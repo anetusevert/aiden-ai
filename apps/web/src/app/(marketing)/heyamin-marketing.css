@@ -1,0 +1,481 @@
+/* ==========================================================================
+   HeyAmin — Marketing & Login Pages
+   Dark graphite glassmorphic theme aligned with app design system
+   ========================================================================== */
+
+@import '../../styles/tokens.css';
+
+/* ── Scope ── */
+.ha-mkt {
+  background: var(--bg-primary, #0e0f11);
+  color: var(--text-primary, #f0f0f3);
+  min-height: 100vh;
+  font-family: var(--font-body, -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif);
+}
+
+.ha-mkt * {
+  box-sizing: border-box;
+}
+
+.ha-mkt h1,
+.ha-mkt h2,
+.ha-mkt h3,
+.ha-mkt p,
+.ha-mkt span,
+.ha-mkt li {
+  color: inherit;
+}
+
+/* ── Header ── */
+.ha-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 2.5rem;
+  background: linear-gradient(
+    to bottom,
+    rgba(14, 15, 17, 0.95) 60%,
+    transparent
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.ha-logo {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #f0f0f3) !important;
+  text-decoration: none !important;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.ha-logo-accent {
+  color: var(--amin-accent, #d4a017) !important;
+}
+
+.ha-nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary, #9a9ba2) !important;
+  text-decoration: none !important;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.07));
+  transition: all var(--duration-base, 200ms) var(--ease-out);
+}
+
+.ha-nav-link:hover {
+  color: var(--text-primary, #f0f0f3) !important;
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.05));
+  border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.12));
+}
+
+/* ── Hero ── */
+.ha-hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 7rem 1.5rem 5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.ha-glow {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80vw;
+  height: 70vw;
+  max-width: 900px;
+  max-height: 700px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(212, 160, 23, 0.06) 0%,
+    rgba(30, 58, 95, 0.04) 35%,
+    transparent 65%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ha-hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.ha-eyebrow {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--amin-accent, #d4a017) !important;
+  margin: 0 0 1.5rem;
+}
+
+.ha-hero h1 {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: clamp(2rem, 5.5vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--text-primary, #f0f0f3) !important;
+  margin: 0 0 1.5rem;
+}
+
+.ha-accent {
+  color: var(--amin-accent, #d4a017) !important;
+}
+
+.ha-hero-sub {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--text-secondary, #9a9ba2) !important;
+  margin: 0 0 2.5rem;
+  max-width: 32rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── CTA row ── */
+.ha-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.ha-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 2rem;
+  background: var(--amin-accent-gradient, linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #e0b332 100%));
+  color: #0e0f11 !important;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: 10px;
+  text-decoration: none !important;
+  transition: transform var(--duration-base) var(--ease-out),
+    opacity var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 12px rgba(212, 160, 23, 0.2);
+}
+
+.ha-btn-primary:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  text-decoration: none !important;
+  box-shadow: 0 4px 20px rgba(212, 160, 23, 0.3);
+}
+
+.ha-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.875rem 1.25rem;
+  color: var(--text-muted, #636470) !important;
+  font-size: 0.875rem;
+  text-decoration: none !important;
+  border-radius: 8px;
+  transition: color var(--duration-base) var(--ease-out);
+}
+
+.ha-btn-ghost:hover {
+  color: var(--text-primary, #f0f0f3) !important;
+  text-decoration: none !important;
+}
+
+/* ── Section ── */
+.ha-section {
+  padding: 6rem 1.5rem;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
+}
+
+.ha-section-inner {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.ha-section h2 {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: clamp(1.375rem, 2.5vw, 1.875rem);
+  font-weight: 600;
+  color: var(--text-primary, #f0f0f3) !important;
+  text-align: center;
+  margin: 0 0 3rem;
+  letter-spacing: -0.02em;
+}
+
+/* ── Feature grid ── */
+.ha-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.ha-tile {
+  padding: 1.75rem;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.07));
+  border-radius: 14px;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.ha-tile:hover {
+  border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.12));
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.05));
+  box-shadow: var(--shadow-md);
+}
+
+.ha-tile h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary, #f0f0f3) !important;
+  margin: 0 0 0.625rem;
+  letter-spacing: -0.01em;
+}
+
+.ha-tile p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-secondary, #9a9ba2) !important;
+  margin: 0;
+}
+
+/* ── Footer ── */
+.ha-footer {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
+}
+
+.ha-footer p {
+  font-size: 0.8125rem;
+  color: var(--text-muted, #636470) !important;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Login Page — Glassmorphic Card
+   ========================================================================== */
+.ha-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: var(--bg-primary, #0e0f11);
+  position: relative;
+  overflow: hidden;
+}
+
+.ha-login-glow {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(
+    circle,
+    rgba(212, 160, 23, 0.06) 0%,
+    rgba(30, 58, 95, 0.04) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ha-login-card {
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  z-index: 1;
+  padding: 2.5rem 2rem;
+  background: var(--glass-bg-elevated, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.07));
+  border-radius: 16px;
+  backdrop-filter: blur(var(--glass-blur, 20px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 20px));
+  box-shadow: var(--shadow-glass, 0 8px 32px rgba(0, 0, 0, 0.3));
+}
+
+.ha-login-brand {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.ha-login-wordmark {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #f0f0f3);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.ha-login-wordmark-accent {
+  color: var(--amin-accent, #d4a017);
+}
+
+.ha-login-title {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: 1.375rem;
+  font-weight: 500;
+  color: var(--text-primary, #f0f0f3) !important;
+  text-align: center;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.ha-login-sub {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #9a9ba2) !important;
+  text-align: center;
+  margin: 0 0 2rem;
+  line-height: 1.5;
+}
+
+.ha-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ha-field {
+  position: relative;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.07));
+  border-radius: 10px;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.03));
+  transition: border-color var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.ha-field:focus-within {
+  border-color: var(--amin-accent, #d4a017);
+  box-shadow: 0 0 0 3px var(--amin-accent-soft, rgba(212, 160, 23, 0.12));
+}
+
+.ha-field label {
+  position: absolute;
+  top: -0.45rem;
+  left: 0.875rem;
+  padding: 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary, #9a9ba2) !important;
+  background: var(--bg-primary, #0e0f11);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.ha-field input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary, #f0f0f3);
+  font-size: 0.9375rem;
+  border-radius: 10px;
+}
+
+.ha-field input::placeholder {
+  color: var(--text-faint, #45464f);
+}
+
+.ha-field input:-webkit-autofill,
+.ha-field input:-webkit-autofill:hover,
+.ha-field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary, #f0f0f3);
+  -webkit-box-shadow: 0 0 0px 40rem #0e0f11 inset;
+}
+
+.ha-login-error {
+  font-size: 0.8125rem;
+  color: var(--status-danger, #f87171) !important;
+  text-align: center;
+  padding: 0.625rem 0.875rem;
+  background: var(--status-danger-soft, rgba(248, 113, 113, 0.12));
+  border: 1px solid var(--status-danger-border, rgba(248, 113, 113, 0.25));
+  border-radius: 8px;
+}
+
+.ha-btn-submit {
+  width: 100%;
+  padding: 0.9375rem;
+  background: var(--amin-accent-gradient, linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #e0b332 100%));
+  color: #0e0f11 !important;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+  margin-top: 0.5rem;
+  box-shadow: 0 2px 12px rgba(212, 160, 23, 0.2);
+}
+
+.ha-btn-submit:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(212, 160, 23, 0.3);
+}
+
+.ha-btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ha-login-footer-link {
+  color: var(--text-muted, #636470) !important;
+  text-decoration: none !important;
+  font-size: 0.8125rem;
+  transition: color var(--duration-base) var(--ease-out);
+}
+
+.ha-login-footer-link:hover {
+  color: var(--text-secondary, #9a9ba2) !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .ha-header {
+    padding: 1rem 1.25rem;
+  }
+  .ha-hero {
+    padding: 6rem 1.25rem 4rem;
+  }
+  .ha-section {
+    padding: 4rem 1.25rem;
+  }
+  .ha-login-card {
+    padding: 2rem 1.5rem;
+  }
+}

@@ -1,0 +1,38 @@
+# Caddyfile for local development with TLS
+#
+# Serves web and API from a single origin at https://localhost
+# - Web (Next.js): https://localhost/
+# - API (FastAPI): https://localhost/api/*
+#
+# TLS: Uses Caddy's internal CA for automatic local HTTPS
+# The first time you access https://localhost, your browser may show
+# a certificate warning. See docs/LOCAL_DEV.md for trust instructions.
+
+{
+	# Enable internal CA for localhost certificates
+	# This generates a self-signed root CA and uses it to sign certs
+	local_certs
+}
+
+https://localhost {
+	# Use internal TLS (self-signed by Caddy's local CA)
+	tls internal
+
+	# API: Route /api/* to the API container (api-proxy service)
+	# The /api prefix is KEPT and forwarded to FastAPI
+	# FastAPI has API_ROOT_PATH=/api to handle this correctly
+	handle /api/* {
+		reverse_proxy api-proxy:8000
+	}
+
+	# Web: Route everything else to the web container (web-proxy service)
+	handle {
+		reverse_proxy web-proxy:3000
+	}
+
+	# Logging
+	log {
+		output stdout
+		format console
+	}
+}

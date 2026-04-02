@@ -1,0 +1,22 @@
+{
+  "specVersion": "0.5",
+  "name": "amin",
+  "displayName": "Amin",
+  "version": "1.0.0",
+  "description": "AI legal colleague for GCC lawyers — trustworthy, precise, culturally fluent.",
+  "author": { "name": "HeyAmin", "github": "heyamin" },
+  "license": "MIT",
+  "tags": ["legal", "gcc", "arabic", "ksa", "assistant", "agent"],
+  "category": "work/legal",
+  "compatibility": {
+    "frameworks": ["heyamin"],
+    "models": ["gpt-4o*", "gpt-4o-mini*", "claude-*", "gemini-*"]
+  },
+  "files": {
+    "soul": "SOUL.md",
+    "identity": "IDENTITY.md",
+    "agents": "AGENTS.md",
+    "style": "STYLE.md",
+    "heartbeat": "HEARTBEAT.md"
+  }
+}

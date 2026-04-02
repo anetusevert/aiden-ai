@@ -1,0 +1,104 @@
+[project]
+name = "aiden-api"
+version = "0.1.0"
+description = "Aiden.ai API backend"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "email-validator>=2.1.0",
+    "sqlalchemy>=2.0.25",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "psycopg2-binary>=2.9.9",
+    "redis>=5.0.0",
+    "boto3>=1.34.0",
+    "httpx>=0.26.0",
+    "pyjwt>=2.8.0",
+    "python-multipart>=0.0.6",
+    # Text extraction dependencies
+    "pymupdf>=1.24.0",
+    "pdfminer.six>=20231228",
+    "python-docx>=1.1.0",
+    "beautifulsoup4>=4.12.0",
+    # Vector embeddings
+    "pgvector>=0.2.0",
+    # LLM providers
+    "openai>=1.0.0",
+    "argon2-cffi>=23.1.0",
+    # Agent enhancements
+    "tiktoken>=0.7.0",
+    "tenacity>=8.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.26.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+    "types-redis>=4.6.0",
+    "boto3-stubs>=1.34.0",
+    "types-pyjwt>=1.7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["aiden_api"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ARG"]  # Unused arguments are common with pytest fixtures
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+markers = [
+    "unit: Unit tests that do not require database",
+    "integration: Integration tests that require PostgreSQL",
+]

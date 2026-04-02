@@ -1,0 +1,244 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database (with pgvector extension for embeddings)
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: aiden-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aiden}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aiden_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aiden}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aiden} -d ${POSTGRES_DB:-aiden}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: aiden-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # MinIO (S3-compatible storage)
+  minio:
+    image: minio/minio:latest
+    container_name: aiden-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      # Use curl to check MinIO's built-in health endpoint
+      # This is more reliable than "mc ready local" which may not be available
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # MinIO initialization (create buckets)
+  minio-init:
+    image: minio/mc:latest
+    container_name: aiden-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-aiden-storage}
+    entrypoint: ["/bin/sh", "-c", "mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} && mc mb myminio/$${MINIO_BUCKET} --ignore-existing && mc anonymous set download myminio/$${MINIO_BUCKET} || true && echo 'Bucket initialized successfully'"]
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: aiden-api
+    command: uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./apps/api:/app
+      - ./amin-soul:/app/amin-soul:ro
+      - api_uv_cache:/root/.cache/uv
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-aiden}:${POSTGRES_PASSWORD:-aiden_dev_password}@postgres:5432/${POSTGRES_DB:-aiden}
+      - REDIS_URL=redis://redis:6379/0
+      # S3/MinIO Configuration (canonical S3_* vars)
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET_NAME=${MINIO_BUCKET:-aiden-storage}
+      - S3_REGION=us-east-1
+      - S3_USE_SSL=false
+      - S3_FORCE_PATH_STYLE=true
+      # LLM Provider Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER:-stub}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - ENVIRONMENT=${ENVIRONMENT:-dev}
+      # CORS Configuration (compose reads CORS_ORIGINS from .env)
+      - CORS_ORIGINS_STR=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 300s
+
+  # Next.js Frontend
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      target: dev
+    container_name: aiden-web
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "${WEB_HOST_PORT:-3000}:3000"
+    environment:
+      # Client-side URL (browser requests) - must be accessible from host
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+      # Server-side URL (SSR requests) - uses Docker internal network
+      - API_INTERNAL_BASE_URL=http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Caddy Reverse Proxy (for HTTPS local dev)
+  # Serves web and API from single origin: https://localhost
+  # Start with: docker compose --profile proxy up -d
+  caddy:
+    image: caddy:2-alpine
+    container_name: aiden-caddy
+    profiles:
+      - proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # Caddy uses these for internal CA storage
+      - XDG_DATA_HOME=/data
+      - XDG_CONFIG_HOME=/config
+    depends_on:
+      - web-proxy
+      - api-proxy
+
+  # Web configured for same-origin mode (behind proxy)
+  # This is an alternative web service that uses same-origin API routing
+  web-proxy:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      target: dev
+    container_name: aiden-web-proxy
+    profiles:
+      - proxy
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    # No external port - only accessible through caddy
+    environment:
+      # Same-origin mode: unset NEXT_PUBLIC_API_BASE_URL
+      # Client calls /api/* which goes through caddy to api-proxy:8000
+      - NEXT_PUBLIC_API_PREFIX=/api
+      # Server-side SSR needs direct API access to api-proxy
+      - API_INTERNAL_BASE_URL=http://api-proxy:8000
+    depends_on:
+      api-proxy:
+        condition: service_healthy
+
+  # API configured for same-origin mode (behind proxy)
+  api-proxy:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: aiden-api-proxy
+    profiles:
+      - proxy
+    command: uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./apps/api:/app
+      - api_uv_cache:/root/.cache/uv
+    # No external port - only accessible through caddy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-aiden}:${POSTGRES_PASSWORD:-aiden_dev_password}@postgres:5432/${POSTGRES_DB:-aiden}
+      - REDIS_URL=redis://redis:6379/0
+      # S3/MinIO Configuration
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - S3_BUCKET_NAME=${MINIO_BUCKET:-aiden-storage}
+      - S3_REGION=us-east-1
+      - S3_USE_SSL=false
+      - S3_FORCE_PATH_STYLE=true
+      # LLM Provider Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER:-stub}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - ENVIRONMENT=${ENVIRONMENT:-dev}
+      # Same-origin mode: API mounted at /api
+      - API_ROOT_PATH=/api
+      # CORS - still needed for any edge cases
+      - CORS_ORIGINS_STR=https://localhost,http://localhost:3000
+      # Cookie security - set COOKIE_SECURE=true to test Secure cookies under TLS
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  api_uv_cache:
+  caddy_data:
+  caddy_config:
