@@ -1,0 +1,53 @@
+# Root .dockerignore for Dockerfile.api (repo-root build context)
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+.uv/
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+*.swp
+*.swo
+
+# Environment (secrets)
+.env
+.env.local
+apps/api/.env
+apps/api/.env.local
+apps/web/.env
+apps/web/.env.local
+
+# Git
+.git/
+.gitignore
+
+# Node / Web (not needed for API image)
+apps/web/node_modules/
+apps/web/.next/
+
+# Docker meta
+Dockerfile
+Dockerfile.api
+docker-compose.yml
+.dockerignore
+
+# Docs (keep README.md for pyproject.toml)
+docs/
+*.md
+!apps/api/README.md
+!amin-soul/*.md
