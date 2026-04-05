@@ -21,6 +21,11 @@ CMD ["pnpm", "dev"]
 
 # Builder stage
 FROM base AS builder
+
+ARG NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_COLLABORA_URL
+ARG NEXT_PUBLIC_COLLABORA_ENABLED
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
