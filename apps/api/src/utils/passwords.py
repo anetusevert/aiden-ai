@@ -1,7 +1,7 @@
 """Password hashing (argon2) and email normalization."""
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
 _hasher = PasswordHasher()
 
@@ -22,5 +22,5 @@ def verify_password(plain: str, password_hash: str | None) -> bool:
         return False
     try:
         return _hasher.verify(password_hash, plain)
-    except VerifyMismatchError:
+    except (VerifyMismatchError, VerificationError, InvalidHashError):
         return False

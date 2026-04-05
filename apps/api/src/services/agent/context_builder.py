@@ -4,37 +4,125 @@ Implements context compaction when approaching token limits.
 Uses tiktoken for accurate counting, with len//4 heuristic fallback.
 """
 
+import json
 import logging
 from typing import Any
 
 from src.models.conversation import Message
 from src.models.twin import UserTwin
+from src.services.agent.screen_context import build_screen_context as load_screen_context
 from src.services.agent.soul_loader import get_soul_system_prompt
 from src.services.agent.token_counter import count_message_tokens, count_tokens
 
 logger = logging.getLogger(__name__)
 
+_TWIN_PREFS_TTL = 300  # 5 minutes
+
+
+def _twin_prefs_key(user_id: str) -> str:
+    return f"twin_prefs:{user_id}"
+
+
+async def cache_twin_prefs(user_id: str, prefs: dict) -> None:
+    """Cache twin preferences in Redis (5-minute TTL)."""
+    try:
+        from src.services.agent.screen_context import get_redis_client
+        client = get_redis_client()
+        await client.set(_twin_prefs_key(user_id), json.dumps(prefs), ex=_TWIN_PREFS_TTL)
+    except Exception as e:
+        logger.debug("Redis prefs cache write failed: %s", e)
+
+
+async def invalidate_twin_prefs_cache(user_id: str) -> None:
+    """Invalidate the Redis twin preferences cache for a user."""
+    try:
+        from src.services.agent.screen_context import get_redis_client
+        client = get_redis_client()
+        await client.delete(_twin_prefs_key(user_id))
+    except Exception as e:
+        logger.debug("Redis prefs cache invalidation failed: %s", e)
+
 DEFAULT_MAX_TOKENS = 120_000
+
+LANGUAGE_NAMES: dict[str, str] = {
+    "en": "English",
+    "ar": "Arabic",
+    "fr": "French",
+    "ur": "Urdu",
+    "tl": "Filipino (Tagalog)",
+}
+
+MALE_VOICES = {"onyx", "echo", "fable"}
+
+
+def get_safe_voice(prefs: dict) -> str:
+    """Return the user's saved voice, falling back to 'onyx' if invalid or female."""
+    voice = prefs.get("amin_voice", "onyx")
+    return voice if voice in MALE_VOICES else "onyx"
+
+
+def _build_language_directive(twin: UserTwin | None) -> str:
+    """Build the mandatory language directive that MUST be first in the prompt."""
+    if twin is None:
+        return "CRITICAL INSTRUCTION: You MUST respond exclusively in English.\n\n"
+
+    prefs = twin.preferences or {}
+    lang_code = prefs.get("app_language", "en")
+    lang_name = LANGUAGE_NAMES.get(lang_code, "English")
+
+    if lang_code == "en":
+        return "CRITICAL INSTRUCTION: You MUST respond exclusively in English.\n\n"
+
+    return (
+        f"CRITICAL INSTRUCTION: You MUST respond exclusively in {lang_name}. "
+        f"Every single word of your response must be in {lang_name}. "
+        f"Do not use English under any circumstances. "
+        f"This is a non-negotiable language setting chosen by the user.\n\n"
+    )
 
 
 def build_system_prompt(
     soul: dict[str, str],
     twin: UserTwin | None = None,
+    screen_context_text: str | None = None,
 ) -> str:
-    """Build the complete system prompt from Soul + Twin."""
-    parts: list[str] = [get_soul_system_prompt()]
+    """Build the complete system prompt from Soul + Twin.
+
+    IMPORTANT: language directive is always the absolute first content.
+    """
+    # Language directive MUST be first — before soul, before everything
+    language_directive = _build_language_directive(twin)
+
+    soul_prompt = get_soul_system_prompt()
+    parts: list[str] = [language_directive + soul_prompt]
 
     if twin is not None:
         twin_section = build_twin_context(twin)
         if twin_section:
             parts.append(twin_section)
 
-    return "\n\n---\n\n".join(parts)
+    if screen_context_text:
+        parts.append("## Screen Context\n" + screen_context_text)
+
+    prompt = "\n\n---\n\n".join(parts)
+    logger.debug("System prompt first 200 chars: %s", prompt[:200])
+    return prompt
+
+
+async def build_screen_context(user_id: str) -> str:
+    """Load the latest screen context for a user."""
+    return await load_screen_context(user_id)
 
 
 def build_twin_context(twin: UserTwin) -> str:
-    """Render twin data as natural language for inclusion in system prompt."""
-    lines: list[str] = ["## Your Knowledge About This Lawyer"]
+    """Render twin data as natural language for inclusion in system prompt.
+
+    Note: language directive is NOT added here — it's handled at the top of
+    build_system_prompt to ensure it is always the very first content.
+    """
+    lines: list[str] = []
+
+    lines.append("## Your Knowledge About This Lawyer")
 
     if twin.profile:
         lines.append("\n### Profile")

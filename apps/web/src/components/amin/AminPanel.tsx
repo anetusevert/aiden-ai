@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { AminAvatarV2 } from './AminAvatarV2';
-import type { AvatarState } from './AminAvatarV2';
+import { AminAvatar, type AminAvatarState } from './AminAvatar';
 import { AminChat } from './AminChat';
 import { AminInput } from './AminInput';
 import { useAminContext } from './AminProvider';
+import { useCurrentScreenContext } from '@/lib/screenContext';
 import { motionTokens } from '@/lib/motion';
 
 const leftPanelMotion = {
@@ -23,6 +24,7 @@ const leftPanelMotion = {
 };
 
 export function AminPanel() {
+  const t = useTranslations('amin');
   const {
     messages,
     aminStatus,
@@ -36,6 +38,8 @@ export function AminPanel() {
     createConversation,
     closePanel,
   } = useAminContext();
+  const screenContext = useCurrentScreenContext();
+  const documentContext = screenContext.document;
 
   useEffect(() => {
     if (!activeConversation) {
@@ -45,17 +49,28 @@ export function AminPanel() {
 
   const statusLabel =
     aminStatus === 'thinking'
-      ? 'Thinking\u2026'
+      ? t('statusThinking')
       : aminStatus === 'speaking'
-        ? 'Responding\u2026'
+        ? t('statusSpeaking')
         : aminStatus === 'listening'
-          ? 'Awaiting approval\u2026'
+          ? t('statusListening')
           : aminStatus === 'error'
-            ? 'Error'
-            : 'Online';
+            ? t('statusError')
+            : t('statusOnline');
 
   const handleSuggestion = (text: string) => {
     sendMessage(text);
+  };
+
+  const handleDocumentShortcut = () => {
+    if (!documentContext) return;
+    window.dispatchEvent(
+      new CustomEvent('amin-prefill', {
+        detail: {
+          text: `Please help me improve this document: ${documentContext.title}`,
+        },
+      })
+    );
   };
 
   return (
@@ -68,13 +83,13 @@ export function AminPanel() {
     >
       {/* Header */}
       <div className="amin-panel-header">
-        <AminAvatarV2
-          size="small"
-          state={aminStatus as AvatarState}
-          showRing={false}
+        <AminAvatar
+          size={56}
+          state={aminStatus as AminAvatarState}
+          showWaveform
         />
         <div className="amin-panel-header-info">
-          <span className="amin-panel-title">Amin</span>
+          <span className="amin-panel-title">{t('title')}</span>
           <span className="amin-panel-status">
             <span className="amin-panel-status-dot" data-status={aminStatus} />
             {statusLabel}
@@ -83,7 +98,7 @@ export function AminPanel() {
         <button
           className="amin-panel-close"
           onClick={closePanel}
-          aria-label="Close Amin panel"
+          aria-label={t('closePanel')}
         >
           <svg
             width="18"
@@ -100,6 +115,20 @@ export function AminPanel() {
           </svg>
         </button>
       </div>
+
+      {documentContext ? (
+        <div className="amin-doc-context">
+          <div>
+            <div className="amin-doc-context-title">{documentContext.title}</div>
+            <div className="amin-doc-context-badge">
+              {documentContext.doc_type.toUpperCase()} · {documentContext.current_view.toUpperCase()}
+            </div>
+          </div>
+          <button className="btn btn-outline" onClick={handleDocumentShortcut}>
+            Edit with Amin
+          </button>
+        </div>
+      ) : null}
 
       {/* Chat Area */}
       <AminChat

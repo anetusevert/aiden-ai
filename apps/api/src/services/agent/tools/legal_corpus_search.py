@@ -7,22 +7,38 @@ from src.services.agent.tool_registry import Tool, ToolResult
 
 async def _execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResult:
     try:
-        from src.services.global_legal_retrieval_service import GlobalLegalRetrievalService
-
-        db = context["db"]
-        service = GlobalLegalRetrievalService()
-        chunks = await service.hybrid_search(
-            db=db,
-            query=params["query"],
-            limit=params.get("limit", 10),
-            jurisdiction=params.get("jurisdiction") if params.get("jurisdiction") != "ALL" else None,
+        from src.services.global_legal_retrieval_service import (
+            GlobalLegalRetrievalService,
+            GlobalLegalSearchFilters,
+            PolicyFilters,
         )
 
-        results = []
-        for c in chunks:
+        db = context["db"]
+        service = GlobalLegalRetrievalService(db)
+
+        jurisdiction = params.get("jurisdiction")
+        filters = GlobalLegalSearchFilters()
+        if jurisdiction and jurisdiction != "ALL":
+            filters.jurisdiction = jurisdiction
+
+        # Build permissive policy filters so the agent can search all jurisdictions
+        policy_filters = PolicyFilters(
+            allowed_jurisdictions=["UAE", "DIFC", "ADGM", "KSA", "OMAN", "BAHRAIN", "QATAR", "KUWAIT"],
+            allowed_input_languages=["ar", "en", "mixed"],
+        )
+
+        response = await service.search_chunks(
+            query=params["query"],
+            limit=params.get("limit", 10),
+            filters=filters,
+            policy_filters=policy_filters,
+        )
+
+        results: list[dict[str, Any]] = []
+        for c in response.items:
             results.append({
                 "chunk_id": c.chunk_id,
-                "snippet": c.text[:400],
+                "snippet": c.snippet[:400],
                 "instrument_title": c.instrument_title,
                 "jurisdiction": c.jurisdiction,
                 "instrument_type": c.instrument_type,

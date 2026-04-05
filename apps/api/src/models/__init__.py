@@ -12,8 +12,12 @@ from src.models.legal_chunk_embedding import LegalChunkEmbedding
 from src.models.legal_instrument import LegalInstrument
 from src.models.legal_instrument_version import LegalInstrumentVersion
 from src.models.legal_text import LegalText
+from src.models.office import OfficeDocument, WopiToken
+from src.models.organization import Organization, OrganizationMembership
 from src.models.policy_profile import PolicyProfile
 from src.models.refresh_session import RefreshSession
+from src.models.scraping_job import ScrapingJob
+from src.models.scraping_source import ScrapingSource
 from src.models.tenant import Tenant
 from src.models.twin import TwinObservation, UserTwin
 from src.models.user import User
@@ -34,12 +38,18 @@ __all__ = [
     "LegalInstrumentVersion",
     "LegalText",
     "Message",
+    "OfficeDocument",
+    "Organization",
+    "OrganizationMembership",
     "PolicyProfile",
     "RefreshSession",
+    "ScrapingJob",
+    "ScrapingSource",
     "Tenant",
     "TwinObservation",
     "Workspace",
     "User",
     "UserTwin",
+    "WopiToken",
     "WorkspaceMembership",
 ]

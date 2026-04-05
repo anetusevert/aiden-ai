@@ -15,6 +15,7 @@ from src.routers.organizations import router as organizations_router
 from src.routers.policy import policy_resolve_router
 from src.routers.policy import router as policy_router
 from src.routers.policy import workspace_policy_router
+from src.routers.scraping import router as scraping_router
 from src.routers.search import admin_router as search_admin_router
 from src.routers.search import router as search_router
 from src.routers.soul import router as soul_router
@@ -22,7 +23,10 @@ from src.routers.tenants import router as tenants_router
 from src.routers.twins import router as twins_router
 from src.routers.voice import voice_ws
 from src.routers.workflows import router as workflows_router
+from src.routers.news import router as news_router
+from src.routers.office import router as office_router
 from src.routers.workspaces import router as workspaces_router
+from src.routers.wopi import router as wopi_router
 
 __all__ = [
     "audit_router",
@@ -41,11 +45,15 @@ __all__ = [
     "policy_router",
     "workspace_policy_router",
     "policy_resolve_router",
+    "scraping_router",
     "search_router",
     "search_admin_router",
     "workflows_router",
     "operator_router",
     "organizations_router",
     "soul_router",
+    "news_router",
+    "office_router",
     "voice_ws",
+    "wopi_router",
 ]

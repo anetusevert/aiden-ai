@@ -11,6 +11,7 @@ import {
 import { useAuth } from '@/lib/AuthContext';
 import { motion } from 'framer-motion';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
+import { WorkflowLaunchBanner } from '@/components/workflows/WorkflowLaunchBanner';
 
 const JURISDICTIONS = [
   'UAE',
@@ -117,6 +118,8 @@ export default function GlobalLegalPage() {
 
   return (
     <motion.div {...fadeUp}>
+      <WorkflowLaunchBanner currentRoute="/global-legal" />
+
       {/* Header */}
       <div className="page-header">
         <div className="flex items-center gap-3">

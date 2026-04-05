@@ -1,0 +1,161 @@
+'use client';
+
+import { useMemo } from 'react';
+import { useParams } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { useNavigation } from '@/components/NavigationLoader';
+import { getWorkflowById } from '@/lib/workflowRegistry';
+import {
+  WORKFLOW_CATEGORY_ACCENTS,
+  getCategoryDisplayName,
+  getToolLabel,
+  getWorkflowExecuteHref,
+  renderCategoryIcon,
+} from '@/lib/workflowPresentation';
+import {
+  fadeUp,
+  staggerContainer,
+  staggerItem,
+  tileMotion,
+} from '@/lib/motion';
+
+export default function WorkflowDetailPage() {
+  const params = useParams<{ category: string; workflowId: string }>();
+  const { navigateTo } = useNavigation();
+
+  const workflow = useMemo(
+    () => getWorkflowById(params.workflowId),
+    [params.workflowId]
+  );
+
+  if (!workflow || workflow.category !== params.category) {
+    return (
+      <div className="workflow-empty-state">
+        <h1 className="page-title">Workflow not found</h1>
+        <p className="page-subtitle">
+          The requested workflow could not be matched to this practice area.
+        </p>
+      </div>
+    );
+  }
+
+  const accent = WORKFLOW_CATEGORY_ACCENTS[workflow.category];
+  const launchHref = getWorkflowExecuteHref(workflow);
+
+  return (
+    <motion.div className="workflow-detail-page" {...fadeUp}>
+      <section
+        className="workflow-detail-hero"
+        style={{ '--workflow-accent': accent } as React.CSSProperties}
+      >
+        <div className="workflow-detail-hero-top">
+          <span className="workflow-detail-icon">
+            {renderCategoryIcon(workflow.category, 22)}
+          </span>
+          <span className="workflow-detail-category">
+            {getCategoryDisplayName(workflow.category)}
+          </span>
+        </div>
+
+        <h1 className="workflow-detail-title">{workflow.name}</h1>
+        <p className="workflow-detail-description">{workflow.description}</p>
+
+        <div className="workflow-detail-actions">
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => navigateTo(launchHref)}
+          >
+            Start workflow
+          </button>
+          {workflow.tools.map(tool => (
+            <button
+              key={tool}
+              type="button"
+              className="btn btn-outline"
+              onClick={() =>
+                navigateTo(
+                  `${tool}?workflow=${workflow.id}&category=${workflow.category}`
+                )
+              }
+            >
+              Open {getToolLabel(tool)}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="workflow-detail-layout">
+        <div className="workflow-detail-panel">
+          <div className="workflow-detail-panel-header">
+            <h2>Flow overview</h2>
+            <span>{workflow.steps.length} stages</span>
+          </div>
+
+          <motion.div
+            className="workflow-step-list"
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+          >
+            {workflow.steps.map(step => (
+              <motion.div
+                key={step.order}
+                className="workflow-step-card"
+                variants={staggerItem}
+              >
+                <div className="workflow-step-number">{step.order}</div>
+                <div className="workflow-step-copy">
+                  <h3>{step.name}</h3>
+                  <p>{step.detail}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+
+        <div className="workflow-detail-sidepanel">
+          <motion.div
+            className="workflow-side-card"
+            whileHover={tileMotion.hover}
+            whileTap={tileMotion.tap}
+          >
+            <span className="workflow-side-kicker">Primary launch</span>
+            <h3>{getToolLabel(workflow.route)}</h3>
+            <p>
+              Amin will prepare the most relevant workspace first, then you can
+              branch into the other supporting tools.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="workflow-side-card"
+            whileHover={tileMotion.hover}
+            whileTap={tileMotion.tap}
+          >
+            <span className="workflow-side-kicker">Supporting tools</span>
+            <div className="workflow-tool-pill-list">
+              {workflow.tools.map(tool => (
+                <span key={tool} className="workflow-tool-pill">
+                  {getToolLabel(tool)}
+                </span>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="workflow-side-card workflow-side-card-cta"
+            whileHover={tileMotion.hover}
+            whileTap={tileMotion.tap}
+          >
+            <span className="workflow-side-kicker">Amin prompt</span>
+            <p>
+              “Prepare this workflow, identify the first required inputs, and
+              guide me through the next step.”
+            </p>
+          </motion.div>
+        </div>
+      </section>
+    </motion.div>
+  );
+}

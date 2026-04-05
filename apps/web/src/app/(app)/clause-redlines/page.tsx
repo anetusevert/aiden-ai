@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -21,31 +21,15 @@ import {
   EvidenceMetaPanel,
   GlobalLawExplanationBanner,
   renderCitationsWithDifferentiation,
-  getPolicyTooltipText,
+  usePolicyTooltipText,
 } from '@/components/EvidenceCard';
 import { SourceTypeBadge } from '@/components/ui/Badge';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
+import { useTranslations } from 'next-intl';
+import { WorkflowLaunchBanner } from '@/components/workflows/WorkflowLaunchBanner';
 
 type OutputLanguage = 'en' | 'ar';
-
-const CLAUSE_TYPES: { value: ClauseType; label: string }[] = [
-  { value: 'governing_law', label: 'Governing Law' },
-  { value: 'termination', label: 'Termination' },
-  { value: 'liability', label: 'Liability' },
-  { value: 'indemnity', label: 'Indemnity' },
-  { value: 'confidentiality', label: 'Confidentiality' },
-  { value: 'payment', label: 'Payment Terms' },
-  { value: 'ip', label: 'Intellectual Property' },
-  { value: 'force_majeure', label: 'Force Majeure' },
-];
-
-const JURISDICTIONS: { value: ClauseJurisdiction; label: string }[] = [
-  { value: 'UAE', label: 'UAE' },
-  { value: 'DIFC', label: 'DIFC' },
-  { value: 'ADGM', label: 'ADGM' },
-  { value: 'KSA', label: 'KSA' },
-];
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#dc2626',
@@ -83,6 +67,42 @@ export default function ClauseRedlinesPage() {
     defaultOutputLanguage,
     workspaceContext,
   } = useAuth();
+
+  const t = useTranslations('common');
+  const tEvidence = useTranslations('evidence');
+  const policyTooltip = usePolicyTooltipText();
+
+  const CLAUSE_TYPES = useMemo(
+    () =>
+      [
+        { value: 'governing_law' as const, label: t('clauseGoverningLaw') },
+        { value: 'termination' as const, label: t('clauseTermination') },
+        { value: 'liability' as const, label: t('clauseLiability') },
+        { value: 'indemnity' as const, label: t('clauseIndemnity') },
+        {
+          value: 'confidentiality' as const,
+          label: t('clauseConfidentiality'),
+        },
+        { value: 'payment' as const, label: t('clausePayment') },
+        { value: 'ip' as const, label: t('clauseIp') },
+        { value: 'force_majeure' as const, label: t('clauseForceMajeure') },
+      ] as const satisfies ReadonlyArray<{ value: ClauseType; label: string }>,
+    [t]
+  );
+
+  const JURISDICTIONS = useMemo(
+    () =>
+      [
+        { value: 'UAE' as const, label: t('uae') },
+        { value: 'DIFC' as const, label: t('difc') },
+        { value: 'ADGM' as const, label: t('adgm') },
+        { value: 'KSA' as const, label: t('ksa') },
+      ] as const satisfies ReadonlyArray<{
+        value: ClauseJurisdiction;
+        label: string;
+      }>,
+    [t]
+  );
 
   // URL params
   const documentId = searchParams.get('documentId') || '';
@@ -576,7 +596,7 @@ export default function ClauseRedlinesPage() {
                           ) : (
                             <span
                               className="text-xs text-muted italic"
-                              title={getPolicyTooltipText(ev.jurisdiction)}
+                              title={policyTooltip(ev.jurisdiction)}
                             >
                               Global law reference
                             </span>
@@ -630,6 +650,8 @@ export default function ClauseRedlinesPage() {
 
   return (
     <motion.div {...fadeUp}>
+      <WorkflowLaunchBanner currentRoute="/clause-redlines" />
+
       <div className="mb-4">
         <Link
           href={`/documents/${documentId}`}

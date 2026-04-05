@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient, type SoulDetail } from '@/lib/apiClient';
 import { useAuth } from '@/lib/AuthContext';
+import { useNavigation } from '@/components/NavigationLoader';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
 import { SoulConstellation } from '@/components/amin/SoulConstellation';
@@ -14,6 +15,7 @@ export default function MemberDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { navigateTo } = useNavigation();
   const userId = params.id as string;
 
   const [soul, setSoul] = useState<SoulDetail | null>(null);
@@ -107,7 +109,7 @@ export default function MemberDetailPage() {
           <div>
             <button
               className="btn btn-sm"
-              onClick={() => router.push('/members')}
+              onClick={() => navigateTo('/members')}
               style={{ marginBottom: 8, opacity: 0.7 }}
             >
               &larr; Back to Members

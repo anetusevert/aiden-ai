@@ -6,10 +6,13 @@ import { apiClient, AuditLogEntry } from '@/lib/apiClient';
 import { useAuth } from '@/lib/AuthContext';
 import { motion } from 'framer-motion';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
+import { useTranslations } from 'next-intl';
 
 export default function AuditPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const ta = useTranslations('audit');
+  const tc = useTranslations('common');
 
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,13 +39,11 @@ export default function AuditPage() {
       );
       setEntries(response.items);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load audit logs'
-      );
+      setError(err instanceof Error ? err.message : ta('failedLoad'));
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, limit, actionFilter, workspaceFilter]);
+  }, [isAdmin, limit, actionFilter, workspaceFilter, ta]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -107,7 +108,7 @@ export default function AuditPage() {
   };
 
   if (authLoading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading">{tc('loading')}</div>;
   }
 
   // Admin-only gate
@@ -115,14 +116,15 @@ export default function AuditPage() {
     return (
       <div>
         <div className="page-header">
-          <h1 className="page-title">Audit Log</h1>
-          <p className="page-subtitle">System activity and access logs</p>
+          <h1 className="page-title">{ta('title')}</h1>
+          <p className="page-subtitle">{ta('subtitle')}</p>
         </div>
         <div className="alert alert-warning" style={{ maxWidth: '500px' }}>
-          <strong>Admin Only</strong>
+          <strong>{ta('adminOnlyTitle')}</strong>
           <p style={{ marginTop: '0.5rem', marginBottom: 0 }}>
-            The audit log is only accessible to users with ADMIN role. Your
-            current role is <strong>{user?.role || 'unknown'}</strong>.
+            {ta('adminOnlyBody', {
+              role: user?.role || ta('unknownRole'),
+            })}
           </p>
         </div>
       </div>
@@ -132,8 +134,8 @@ export default function AuditPage() {
   return (
     <motion.div {...fadeUp}>
       <div className="page-header">
-        <h1 className="page-title">Audit Log</h1>
-        <p className="page-subtitle">System activity and access logs</p>
+        <h1 className="page-title">{ta('title')}</h1>
+        <p className="page-subtitle">{ta('subtitle')}</p>
       </div>
 
       {/* Filters */}
@@ -142,7 +144,7 @@ export default function AuditPage() {
           <div className="grid grid-2" style={{ gap: '1rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label htmlFor="actionFilter" className="form-label">
-                Action (contains)
+                {ta('actionContains')}
               </label>
               <input
                 id="actionFilter"
@@ -150,12 +152,12 @@ export default function AuditPage() {
                 className="form-input"
                 value={actionFilter}
                 onChange={e => setActionFilter(e.target.value)}
-                placeholder="e.g., document.upload, auth.login"
+                placeholder={ta('placeholderAction')}
               />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label htmlFor="workspaceFilter" className="form-label">
-                Workspace ID
+                {ta('workspaceId')}
               </label>
               <input
                 id="workspaceFilter"
@@ -163,7 +165,7 @@ export default function AuditPage() {
                 className="form-input"
                 value={workspaceFilter}
                 onChange={e => setWorkspaceFilter(e.target.value)}
-                placeholder="Workspace UUID"
+                placeholder={ta('placeholderWorkspace')}
               />
             </div>
           </div>
@@ -173,7 +175,7 @@ export default function AuditPage() {
               className="btn btn-primary"
               disabled={loading}
             >
-              {loading ? 'Searching...' : 'Search'}
+              {loading ? ta('searching') : ta('search')}
             </button>
             <button
               type="button"
@@ -183,7 +185,7 @@ export default function AuditPage() {
                 setWorkspaceFilter(user?.workspace_id || '');
               }}
             >
-              Reset
+              {ta('reset')}
             </button>
           </div>
         </form>
@@ -192,14 +194,14 @@ export default function AuditPage() {
       {error && <div className="alert alert-error mb-4">{error}</div>}
 
       {loading ? (
-        <div className="loading">Loading audit logs...</div>
+        <div className="loading">{ta('loadingAudit')}</div>
       ) : entries.length === 0 ? (
         <div className="card">
           <p
             className="text-muted"
             style={{ textAlign: 'center', padding: '2rem 0' }}
           >
-            No audit log entries found matching your filters.
+            {ta('noEntries')}
           </p>
         </div>
       ) : (
@@ -208,11 +210,11 @@ export default function AuditPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Timestamp</th>
-                  <th>Action</th>
-                  <th>Status</th>
-                  <th>Resource</th>
-                  <th>Request ID</th>
+                  <th>{ta('timestamp')}</th>
+                  <th>{ta('action')}</th>
+                  <th>{ta('tableStatus')}</th>
+                  <th>{ta('tableResource')}</th>
+                  <th>{ta('tableRequestId')}</th>
                 </tr>
               </thead>
               <motion.tbody
@@ -291,7 +293,7 @@ export default function AuditPage() {
               color: 'var(--muted)',
             }}
           >
-            Showing {entries.length} entries (limit: {limit})
+            {ta('showingEntries', { count: entries.length, limit })}
           </div>
         </div>
       )}

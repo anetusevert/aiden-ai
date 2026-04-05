@@ -80,17 +80,130 @@
   border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.12));
 }
 
-/* ── Hero ── */
+/* ==========================================================================
+   Marketing Entry Sequence
+   ========================================================================== */
+
+.mkt-entry {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-primary, #0e0f11);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mkt-entry-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.mkt-entry-phase {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.mkt-entry-bloom {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(212, 160, 23, 0.18) 0%,
+    rgba(30, 58, 95, 0.08) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.mkt-entry-wordmark-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 28px;
+  gap: 16px;
+}
+
+.mkt-entry-wordmark {
+  display: flex;
+  gap: 3px;
+}
+
+.mkt-entry-letter {
+  display: inline-block;
+  font-size: 32px;
+  letter-spacing: 3px;
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+}
+
+.mkt-entry-gold-line {
+  width: 80px;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--amin-accent, #d4a017),
+    transparent
+  );
+  transform-origin: center;
+}
+
+.mkt-entry-tagline {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--text-primary, #f0f0f3) !important;
+  text-align: center;
+  margin: 24px 0 16px;
+  line-height: 1.2;
+}
+
+.mkt-entry-welcome {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #9a9ba2) !important;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Hero — Split Layout
+   ========================================================================== */
+
 .ha-hero {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
   padding: 7rem 1.5rem 5rem;
   position: relative;
   overflow: hidden;
+}
+
+.ha-hero-split {
+  text-align: left;
+}
+
+.ha-hero-split .ha-cta-row {
+  justify-content: flex-start;
+}
+
+.ha-hero-split .ha-hero-sub {
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .ha-glow {
@@ -115,8 +228,57 @@
 .ha-hero-inner {
   position: relative;
   z-index: 1;
-  max-width: 44rem;
+  max-width: 64rem;
   margin: 0 auto;
+  width: 100%;
+}
+
+.ha-hero-row {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+
+.ha-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ha-hero-avatar {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ha-hero-avatar-glow {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(212, 160, 23, 0.1) 0%,
+    rgba(30, 58, 95, 0.06) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+/* Background particles */
+.ha-hero-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ha-hero-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--amin-accent, #d4a017);
+  opacity: 0.2;
 }
 
 .ha-eyebrow {
@@ -131,9 +293,9 @@
 
 .ha-hero h1 {
   font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
-  font-size: clamp(2rem, 5.5vw, 3.25rem);
+  font-size: clamp(2rem, 5.5vw, 3.5rem);
   font-weight: 600;
-  line-height: 1.12;
+  line-height: 1.1;
   letter-spacing: -0.03em;
   color: var(--text-primary, #f0f0f3) !important;
   margin: 0 0 1.5rem;
@@ -149,8 +311,6 @@
   color: var(--text-secondary, #9a9ba2) !important;
   margin: 0 0 2.5rem;
   max-width: 32rem;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 /* ── CTA row ── */
@@ -158,7 +318,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.875rem;
-  justify-content: center;
   align-items: center;
 }
 
@@ -188,6 +347,11 @@
   box-shadow: 0 4px 20px rgba(212, 160, 23, 0.3);
 }
 
+.ha-btn-sm {
+  padding: 0.625rem 1.5rem;
+  font-size: 0.8125rem;
+}
+
 .ha-btn-ghost {
   display: inline-flex;
   align-items: center;
@@ -204,7 +368,10 @@
   text-decoration: none !important;
 }
 
-/* ── Section ── */
+/* ==========================================================================
+   Sections — shared
+   ========================================================================== */
+
 .ha-section {
   padding: 6rem 1.5rem;
   border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.05));
@@ -225,10 +392,74 @@
   letter-spacing: -0.02em;
 }
 
-/* ── Feature grid ── */
+/* ==========================================================================
+   Meet Amin Section
+   ========================================================================== */
+
+.ha-meet-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ha-meet-avatar {
+  margin-bottom: 2rem;
+}
+
+.ha-meet-heading {
+  font-size: clamp(1.5rem, 3vw, 2.25rem) !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.ha-meet-body {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--text-secondary, #9a9ba2) !important;
+  max-width: 36rem;
+  margin: 0 auto 2.5rem;
+}
+
+.ha-meet-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  justify-content: center;
+}
+
+.ha-meet-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary, #f0f0f3) !important;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.07));
+  border-radius: 100px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.ha-meet-pill:hover {
+  border-color: var(--amin-accent, #d4a017);
+  background: var(--amin-accent-soft, rgba(212, 160, 23, 0.08));
+}
+
+.ha-meet-pill svg {
+  color: var(--amin-accent, #d4a017);
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Feature Grid (enhanced)
+   ========================================================================== */
+
 .ha-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.25rem;
 }
 
@@ -239,15 +470,27 @@
   background: var(--glass-bg, rgba(255, 255, 255, 0.03));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  transition: border-color var(--duration-base) var(--ease-out),
-    background var(--duration-base) var(--ease-out),
-    box-shadow var(--duration-base) var(--ease-out);
+  transition: border-color 250ms ease,
+    background 250ms ease,
+    box-shadow 250ms ease;
 }
 
 .ha-tile:hover {
-  border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.12));
+  border-color: rgba(212, 160, 23, 0.2);
   background: var(--glass-bg-hover, rgba(255, 255, 255, 0.05));
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(212, 160, 23, 0.08);
+}
+
+.ha-tile-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--amin-accent-soft, rgba(212, 160, 23, 0.1));
+  color: var(--amin-accent, #d4a017);
+  margin-bottom: 1rem;
 }
 
 .ha-tile h3 {
@@ -265,7 +508,129 @@
   margin: 0;
 }
 
-/* ── Footer ── */
+/* ==========================================================================
+   How It Works — Steps
+   ========================================================================== */
+
+.ha-steps-section {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.ha-steps {
+  display: flex;
+  gap: 2rem;
+  position: relative;
+  padding-top: 1rem;
+}
+
+.ha-steps-line {
+  position: absolute;
+  top: 2.25rem;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 160, 23, 0.2),
+    rgba(212, 160, 23, 0.2),
+    transparent
+  );
+}
+
+.ha-step {
+  flex: 1;
+  text-align: center;
+  position: relative;
+}
+
+.ha-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--amin-accent-soft, rgba(212, 160, 23, 0.1));
+  border: 1px solid rgba(212, 160, 23, 0.2);
+  color: var(--amin-accent, #d4a017) !important;
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 1.25rem;
+}
+
+.ha-step h3 {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #f0f0f3) !important;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.ha-step p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-secondary, #9a9ba2) !important;
+  margin: 0;
+  max-width: 18rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ==========================================================================
+   Trust / Social Proof
+   ========================================================================== */
+
+.ha-trust-section {
+  text-align: center;
+}
+
+.ha-trust-sub {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-secondary, #9a9ba2) !important;
+  max-width: 34rem;
+  margin: -1.5rem auto 2.5rem;
+  text-align: center;
+}
+
+.ha-trust-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.ha-trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary, #9a9ba2) !important;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.07));
+  border-radius: 100px;
+  transition: border-color 200ms ease;
+}
+
+.ha-trust-pill:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.ha-trust-pill svg {
+  color: var(--amin-accent, #d4a017);
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Footer — Full
+   ========================================================================== */
+
 .ha-footer {
   padding: 2.5rem 1.5rem;
   text-align: center;
@@ -278,9 +643,60 @@
   margin: 0;
 }
 
+.ha-footer-full {
+  padding: 3.5rem 2rem 2rem;
+}
+
+.ha-footer-inner {
+  max-width: 56rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ha-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ha-footer-wordmark {
+  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #f0f0f3) !important;
+}
+
+.ha-footer-tagline {
+  font-size: 0.8125rem;
+  color: var(--text-muted, #636470) !important;
+  margin: 0 !important;
+}
+
+.ha-footer-rule {
+  max-width: 56rem;
+  margin: 2rem auto 1.25rem;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 160, 23, 0.15),
+    transparent
+  );
+}
+
+.ha-footer-copy {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-faint, #45464f) !important;
+}
+
 /* ==========================================================================
    Login Page — Glassmorphic Card
    ========================================================================== */
+
 .ha-login-page {
   min-height: 100vh;
   display: flex;
@@ -425,6 +841,58 @@
   border-radius: 8px;
 }
 
+/* Login — network/connection warning (amber) */
+.ha-login-warning {
+  font-size: 0.8125rem;
+  color: var(--amin-accent, #d4a017) !important;
+  text-align: center;
+  padding: 0.75rem 1rem;
+  background: rgba(212, 160, 23, 0.08);
+  border: 1px solid rgba(212, 160, 23, 0.2);
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.ha-login-warning code {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  color: var(--text-primary, #f0f0f3) !important;
+}
+
+/* Connection status dot */
+.ha-connection-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-muted, #636470) !important;
+  margin-bottom: 0.5rem;
+}
+
+.ha-connection-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ha-connection-dot--online {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+}
+
+.ha-connection-dot--offline {
+  background: var(--amin-accent, #d4a017);
+  box-shadow: 0 0 6px rgba(212, 160, 23, 0.4);
+}
+
+.ha-connection-dot--checking {
+  background: var(--text-muted, #636470);
+}
+
 .ha-btn-submit {
   width: 100%;
   padding: 0.9375rem;
@@ -464,7 +932,54 @@
   color: var(--text-secondary, #9a9ba2) !important;
 }
 
-/* ── Responsive ── */
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .ha-hero-row {
+    flex-direction: column;
+    text-align: center;
+    gap: 2.5rem;
+  }
+
+  .ha-hero-split {
+    text-align: center;
+  }
+
+  .ha-hero-split .ha-cta-row {
+    justify-content: center;
+  }
+
+  .ha-hero-split .ha-hero-sub {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .ha-hero-avatar {
+    order: -1;
+  }
+
+  .ha-steps {
+    flex-direction: column;
+    gap: 2.5rem;
+  }
+
+  .ha-steps-line {
+    display: none;
+  }
+
+  .ha-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ha-footer-inner {
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+}
+
 @media (max-width: 640px) {
   .ha-header {
     padding: 1rem 1.25rem;
@@ -477,5 +992,13 @@
   }
   .ha-login-card {
     padding: 2rem 1.5rem;
+  }
+  .mkt-entry-letter {
+    font-size: 24px;
+    letter-spacing: 2px;
+  }
+  .mkt-entry-tagline {
+    font-size: 1.25rem;
+    padding: 0 1rem;
   }
 }

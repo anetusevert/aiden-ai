@@ -20,11 +20,15 @@ import {
 import { toEvidenceItemFromChunk } from '@/lib/evidence';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
+import { useTranslations } from 'next-intl';
+import { WorkflowLaunchBanner } from '@/components/workflows/WorkflowLaunchBanner';
 
 type OutputLanguage = 'en' | 'ar';
 
 export default function ResearchPage() {
   const router = useRouter();
+  const t = useTranslations('common');
+  const tEvidence = useTranslations('evidence');
   const {
     isAuthenticated,
     isLoading: authLoading,
@@ -93,20 +97,24 @@ export default function ResearchPage() {
 
   // Use the enhanced citation rendering that differentiates global law [GL-X] from workspace [X]
   const renderAnswerWithCitations = (text: string) => {
-    return renderCitationsWithDifferentiation(text);
+    return renderCitationsWithDifferentiation(text, {
+      globalCitationTitle: tEvidence('globalLawRefTitle'),
+    });
   };
 
   if (authLoading) {
     return (
       <div className="loading">
         <span className="spinner" />
-        <span style={{ marginLeft: 'var(--space-3)' }}>Loading...</span>
+        <span style={{ marginLeft: 'var(--space-3)' }}>{t('loading')}</span>
       </div>
     );
   }
 
   return (
     <motion.div {...fadeUp}>
+      <WorkflowLaunchBanner currentRoute="/research" />
+
       {/* Page Header */}
       <div className="page-header">
         <h1 className="page-title">Legal Research</h1>
@@ -120,13 +128,13 @@ export default function ResearchPage() {
         {/* Controls Panel */}
         <div className="workflow-controls">
           <div className="workflow-controls-header">
-            <h3 className="workflow-controls-title">Research Query</h3>
+            <h3 className="workflow-controls-title">{t('researchQuery')}</h3>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="question" className="form-label">
-                Question
+                {t('question')}
               </label>
               <textarea
                 id="question"
@@ -135,8 +143,8 @@ export default function ResearchPage() {
                 onChange={e => setQuestion(e.target.value)}
                 placeholder={
                   defaultOutputLanguage === 'ar'
-                    ? 'أدخل سؤالك القانوني...'
-                    : 'Enter your legal question...'
+                    ? t('placeholderQuestionAr')
+                    : t('placeholderQuestionEn')
                 }
                 required
                 style={{ minHeight: '100px' }}
@@ -155,24 +163,24 @@ export default function ResearchPage() {
                   setOutputLanguage(e.target.value as OutputLanguage)
                 }
               >
-                <option value="en">English</option>
-                <option value="ar">Arabic (عربي)</option>
+                <option value="en">{t('english')}</option>
+                <option value="ar">{t('arabicOption')}</option>
               </select>
               {workspaceContext && (
                 <span className="form-hint">
-                  Workspace default:{' '}
-                  {defaultOutputLanguage === 'ar' ? 'Arabic' : 'English'}
+                  {t('workspaceDefault')}{' '}
+                  {defaultOutputLanguage === 'ar' ? t('arabic') : t('english')}
                 </span>
               )}
             </div>
 
             <div className="divider" />
 
-            <p className="text-sm text-muted mb-3">Optional Filters</p>
+            <p className="text-sm text-muted mb-3">{t('optionalFilters')}</p>
 
             <div className="form-group">
               <label htmlFor="filterJurisdiction" className="form-label">
-                Jurisdiction
+                {t('jurisdiction')}
               </label>
               <select
                 id="filterJurisdiction"
@@ -180,17 +188,17 @@ export default function ResearchPage() {
                 value={jurisdiction}
                 onChange={e => setJurisdiction(e.target.value)}
               >
-                <option value="">Any</option>
-                <option value="UAE">UAE</option>
-                <option value="DIFC">DIFC</option>
-                <option value="ADGM">ADGM</option>
-                <option value="KSA">KSA</option>
+                <option value="">{t('any')}</option>
+                <option value="UAE">{t('uae')}</option>
+                <option value="DIFC">{t('difc')}</option>
+                <option value="ADGM">{t('adgm')}</option>
+                <option value="KSA">{t('ksa')}</option>
               </select>
             </div>
 
             <div className="form-group">
               <label htmlFor="filterDocType" className="form-label">
-                Document Type
+                {t('documentType')}
               </label>
               <select
                 id="filterDocType"
@@ -198,17 +206,17 @@ export default function ResearchPage() {
                 value={documentType}
                 onChange={e => setDocumentType(e.target.value)}
               >
-                <option value="">Any</option>
-                <option value="contract">Contract</option>
-                <option value="policy">Policy</option>
-                <option value="memo">Memo</option>
-                <option value="regulatory">Regulatory</option>
+                <option value="">{t('any')}</option>
+                <option value="contract">{t('docTypeContract')}</option>
+                <option value="policy">{t('docTypePolicy')}</option>
+                <option value="memo">{t('docTypeMemo')}</option>
+                <option value="regulatory">{t('docTypeRegulatory')}</option>
               </select>
             </div>
 
             <div className="form-group">
               <label htmlFor="limit" className="form-label">
-                Evidence Limit
+                {t('evidenceLimit')}
               </label>
               <input
                 id="limit"
@@ -238,10 +246,10 @@ export default function ResearchPage() {
               {loading ? (
                 <>
                   <span className="spinner spinner-sm" />
-                  Researching...
+                  {t('researching')}
                 </>
               ) : (
-                'Submit Query'
+                t('submitQuery')
               )}
             </button>
           </form>
@@ -272,7 +280,9 @@ export default function ResearchPage() {
             <div>
               {/* Status Header */}
               <div className="workflow-results-header">
-                <h3 className="workflow-results-title">Research Results</h3>
+                <h3 className="workflow-results-title">
+                  {t('researchResults')}
+                </h3>
                 <WorkflowStatusBadge status={result.meta.status} />
               </div>
 
@@ -285,16 +295,16 @@ export default function ResearchPage() {
                     style={{ marginBottom: 'var(--space-5)' }}
                   >
                     <div>
-                      <strong>Limited source coverage</strong>
+                      <strong>{t('limitedSourceCoverage')}</strong>
                       <p
                         style={{
                           margin: 'var(--space-1) 0 0',
                           fontSize: 'var(--text-sm)',
                         }}
                       >
-                        {result.evidence.length} evidence chunk
-                        {result.evidence.length !== 1 ? 's' : ''} found. Upload
-                        additional documents for more comprehensive results.
+                        {t('limitedSourceCoverageBody', {
+                          count: result.evidence.length,
+                        })}
                       </p>
                     </div>
                   </div>
@@ -314,13 +324,13 @@ export default function ResearchPage() {
                     }}
                   >
                     <span className="badge badge-muted">
-                      Model: {result.meta.model}
+                      {t('model')}: {result.meta.model}
                     </span>
                     <span className="badge badge-muted">
-                      Chunks: {result.meta.chunk_count}
+                      {t('chunks')}: {result.meta.chunk_count}
                     </span>
                     <span className="badge badge-muted">
-                      Citations: {result.meta.citation_count_used}
+                      {t('citations')}: {result.meta.citation_count_used}
                     </span>
                   </div>
                 </div>
@@ -347,15 +357,20 @@ export default function ResearchPage() {
                           </p>
                           <div className="flex items-center justify-between gap-2">
                             <span className="workflow-citation-chunk">
-                              Chars {citation.char_start}–{citation.char_end}
+                              {tEvidence('charsRange', {
+                                start: citation.char_start,
+                                end: citation.char_end,
+                              })}
                               {citation.page_start &&
-                                ` · Page ${citation.page_start}`}
+                                ` · ${tEvidence('pageMeta', {
+                                  page: citation.page_start,
+                                })}`}
                             </span>
                             <Link
                               href={`/documents/${citation.document_id}/versions/${citation.version_id}/viewer?chunkId=${citation.chunk_id}`}
                               className="view-in-doc-link"
                             >
-                              View
+                              {t('view')}
                             </Link>
                           </div>
                         </div>
@@ -375,7 +390,7 @@ export default function ResearchPage() {
                 {result.evidence.length > 0 && (
                   <div className="workflow-evidence">
                     <h4 className="workflow-evidence-title">
-                      Evidence ({result.evidence.length})
+                      {t('evidenceHeading', { count: result.evidence.length })}
                     </h4>
                     <GroupedEvidenceList
                       evidence={result.evidence.map(toEvidenceItemFromChunk)}
@@ -404,10 +419,9 @@ export default function ResearchPage() {
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
               </div>
-              <p className="workflow-empty-title">Enter a Research Query</p>
+              <p className="workflow-empty-title">{t('enterResearchQuery')}</p>
               <p className="workflow-empty-desc">
-                Ask a legal question to search your document vault and receive a
-                cited answer.
+                {t('enterResearchQueryDesc')}
               </p>
             </div>
           )}

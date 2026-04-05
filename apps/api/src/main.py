@@ -17,12 +17,15 @@ from src.routers import (
     exports_router,
     global_legal_import_router,
     global_legal_router,
+    news_router,
+    office_router,
     operator_router,
     organizations_router,
     global_legal_search_router,
     global_legal_viewer_router,
     policy_resolve_router,
     policy_router,
+    scraping_router,
     search_admin_router,
     search_router,
     soul_router,
@@ -32,6 +35,7 @@ from src.routers import (
     workflows_router,
     workspace_policy_router,
     workspaces_router,
+    wopi_router,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,7 +78,22 @@ async def lifespan(app: FastAPI):
                 exc_info=True,
             )
 
-    # Start Amin background scheduler (dream cycles)
+    # Scraping sources bootstrap
+    try:
+        from src.database import async_session_maker as _asm
+        from src.services.scraping_bootstrap import bootstrap_scraping_sources
+
+        async with _asm() as _sdb:
+            scraping_result = await bootstrap_scraping_sources(_sdb)
+            logger.info(
+                "Scraping sources bootstrap: %s",
+                scraping_result.get("action", "unknown"),
+                extra=scraping_result,
+            )
+    except Exception as e:
+        logger.error("Scraping sources bootstrap failed: %s", e, exc_info=True)
+
+    # Start Amin background scheduler (dream cycles + scraping)
     from src.services.agent.scheduler import AminScheduler
 
     amin_scheduler = AminScheduler()
@@ -129,6 +148,10 @@ app.include_router(conversations_router)
 app.include_router(twins_router)
 app.include_router(soul_router)
 app.include_router(organizations_router)
+app.include_router(scraping_router)
+app.include_router(news_router)
+app.include_router(office_router)
+app.include_router(wopi_router)
 
 # WebSocket route for streaming Amin responses
 app.websocket("/ws/conversations/{conversation_id}")(conversation_ws)

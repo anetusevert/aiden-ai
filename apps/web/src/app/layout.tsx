@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { IBM_Plex_Sans, Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/AuthContext';
+import { HtmlDirProvider } from '@/components/HtmlDirProvider';
 
 // Premium typography: IBM Plex Sans for headings, Inter for body
 const ibmPlexSans = IBM_Plex_Sans({
@@ -22,6 +23,9 @@ export const metadata: Metadata = {
   title: 'HeyAmin — Legal intelligence',
   description:
     'HeyAmin — grounded legal workflows, workspace controls, and evidence-backed outputs.',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
@@ -32,7 +36,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${ibmPlexSans.variable} ${inter.variable}`}>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <HtmlDirProvider />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

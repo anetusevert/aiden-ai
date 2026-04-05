@@ -4,9 +4,11 @@ import {
   useState,
   useCallback,
   useRef,
+  useEffect,
   type KeyboardEvent,
   type ChangeEvent,
 } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface AminInputProps {
   onSend: (content: string) => void;
@@ -19,6 +21,7 @@ export function AminInput({
   disabled = false,
   isStreaming = false,
 }: AminInputProps) {
+  const t = useTranslations('amin');
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -35,6 +38,8 @@ export function AminInput({
   const handleSend = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed || isDisabled) return;
+    // Reset sleep timer before sending
+    window.dispatchEvent(new CustomEvent('amin-user-message'));
     onSend(trimmed);
     setValue('');
     if (textareaRef.current) {
@@ -60,6 +65,21 @@ export function AminInput({
     [autoResize]
   );
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ text?: string }>;
+      const nextValue = customEvent.detail?.text ?? '';
+      setValue(nextValue);
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        autoResize();
+      });
+    };
+
+    window.addEventListener('amin-prefill', handler as EventListener);
+    return () => window.removeEventListener('amin-prefill', handler as EventListener);
+  }, [autoResize]);
+
   return (
     <div className="amin-input-area">
       <div className="amin-input-container">
@@ -69,7 +89,7 @@ export function AminInput({
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Ask Amin anything..."
+          placeholder={t('placeholderInput')}
           rows={1}
           disabled={isDisabled}
         />
@@ -77,7 +97,7 @@ export function AminInput({
           className="amin-input-send"
           onClick={handleSend}
           disabled={!canSend}
-          aria-label="Send message"
+          aria-label={t('sendMessage')}
         >
           <svg
             width="16"

@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, MemberWithUser, type Organization } from '@/lib/apiClient';
 import { useAuth } from '@/lib/AuthContext';
+import { useNavigation } from '@/components/NavigationLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 export default function MembersPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { navigateTo } = useNavigation();
 
   const [members, setMembers] = useState<MemberWithUser[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -670,7 +672,7 @@ export default function MembersPage() {
                                 fontSize: '0.75rem',
                               }}
                               onClick={() =>
-                                router.push(`/members/${member.user_id}`)
+                                navigateTo(`/members/${member.user_id}`)
                               }
                             >
                               Soul

@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { getApiBaseUrl } from '@/lib/api';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
+import { useTranslations } from 'next-intl';
+import { WorkflowLaunchBanner } from '@/components/workflows/WorkflowLaunchBanner';
 
 interface ConversationRow {
   id: string;
@@ -15,6 +17,7 @@ interface ConversationRow {
 }
 
 export default function ConversationsPage() {
+  const t = useTranslations('common');
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,11 +35,11 @@ export default function ConversationsPage() {
       const data = await res.json();
       setConversations(data.conversations ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
+      setError(err instanceof Error ? err.message : t('failedLoad'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadConversations();
@@ -89,6 +92,8 @@ export default function ConversationsPage() {
 
   return (
     <motion.div className="page-container" {...fadeUp}>
+      <WorkflowLaunchBanner currentRoute="/conversations" />
+
       <div className="page-header">
         <div>
           <h1 className="page-title">Conversations</h1>
@@ -122,7 +127,7 @@ export default function ConversationsPage() {
               color: 'var(--foreground-muted)',
             }}
           >
-            Loading conversations…
+            {t('loadingConversations')}
           </p>
         </div>
       )}
@@ -131,7 +136,7 @@ export default function ConversationsPage() {
         <div className="alert alert-error">
           <p>{error}</p>
           <button className="btn btn-sm" onClick={loadConversations}>
-            Retry
+            {t('retry')}
           </button>
         </div>
       )}
@@ -174,9 +179,9 @@ export default function ConversationsPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Date</th>
-                <th>Status</th>
+                <th>{t('tableTitle')}</th>
+                <th>{t('tableDate')}</th>
+                <th>{t('status')}</th>
                 <th style={{ width: 80 }} />
               </tr>
             </thead>
@@ -219,14 +224,18 @@ export default function ConversationsPage() {
                     <span
                       className={`badge badge-${c.status === 'active' ? 'success' : 'default'}`}
                     >
-                      {c.status}
+                      {c.status === 'active'
+                        ? t('conversationStatusActive')
+                        : c.status === 'archived'
+                          ? t('conversationStatusArchived')
+                          : c.status}
                     </span>
                   </td>
                   <td>
                     <button
                       className="btn btn-sm btn-ghost"
                       onClick={() => handleDelete(c.id)}
-                      aria-label="Archive conversation"
+                      aria-label={t('archiveConversation')}
                     >
                       <svg
                         width="14"

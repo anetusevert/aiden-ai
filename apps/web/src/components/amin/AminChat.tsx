@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
+import { useAuth } from '@/lib/AuthContext';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { AminAvatarV2 } from './AminAvatarV2';
-import type { AvatarState } from './AminAvatarV2';
+import { AminAvatar, type AminAvatarState } from './AminAvatar';
 import { AminToolStatus } from './AminToolStatus';
 import { messageEnter, staggerContainer, staggerItem } from '@/lib/motion';
 import type {
@@ -26,12 +27,6 @@ interface AminChatProps {
   onConfirmTool?: (toolName: string, approved: boolean) => void;
 }
 
-const SUGGESTIONS = [
-  'Review my latest contract',
-  'Research UAE labor law updates',
-  'Draft an NDA clause',
-];
-
 export function AminChat({
   messages,
   streamingContent,
@@ -42,6 +37,13 @@ export function AminChat({
   onSuggestion,
   onConfirmTool,
 }: AminChatProps) {
+  const t = useTranslations('amin');
+  const { appLanguage } = useAuth();
+  const suggestions = [
+    t('suggestion1'),
+    t('suggestion2'),
+    t('suggestion3'),
+  ] as const;
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,24 +59,22 @@ export function AminChat({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
         >
-          <AminAvatarV2
-            size="full"
-            state={aminStatus as AvatarState}
-            showRing
+          <AminAvatar
+            size={56}
+            state={aminStatus as AminAvatarState}
+            showWaveform
           />
           <p className="amin-empty-greeting">
-            {
-              '\u0645\u0631\u062d\u0628\u0627\u064b \u064a\u0627 \u0645\u0633\u062a\u0634\u0627\u0631'
-            }
+            {appLanguage === 'ar' ? t('greetingAr') : t('greetingSubtitleEn')}
           </p>
-          <p className="amin-empty-subtitle">How can I help you today?</p>
+          <p className="amin-empty-subtitle">{t('greetingSubtitle')}</p>
           <motion.div
             className="amin-suggestions"
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
           >
-            {SUGGESTIONS.map(s => (
+            {suggestions.map(s => (
               <motion.button
                 key={s}
                 className="amin-suggestion-btn"
@@ -104,7 +104,7 @@ export function AminChat({
         >
           {msg.role !== 'user' && (
             <div className="amin-message-avatar">
-              <AminAvatarV2 size="micro" state="idle" showRing={false} />
+              <AminAvatar size={24} state="idle" showWaveform={false} />
             </div>
           )}
           <div
@@ -136,10 +136,10 @@ export function AminChat({
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="amin-message-avatar">
-            <AminAvatarV2
-              size="micro"
-              state={aminStatus as AvatarState}
-              showRing={false}
+            <AminAvatar
+              size={24}
+              state={aminStatus as AminAvatarState}
+              showWaveform={false}
             />
           </div>
           <div className="amin-message amin-message-assistant">

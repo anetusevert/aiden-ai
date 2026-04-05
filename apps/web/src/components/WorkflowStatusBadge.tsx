@@ -1,55 +1,18 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { WorkflowResultStatus } from '@/lib/apiClient';
 
-/**
- * Status badge configuration for each workflow result status.
- */
-const STATUS_CONFIG: Record<
+const STATUS_VARIANT: Record<
   WorkflowResultStatus,
-  {
-    label: string;
-    variant: 'success' | 'warning' | 'error' | 'info';
-    icon: string;
-    description: string;
-  }
+  { variant: 'success' | 'warning' | 'error' | 'info'; icon: string }
 > = {
-  success: {
-    label: 'Verified',
-    variant: 'success',
-    icon: '✓',
-    description: 'All citations validated',
-  },
-  insufficient_sources: {
-    label: 'Limited Sources',
-    variant: 'warning',
-    icon: '!',
-    description: 'Insufficient evidence for complete analysis',
-  },
-  policy_denied: {
-    label: 'Policy Blocked',
-    variant: 'error',
-    icon: '✕',
-    description: 'Blocked by workspace policy',
-  },
-  citation_violation: {
-    label: 'Reduced Output',
-    variant: 'warning',
-    icon: '!',
-    description: 'Some content removed due to citation requirements',
-  },
-  validation_failed: {
-    label: 'Validation Failed',
-    variant: 'error',
-    icon: '✕',
-    description: 'Failed to validate response',
-  },
-  generation_failed: {
-    label: 'Generation Failed',
-    variant: 'error',
-    icon: '✕',
-    description: 'Failed to generate response',
-  },
+  success: { variant: 'success', icon: '✓' },
+  insufficient_sources: { variant: 'warning', icon: '!' },
+  policy_denied: { variant: 'error', icon: '✕' },
+  citation_violation: { variant: 'warning', icon: '!' },
+  validation_failed: { variant: 'error', icon: '✕' },
+  generation_failed: { variant: 'error', icon: '✕' },
 };
 
 interface WorkflowStatusBadgeProps {
@@ -60,21 +23,37 @@ interface WorkflowStatusBadgeProps {
 /**
  * WorkflowStatusBadge - Display a trust status badge for workflow results.
  */
+const STATUS_ORDER: WorkflowResultStatus[] = [
+  'success',
+  'insufficient_sources',
+  'policy_denied',
+  'citation_violation',
+  'validation_failed',
+  'generation_failed',
+];
+
 export function WorkflowStatusBadge({
   status,
   showDescription = false,
 }: WorkflowStatusBadgeProps) {
-  const config = STATUS_CONFIG[status] || STATUS_CONFIG.success;
+  const t = useTranslations('workflowStatus');
+  const meta = STATUS_VARIANT[status] || STATUS_VARIANT.success;
+  const badgeClass = `workflow-status-badge workflow-status-${meta.variant}`;
 
-  const badgeClass = `workflow-status-badge workflow-status-${config.variant}`;
+  const labelMap = Object.fromEntries(
+    STATUS_ORDER.map(s => [s, t(`${s}.label`)])
+  ) as Record<WorkflowResultStatus, string>;
+  const descMap = Object.fromEntries(
+    STATUS_ORDER.map(s => [s, t(`${s}.description`)])
+  ) as Record<WorkflowResultStatus, string>;
 
   return (
     <div className={badgeClass}>
-      <span className="workflow-status-icon">{config.icon}</span>
+      <span className="workflow-status-icon">{meta.icon}</span>
       <div className="workflow-status-content">
-        <span className="workflow-status-label">{config.label}</span>
+        <span className="workflow-status-label">{labelMap[status]}</span>
         {showDescription && (
-          <span className="workflow-status-desc">{config.description}</span>
+          <span className="workflow-status-desc">{descMap[status]}</span>
         )}
       </div>
     </div>

@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { apiClient, type SoulDetail } from '@/lib/apiClient';
-import { Sidebar } from '@/components/Sidebar';
+import { Rail1 } from '@/components/nav/Rail1';
+import { Rail2Panel } from '@/components/nav/Rail2Panel';
 import { TopBar } from '@/components/TopBar';
 import { DevModeBanner } from '@/components/DevModeBanner';
 import { StubProviderBanner } from '@/components/StubProviderBanner';
@@ -12,17 +13,50 @@ import { AminPanel } from '@/components/amin/AminPanel';
 import { AminMinimized } from '@/components/amin/AminMinimized';
 import { AminProvider, useAminContext } from '@/components/amin/AminProvider';
 import EntrySequence from '@/components/shell/EntrySequence';
+import {
+  NavigationLoaderProvider,
+  useNavigation,
+} from '@/components/NavigationLoader';
+import { NavigationProvider } from '@/context/NavigationContext';
 import { AnimatePresence } from 'framer-motion';
+import { I18nProvider } from '@/components/I18nProvider';
+import { useScreenContext } from '@/hooks/useScreenContext';
+import { useTranslations } from 'next-intl';
+
+function AppShellLoading() {
+  const t = useTranslations('common');
+  return (
+    <div className="app-loading">
+      <div className="app-loading-content">
+        <span className="spinner spinner-lg" />
+        <p>{t('loading')}</p>
+      </div>
+    </div>
+  );
+}
 
 function AppShellInner() {
   const { aminOpen } = useAminContext();
+  const { navigateTo } = useNavigation();
+  useScreenContext();
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ docId?: string }>;
+      const docId = customEvent.detail?.docId;
+      if (docId) {
+        navigateTo(`/documents/${docId}`);
+      }
+    };
+
+    window.addEventListener('document_created', handler as EventListener);
+    return () =>
+      window.removeEventListener('document_created', handler as EventListener);
+  }, [navigateTo]);
 
   return (
     <>
-      {/* Left-side panel (always in DOM, visibility controlled by aminOpen) */}
       <AnimatePresence>{aminOpen && <AminPanel />}</AnimatePresence>
-
-      {/* FAB always visible bottom-right */}
       <AminMinimized />
     </>
   );
@@ -31,13 +65,14 @@ function AppShellInner() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [soul, setSoul] = useState<SoulDetail | null>(null);
-  const [showEntry, setShowEntry] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return !sessionStorage.getItem('amin-entry-seen');
-  });
+  const [showEntry, setShowEntry] = useState(false);
+
+  useEffect(() => {
+    if (!sessionStorage.getItem('amin-entry-seen')) {
+      setShowEntry(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -45,46 +80,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Fetch soul/twin data for sidebar personalization (non-blocking)
   useEffect(() => {
     if (!isAuthenticated) return;
     apiClient
       .getMySoul()
       .then(setSoul)
-      .catch(() => {
-        // Soul not available yet — sidebar works without it
-      });
+      .catch(() => {});
   }, [isAuthenticated]);
 
-  const handleEntryComplete = () => {
+  const handleEntryComplete = useCallback(() => {
     sessionStorage.setItem('amin-entry-seen', '1');
     setShowEntry(false);
-  };
-
-  const handleCollapsedChange = useCallback((collapsed: boolean) => {
-    setSidebarCollapsed(collapsed);
-  }, []);
-
-  const handleToggleSidebar = useCallback(() => {
-    if (window.innerWidth <= 1024) {
-      setMobileOpen(prev => !prev);
-    } else {
-      setSidebarCollapsed(prev => {
-        const next = !prev;
-        localStorage.setItem('heyamin-sidebar-collapsed', String(next));
-        return next;
-      });
-    }
   }, []);
 
   if (isLoading) {
     return (
-      <div className="app-loading">
-        <div className="app-loading-content">
-          <span className="spinner spinner-lg" />
-          <p>Loading...</p>
-        </div>
-      </div>
+      <I18nProvider>
+        <AppShellLoading />
+      </I18nProvider>
     );
   }
 
@@ -95,30 +108,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <EntrySequence visible={showEntry} onComplete={handleEntryComplete} />
-      <AminProvider>
-        <div
-          className={`app-shell ${sidebarCollapsed ? 'app-shell-collapsed' : ''}`}
-          style={showEntry ? { opacity: 0, pointerEvents: 'none' } : undefined}
-        >
-          <DevModeBanner />
-          <StubProviderBanner />
-          <Sidebar
-            collapsed={sidebarCollapsed}
-            onCollapsedChange={handleCollapsedChange}
-            mobileOpen={mobileOpen}
-            onMobileClose={() => setMobileOpen(false)}
-            soul={soul}
-          />
-          <main className="app-main">
-            <TopBar
-              onToggleSidebar={handleToggleSidebar}
-              sidebarCollapsed={sidebarCollapsed}
-            />
-            <div className="app-content">{children}</div>
-          </main>
-          <AppShellInner />
-        </div>
-      </AminProvider>
+      <I18nProvider>
+        <NavigationLoaderProvider>
+          <NavigationProvider>
+            <AminProvider>
+              <div
+                className="ha-shell app-shell"
+                style={
+                  showEntry ? { opacity: 0, pointerEvents: 'none' } : undefined
+                }
+              >
+                <DevModeBanner />
+                <StubProviderBanner />
+                <Rail1 />
+                <Rail2Panel soul={soul} />
+                <main className="ha-main">
+                  <TopBar />
+                  <div className="app-content">{children}</div>
+                </main>
+                <AppShellInner />
+              </div>
+            </AminProvider>
+          </NavigationProvider>
+        </NavigationLoaderProvider>
+      </I18nProvider>
     </>
   );
 }

@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { UserAvatar } from '@/components/UserAvatar';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
+import { useTranslations } from 'next-intl';
 
 function getRoleBadgeClass(role: string) {
   switch (role) {
@@ -21,6 +22,13 @@ function getRoleBadgeClass(role: string) {
 export default function AccountPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout, logoutAll } = useAuth();
+  const t = useTranslations('common');
+
+  const roleLabel = (role: string) => {
+    if (role === 'ADMIN') return t('admin');
+    if (role === 'EDITOR') return t('editor');
+    return t('viewer');
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -39,8 +47,8 @@ export default function AccountPage() {
   return (
     <motion.div {...fadeUp}>
       <div className="page-header">
-        <h1 className="page-title">Account</h1>
-        <p className="page-subtitle">Manage your profile and preferences</p>
+        <h1 className="page-title">{t('accountTitle')}</h1>
+        <p className="page-subtitle">{t('accountSubtitle')}</p>
       </div>
 
       <div style={{ maxWidth: '640px' }}>
@@ -72,7 +80,7 @@ export default function AccountPage() {
                   background: 'var(--bg-elevated)',
                   border: '1px solid var(--glass-border)',
                 }}
-                title="Upload photo (coming soon)"
+                title={t('uploadPhotoSoon')}
               >
                 <svg
                   width="14"
@@ -107,7 +115,9 @@ export default function AccountPage() {
               >
                 {user.email}
               </div>
-              <span className={getRoleBadgeClass(user.role)}>{user.role}</span>
+              <span className={getRoleBadgeClass(user.role)}>
+                {roleLabel(user.role)}
+              </span>
             </div>
           </div>
         </div>
@@ -148,7 +158,7 @@ export default function AccountPage() {
         {/* Permissions */}
         <div className="card mb-4">
           <div className="card-header">
-            <h3 className="card-title">Permissions</h3>
+            <h3 className="card-title">{t('permissions')}</h3>
           </div>
 
           <div
@@ -167,9 +177,9 @@ export default function AccountPage() {
                   marginBottom: 'var(--space-1)',
                 }}
               >
-                View
+                {t('view')}
               </div>
-              <span className="badge badge-success">Yes</span>
+              <span className="badge badge-success">{t('yes')}</span>
             </div>
             <div>
               <div
@@ -179,12 +189,14 @@ export default function AccountPage() {
                   marginBottom: 'var(--space-1)',
                 }}
               >
-                Edit
+                {t('edit')}
               </div>
               <span
                 className={`badge ${user.role === 'ADMIN' || user.role === 'EDITOR' ? 'badge-success' : 'badge-error'}`}
               >
-                {user.role === 'ADMIN' || user.role === 'EDITOR' ? 'Yes' : 'No'}
+                {user.role === 'ADMIN' || user.role === 'EDITOR'
+                  ? t('yes')
+                  : t('no')}
               </span>
             </div>
             <div>
@@ -195,12 +207,12 @@ export default function AccountPage() {
                   marginBottom: 'var(--space-1)',
                 }}
               >
-                Manage
+                {t('manage')}
               </div>
               <span
                 className={`badge ${user.role === 'ADMIN' ? 'badge-success' : 'badge-error'}`}
               >
-                {user.role === 'ADMIN' ? 'Yes' : 'No'}
+                {user.role === 'ADMIN' ? t('yes') : t('no')}
               </span>
             </div>
           </div>
@@ -209,14 +221,12 @@ export default function AccountPage() {
         {/* Security */}
         <div className="card mb-4">
           <div className="card-header">
-            <h3 className="card-title">Security</h3>
+            <h3 className="card-title">{t('security')}</h3>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Authentication</label>
-            <span className="badge badge-success">
-              Secure Cookie (httpOnly)
-            </span>
+            <label className="form-label">{t('authentication')}</label>
+            <span className="badge badge-success">{t('secureCookie')}</span>
           </div>
 
           <div
@@ -231,15 +241,15 @@ export default function AccountPage() {
               className="btn btn-outline"
               style={{ flex: 1 }}
             >
-              Sign Out
+              {t('signOut')}
             </button>
             <button
               onClick={logoutAll}
               className="btn btn-outline"
               style={{ flex: 1 }}
-              title="Sign out from all devices"
+              title={t('signOutAllDevicesTitle')}
             >
-              Sign Out Everywhere
+              {t('signOutEverywhere')}
             </button>
           </div>
         </div>

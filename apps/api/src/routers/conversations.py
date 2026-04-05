@@ -18,6 +18,8 @@ from src.database import get_db
 from src.dependencies import RequestContext, get_workspace_context
 from src.models.conversation import Conversation, Message
 from src.services.agent.amin import AminAgent
+from src.services.agent.realtime import register_connection, unregister_connection
+from src.services.agent.screen_context import store_screen_context
 
 logger = logging.getLogger(__name__)
 
@@ -313,6 +315,7 @@ async def conversation_ws(
         "type": "connected",
         "conversation_id": conversation_id,
     })
+    await register_connection(user_id, websocket)
 
     # Check for heartbeat on connect
     try:
@@ -345,6 +348,18 @@ async def conversation_ws(
                 })
                 continue
 
+            if msg_type == "screen_context":
+                await store_screen_context(
+                    user_id,
+                    {
+                        "route": data.get("route"),
+                        "page_title": data.get("page_title"),
+                        "document": data.get("document"),
+                        "ui_state": data.get("ui_state") or {},
+                    },
+                )
+                continue
+
             if msg_type != "message" or not data.get("content"):
                 await websocket.send_json({"type": "error", "content": "Expected {type: 'message', content: '...'}"})
                 continue
@@ -369,3 +384,5 @@ async def conversation_ws(
             await websocket.send_json({"type": "error", "content": str(e)})
         except Exception:
             pass
+    finally:
+        await unregister_connection(user_id, websocket)

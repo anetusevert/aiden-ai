@@ -11,6 +11,10 @@ import {
 import { useAuth } from '@/lib/AuthContext';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
+import { officeApi } from '@/lib/officeApi';
+import { OfficeDocDetail } from './OfficeDocDetail';
+
+type DocKind = 'loading' | 'office' | 'legal' | 'not-found';
 
 export default function DocumentDetailPage() {
   const params = useParams();
@@ -18,18 +22,19 @@ export default function DocumentDetailPage() {
   const documentId = params.id as string;
 
   const { isAuthenticated, isLoading: authLoading, canEdit, user } = useAuth();
+
+  const [docKind, setDocKind] = useState<DocKind>('loading');
+
   const [document, setDocument] =
     useState<DocumentWithVersionsAndIndexing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Version upload state
   const [showVersionForm, setShowVersionForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
-  // Reindex state
   const [reindexingVersions, setReindexingVersions] = useState<Set<string>>(
     new Set()
   );
@@ -40,6 +45,24 @@ export default function DocumentDetailPage() {
   } | null>(null);
 
   const isAdmin = user?.role === 'ADMIN';
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+
+    let cancelled = false;
+
+    async function resolve() {
+      try {
+        await officeApi.getDocument(documentId);
+        if (!cancelled) setDocKind('office');
+      } catch {
+        if (!cancelled) setDocKind('legal');
+      }
+    }
+
+    void resolve();
+    return () => { cancelled = true; };
+  }, [authLoading, isAuthenticated, documentId]);
 
   const fetchDocument = useCallback(async () => {
     try {
@@ -59,10 +82,10 @@ export default function DocumentDetailPage() {
       router.push('/login');
       return;
     }
-    if (!authLoading && isAuthenticated) {
+    if (!authLoading && isAuthenticated && docKind === 'legal') {
       fetchDocument();
     }
-  }, [authLoading, isAuthenticated, router, fetchDocument]);
+  }, [authLoading, isAuthenticated, router, fetchDocument, docKind]);
 
   const handleUploadVersion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +142,6 @@ export default function DocumentDetailPage() {
         success: response.success,
         message: response.message || 'Reindexing started successfully',
       });
-      // Refresh document to get updated indexing status
       setTimeout(() => {
         fetchDocument();
       }, 2000);
@@ -179,7 +201,15 @@ export default function DocumentDetailPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  if (authLoading || loading) {
+  if (authLoading || docKind === 'loading') {
+    return <div className="loading">Loading...</div>;
+  }
+
+  if (docKind === 'office') {
+    return <OfficeDocDetail docId={documentId} />;
+  }
+
+  if (loading) {
     return <div className="loading">Loading...</div>;
   }
 
@@ -267,7 +297,6 @@ export default function DocumentDetailPage() {
         </div>
       )}
 
-      {/* Document Metadata */}
       <div className="card mb-4">
         <div className="card-header">
           <h3 className="card-title">Metadata</h3>
@@ -303,7 +332,6 @@ export default function DocumentDetailPage() {
         </div>
       </div>
 
-      {/* Version History */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div
           className="card-header"

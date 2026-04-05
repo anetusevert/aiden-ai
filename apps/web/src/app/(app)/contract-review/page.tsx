@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -23,37 +23,16 @@ import {
   GlobalLawExplanationBanner,
   renderCitationsWithDifferentiation,
   countEvidenceBySource,
-  getPolicyTooltipText,
+  usePolicyTooltipText,
 } from '@/components/EvidenceCard';
 import { SourceTypeBadge } from '@/components/ui/Badge';
 import type { EvidenceItem } from '@/lib/evidence';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
+import { useTranslations } from 'next-intl';
+import { WorkflowLaunchBanner } from '@/components/workflows/WorkflowLaunchBanner';
 
 type OutputLanguage = 'en' | 'ar';
-
-const FOCUS_AREAS: { value: ContractFocusArea; label: string }[] = [
-  { value: 'liability', label: 'Liability' },
-  { value: 'termination', label: 'Termination' },
-  { value: 'governing_law', label: 'Governing Law' },
-  { value: 'payment', label: 'Payment Terms' },
-  { value: 'ip', label: 'Intellectual Property' },
-  { value: 'confidentiality', label: 'Confidentiality' },
-];
-
-const REVIEW_MODES: {
-  value: ContractReviewMode;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: 'quick',
-    label: 'Quick',
-    description: 'Fast overview, key issues only',
-  },
-  { value: 'standard', label: 'Standard', description: 'Balanced analysis' },
-  { value: 'deep', label: 'Deep', description: 'Comprehensive review' },
-];
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: '#dc2626',
@@ -81,6 +60,52 @@ export default function ContractReviewPage() {
     defaultOutputLanguage,
     workspaceContext,
   } = useAuth();
+
+  const t = useTranslations('common');
+  const tEvidence = useTranslations('evidence');
+  const policyTooltip = usePolicyTooltipText();
+
+  const FOCUS_AREAS = useMemo(
+    () =>
+      [
+        { value: 'liability' as const, label: t('focusLiability') },
+        { value: 'termination' as const, label: t('focusTermination') },
+        { value: 'governing_law' as const, label: t('focusGoverningLaw') },
+        { value: 'payment' as const, label: t('focusPayment') },
+        { value: 'ip' as const, label: t('focusIp') },
+        { value: 'confidentiality' as const, label: t('focusConfidentiality') },
+      ] as const satisfies ReadonlyArray<{
+        value: ContractFocusArea;
+        label: string;
+      }>,
+    [t]
+  );
+
+  const REVIEW_MODES = useMemo(
+    () =>
+      [
+        {
+          value: 'quick' as const,
+          label: t('quick'),
+          description: t('quickDesc'),
+        },
+        {
+          value: 'standard' as const,
+          label: t('standard'),
+          description: t('standardDesc'),
+        },
+        {
+          value: 'deep' as const,
+          label: t('deep'),
+          description: t('deepDesc'),
+        },
+      ] as const satisfies ReadonlyArray<{
+        value: ContractReviewMode;
+        label: string;
+        description: string;
+      }>,
+    [t]
+  );
 
   // URL params
   const documentId = searchParams.get('documentId') || '';
@@ -279,7 +304,9 @@ export default function ContractReviewPage() {
 
   // Render text with styled citations, differentiating [1] from [GL-1]
   const renderWithCitations = (text: string) => {
-    return renderCitationsWithDifferentiation(text);
+    return renderCitationsWithDifferentiation(text, {
+      globalCitationTitle: tEvidence('globalLawRefTitle'),
+    });
   };
 
   // Convert EvidenceChunkRef to minimal EvidenceItem for counting
@@ -474,7 +501,10 @@ export default function ContractReviewPage() {
                         style={{ marginTop: '0.5rem' }}
                       >
                         <div className="text-sm text-muted">
-                          Chars {ev.char_start}-{ev.char_end}
+                          {tEvidence('charsRange', {
+                            start: ev.char_start,
+                            end: ev.char_end,
+                          })}
                         </div>
 
                         {/* View action based on source type */}
@@ -485,18 +515,18 @@ export default function ContractReviewPage() {
                               className="view-in-doc-link external-source-link"
                               target="_blank"
                               rel="noopener noreferrer"
-                              title="Opens official government source in a new tab"
+                              title={tEvidence('opensOfficial')}
                             >
-                              View Source ↗
+                              {tEvidence('viewSource')}
                             </a>
                           ) : (
                             <span
                               className="text-xs text-muted italic"
-                              title={getPolicyTooltipText(
-                                evExt.jurisdiction as string
+                              title={policyTooltip(
+                                evExt.jurisdiction as string | undefined
                               )}
                             >
-                              Global law reference
+                              {tEvidence('globalLawRefTitle')}
                             </span>
                           )
                         ) : (
@@ -505,7 +535,7 @@ export default function ContractReviewPage() {
                               href={`/documents/${documentId}/versions/${versionId}/viewer?chunkId=${ev.chunk_id}`}
                               className="view-in-doc-link"
                             >
-                              View in Document
+                              {tEvidence('viewInDocument')}
                             </Link>
                           )
                         )}
@@ -522,7 +552,7 @@ export default function ContractReviewPage() {
   };
 
   if (authLoading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading">{t('loading')}</div>;
   }
 
   // Check for missing params
@@ -530,15 +560,15 @@ export default function ContractReviewPage() {
     return (
       <div>
         <div className="page-header">
-          <h1 className="page-title">Contract Review</h1>
-          <p className="page-subtitle">Review contracts for risks and issues</p>
+          <h1 className="page-title">{t('contractReviewTitle')}</h1>
+          <p className="page-subtitle">{t('contractReviewSubtitle')}</p>
         </div>
         <div className="alert alert-error">
-          Missing required parameters. Please select a document version from the{' '}
+          {t('missingParamsSelect')}{' '}
           <Link href="/documents" style={{ fontWeight: 500 }}>
-            Documents
+            {t('documentsPage')}
           </Link>{' '}
-          page.
+          {t('pageLink')}
         </div>
       </div>
     );
@@ -546,18 +576,22 @@ export default function ContractReviewPage() {
 
   return (
     <motion.div {...fadeUp}>
+      <WorkflowLaunchBanner currentRoute="/contract-review" />
+
       <div className="mb-4">
         <Link
           href={`/documents/${documentId}`}
           style={{ color: 'var(--muted)', fontSize: '0.875rem' }}
         >
-          &larr; Back to Document
+          {t('backToDocument')}
         </Link>
       </div>
 
       <div className="page-header">
-        <h1 className="page-title">Contract Review</h1>
-        <p className="page-subtitle">Reviewing: {title}</p>
+        <h1 className="page-title">{t('contractReviewTitle')}</h1>
+        <p className="page-subtitle">
+          {t('reviewing')} {title}
+        </p>
       </div>
 
       <div
@@ -567,13 +601,13 @@ export default function ContractReviewPage() {
         {/* Controls Panel */}
         <div className="card" style={{ height: 'fit-content' }}>
           <div className="card-header">
-            <h3 className="card-title">Review Settings</h3>
+            <h3 className="card-title">{t('reviewSettings')}</h3>
           </div>
 
           {/* Playbook Selector */}
           <div className="form-group" style={{ marginBottom: '1rem' }}>
             <label htmlFor="playbook" className="form-label">
-              Playbook
+              {t('playbook')}
             </label>
             <select
               id="playbook"
@@ -581,19 +615,19 @@ export default function ContractReviewPage() {
               value={selectedPlaybookId || ''}
               onChange={e => handlePlaybookChange(e.target.value)}
             >
-              <option value="">None (manual configuration)</option>
+              <option value="">{t('noneManual')}</option>
               {(() => {
                 const grouped = getPlaybooksByRegion();
                 return (
                   <>
-                    <optgroup label="UAE">
+                    <optgroup label={t('optgroupUae')}>
                       {grouped.UAE.map(p => (
                         <option key={p.id} value={p.id}>
                           {p.name}
                         </option>
                       ))}
                     </optgroup>
-                    <optgroup label="KSA">
+                    <optgroup label={t('optgroupKsa')}>
                       {grouped.KSA.map(p => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -619,7 +653,7 @@ export default function ContractReviewPage() {
                   color: 'var(--muted)',
                 }}
               >
-                Reset to workspace defaults
+                {t('resetWorkspaceDefaults')}
               </button>
             )}
           </div>
@@ -646,7 +680,7 @@ export default function ContractReviewPage() {
                   letterSpacing: '0.05em',
                 }}
               >
-                Playbook Hint
+                {t('playbookHint')}
               </div>
               <div style={{ color: '#334155', lineHeight: 1.5 }}>
                 {promptHint}
@@ -664,12 +698,12 @@ export default function ContractReviewPage() {
               fontSize: '0.875rem',
             }}
           >
-            <div className="text-muted">Document ID</div>
+            <div className="text-muted">{t('documentId')}</div>
             <code style={{ fontSize: '0.75rem' }}>
               {documentId.slice(0, 8)}...
             </code>
             <div className="text-muted" style={{ marginTop: '0.5rem' }}>
-              Version ID
+              {t('versionId')}
             </div>
             <code style={{ fontSize: '0.75rem' }}>
               {versionId.slice(0, 8)}...
@@ -678,7 +712,7 @@ export default function ContractReviewPage() {
 
           {/* Review Mode */}
           <div className="form-group">
-            <label className="form-label">Review Mode</label>
+            <label className="form-label">{t('reviewMode')}</label>
             <div
               style={{
                 display: 'flex',
@@ -726,7 +760,7 @@ export default function ContractReviewPage() {
 
           {/* Focus Areas */}
           <div className="form-group">
-            <label className="form-label">Focus Areas</label>
+            <label className="form-label">{t('focusAreas')}</label>
             <div
               style={{
                 display: 'flex',
@@ -758,7 +792,7 @@ export default function ContractReviewPage() {
           {/* Output Language */}
           <div className="form-group">
             <label htmlFor="outputLang" className="form-label">
-              Output Language
+              {t('outputLanguage')}
             </label>
             <select
               id="outputLang"
@@ -768,16 +802,16 @@ export default function ContractReviewPage() {
                 setOutputLanguage(e.target.value as OutputLanguage)
               }
             >
-              <option value="en">English</option>
-              <option value="ar">Arabic (عربي)</option>
+              <option value="en">{t('english')}</option>
+              <option value="ar">{t('arabicOption')}</option>
             </select>
             {workspaceContext && (
               <small
                 className="text-muted text-sm"
                 style={{ marginTop: '0.25rem', display: 'block' }}
               >
-                Workspace default:{' '}
-                {defaultOutputLanguage === 'ar' ? 'Arabic' : 'English'}
+                {t('workspaceDefault')}{' '}
+                {defaultOutputLanguage === 'ar' ? t('arabic') : t('english')}
               </small>
             )}
           </div>
@@ -788,8 +822,7 @@ export default function ContractReviewPage() {
               className="alert alert-warning"
               style={{ marginBottom: '1rem' }}
             >
-              VIEWER role cannot run contract reviews. Contact your admin for
-              EDITOR access.
+              {t('viewerCannotReview')}
             </div>
           )}
 
@@ -857,8 +890,8 @@ export default function ContractReviewPage() {
                   }}
                   title={
                     !canExport
-                      ? 'Export is only available for success or insufficient_sources results'
-                      : 'Download as DOCX'
+                      ? t('exportUnavailableTitle')
+                      : t('downloadAsDocxTitle')
                   }
                 >
                   {exporting ? (
@@ -874,12 +907,12 @@ export default function ContractReviewPage() {
                           animation: 'spin 1s linear infinite',
                         }}
                       />
-                      Exporting...
+                      {t('exporting')}
                     </>
                   ) : (
                     <>
                       <span style={{ fontSize: '1rem' }}>&#x2193;</span>
-                      Download DOCX
+                      {t('downloadDocx')}
                     </>
                   )}
                 </button>
@@ -890,14 +923,14 @@ export default function ContractReviewPage() {
                   className="alert alert-error"
                   style={{ marginBottom: '1rem' }}
                 >
-                  Export failed: {exportError}
+                  {t('exportFailedPrefix')} {exportError}
                 </div>
               )}
 
               {/* Summary */}
               <div className="card mb-4">
                 <div className="card-header">
-                  <h3 className="card-title">Summary</h3>
+                  <h3 className="card-title">{t('summary')}</h3>
                 </div>
 
                 {/* Insufficient Sources Info Banner */}

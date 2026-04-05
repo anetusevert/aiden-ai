@@ -2,16 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { letterReveal, cinematicSweepIn, motionTokens } from '@/lib/motion';
-import { AminAvatarV2 } from '@/components/amin/AminAvatarV2';
-import type { AvatarState } from '@/components/amin/AminAvatarV2';
+import { cinematicSweepIn, motionTokens } from '@/lib/motion';
+import { AminAvatar, type AminAvatarState } from '@/components/amin/AminAvatar';
+import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 
 interface EntrySequenceProps {
   visible: boolean;
   onComplete: () => void;
 }
-
-const brandText = 'HEYAMIN';
 
 const capabilities = [
   {
@@ -33,7 +31,7 @@ export default function EntrySequence({
   onComplete,
 }: EntrySequenceProps) {
   const [phase, setPhase] = useState(0);
-  const [avatarState, setAvatarState] = useState<AvatarState>('sleeping');
+  const [avatarState, setAvatarState] = useState<AminAvatarState>('idle');
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
@@ -44,10 +42,9 @@ export default function EntrySequence({
     }
 
     const timers = [
-      setTimeout(() => setAvatarState('idle'), 800),
       setTimeout(() => setPhase(1), 1000),
-      setTimeout(() => setAvatarState('speaking'), 1400),
-      setTimeout(() => setAvatarState('idle'), 2000),
+      setTimeout(() => setAvatarState('speaking'), 1500),
+      setTimeout(() => setAvatarState('idle'), 3000),
       setTimeout(() => setPhase(2), 2200),
       setTimeout(() => setPhase(3), 3200),
       setTimeout(() => onCompleteRef.current(), 4200),
@@ -87,66 +84,27 @@ export default function EntrySequence({
                   }}
                 >
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.5 }}
+                    initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{
                       duration: 0.8,
-                      ease: [0.22, 1, 0.36, 1],
-                      delay: 0.1,
+                      ease: [0.0, 0.0, 0.2, 1],
                     }}
+                    style={{ marginBottom: 24 }}
                   >
-                    <AminAvatarV2 size="full" state={avatarState} showRing />
+                    <HeyAminLogo variant="full" size={180} />
                   </motion.div>
 
-                  {/* Pulse glow */}
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.7 }}
-                    animate={{
-                      opacity: [0, 0.35, 0],
-                      scale: [0.7, 1.5, 1.7],
-                    }}
-                    transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
-                    style={{
-                      position: 'absolute',
-                      width: 140,
-                      height: 140,
-                      borderRadius: '50%',
-                      background:
-                        'radial-gradient(circle, rgba(212,160,23,0.25), transparent 70%)',
-                      pointerEvents: 'none',
-                    }}
-                  />
-
-                  {/* Wordmark */}
-                  <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    style={{
-                      display: 'flex',
-                      gap: 3,
-                      marginTop: 28,
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.6,
+                      delay: 0.8,
+                      ease: [0.22, 1, 0.36, 1],
                     }}
                   >
-                    {brandText.split('').map((char, i) => (
-                      <motion.span
-                        key={`${char}-${i}`}
-                        variants={letterReveal}
-                        custom={i}
-                        style={{
-                          display: 'inline-block',
-                          fontSize: 32,
-                          fontWeight: i < 3 ? 300 : 700,
-                          letterSpacing: '3px',
-                          color:
-                            i >= 3
-                              ? 'var(--amin-accent, #d4a017)'
-                              : 'rgba(255,255,255,0.88)',
-                          fontFamily: 'var(--font-heading)',
-                        }}
-                      >
-                        {char}
-                      </motion.span>
-                    ))}
+                    <AminAvatar size={120} state={avatarState} showWaveform={false} />
                   </motion.div>
                 </motion.div>
               )}
@@ -217,7 +175,7 @@ export default function EntrySequence({
                     gap: 16,
                   }}
                 >
-                  <AminAvatarV2 size="hero" state={avatarState} showRing />
+                  <AminAvatar size={120} state={avatarState} showWaveform={false} />
                   <motion.p
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}

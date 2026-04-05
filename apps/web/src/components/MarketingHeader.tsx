@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/lib/AuthContext';
+import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 
 export function MarketingHeader() {
   const { isAuthenticated } = useAuth();
 
   return (
     <header className="ha-header">
-      <Link href="/" className="ha-logo">
-        Hey<span className="ha-logo-accent">Amin</span>
+      <Link href="/" className="ha-logo" style={{ display: 'inline-flex', alignItems: 'center' }}>
+        <HeyAminLogo variant="full" size={120} />
       </Link>
       <nav>
         {isAuthenticated ? (

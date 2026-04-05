@@ -1,4 +1,7 @@
+'use client';
+
 import { MarketingHeader } from '@/components/MarketingHeader';
+import { I18nProvider } from '@/components/I18nProvider';
 import './heyamin-marketing.css';
 
 export default function MarketingLayout({
@@ -7,9 +10,11 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="ha-mkt">
-      <MarketingHeader />
-      <main>{children}</main>
-    </div>
+    <I18nProvider>
+      <div className="ha-mkt">
+        <MarketingHeader />
+        <main>{children}</main>
+      </div>
+    </I18nProvider>
   );
 }

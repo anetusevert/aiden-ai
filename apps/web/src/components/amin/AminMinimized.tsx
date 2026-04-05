@@ -2,12 +2,12 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AminAvatarV2 } from './AminAvatarV2';
+import { AminAvatar, type AminAvatarState } from './AminAvatar';
 import { aminBreathing, voiceRingPulse } from '@/lib/motion';
 import { useAminContext } from './AminProvider';
-import { AminVoiceClient } from '@/lib/aminVoiceClient';
+import { AminVoiceClient, setVoice } from '@/lib/aminVoiceClient';
 import { WakeWordDetector } from '@/lib/wakeWordDetector';
-import type { AvatarState } from './AminAvatarV2';
+import { useAuth } from '@/lib/AuthContext';
 
 const RING_COLORS = {
   off: 'transparent',
@@ -16,12 +16,8 @@ const RING_COLORS = {
 };
 
 export function AminMinimized() {
-  const {
-    aminStatus,
-    voiceMode,
-    setVoiceMode,
-    openPanel,
-  } = useAminContext();
+  const { aminStatus, voiceMode, setVoiceMode, openPanel } = useAminContext();
+  const { aminVoice } = useAuth();
 
   const voiceClientRef = useRef<AminVoiceClient | null>(null);
   const wakeDetectorRef = useRef<WakeWordDetector | null>(null);
@@ -46,6 +42,10 @@ export function AminMinimized() {
     wakeDetectorRef.current?.stop();
     openPanel();
 
+    // Ensure the voice module reflects the user's saved preference
+    // before the WebSocket connects and sends session.update.
+    if (aminVoice) setVoice(aminVoice);
+
     if (!voiceClientRef.current) {
       voiceClientRef.current = new AminVoiceClient({
         onAutoIdle: () => enterPassive(),
@@ -60,7 +60,7 @@ export function AminMinimized() {
     } else {
       voiceClientRef.current.resumeMicCapture();
     }
-  }, [setVoiceMode, enterPassive, openPanel]);
+  }, [setVoiceMode, enterPassive, openPanel, aminVoice]);
 
   const enterOff = useCallback(() => {
     setVoiceMode('off');
@@ -83,10 +83,12 @@ export function AminMinimized() {
     };
   }, []);
 
-  const avatarState: AvatarState =
-    voiceMode === 'active' ? 'listening'
-    : voiceMode === 'passive' ? 'sleeping'
-    : (aminStatus as AvatarState);
+  const avatarState: AminAvatarState =
+    voiceMode === 'active'
+      ? 'listening'
+      : voiceMode === 'passive'
+        ? 'sleeping'
+        : (aminStatus as AminAvatarState);
 
   return (
     <div className="amin-fab-container">
@@ -101,7 +103,7 @@ export function AminMinimized() {
         whileTap={{ scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
       >
-        <AminAvatarV2 size="fab" state={avatarState} showRing />
+        <AminAvatar size={44} state={avatarState} showWaveform />
 
         {/* Voice mode indicator ring */}
         <AnimatePresence>

@@ -250,7 +250,7 @@ export default function SetupPage() {
 
       // Auto-redirect after delay
       setTimeout(() => {
-        router.push('/documents');
+        router.push('/home');
       }, 2500);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Setup failed';
@@ -343,10 +343,10 @@ export default function SetupPage() {
           </div>
 
           <button
-            onClick={() => router.push('/documents')}
+            onClick={() => router.push('/home')}
             className="btn btn-primary btn-block"
           >
-            Go to Documents
+            Go to Home
           </button>
         </div>
       </div>

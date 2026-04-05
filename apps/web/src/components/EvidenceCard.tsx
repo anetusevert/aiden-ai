@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { SourceTypeBadge } from './ui/Badge';
 import type { EvidenceItem, SourceType } from '@/lib/evidence';
 import {
@@ -31,8 +32,10 @@ export type { EvidenceItem } from '@/lib/evidence';
  * ```
  */
 export function renderCitationsWithDifferentiation(
-  text: string
+  text: string,
+  options?: { globalCitationTitle?: string }
 ): React.ReactNode[] {
+  const globalTitle = options?.globalCitationTitle ?? 'Global Law Reference';
   // Match both [1] and [GL-1] patterns
   const parts = text.split(/(\[(?:GL-)?\d+\])/g);
 
@@ -41,11 +44,7 @@ export function renderCitationsWithDifferentiation(
     const globalMatch = part.match(/^\[GL-(\d+)\]$/);
     if (globalMatch) {
       return (
-        <span
-          key={index}
-          className="citation-ref-global"
-          title="Global Law Reference"
-        >
+        <span key={index} className="citation-ref-global" title={globalTitle}>
           GL-{globalMatch[1]}
         </span>
       );
@@ -156,12 +155,15 @@ export function EvidenceCard({
   maxSnippetLength = 300,
   showPolicyTooltip = false,
 }: EvidenceCardProps) {
+  const t = useTranslations('evidence');
   const isGlobalLegal = evidence.source_type === 'global_legal';
   const isWorkspace = evidence.source_type === 'workspace_document';
 
   // Policy tooltip text for global sources
   const policyTooltipText = isGlobalLegal
-    ? getPolicyTooltipText(evidence.jurisdiction)
+    ? evidence.jurisdiction
+      ? t('policyTooltipJurisdiction', { jurisdiction: evidence.jurisdiction })
+      : t('policyTooltipDefault')
     : undefined;
 
   // Truncate snippet if needed
@@ -262,10 +264,11 @@ export function EvidenceCard({
 
       <div className="flex items-center justify-between mt-2">
         <span className="text-xs text-muted">
-          Chunk #{evidence.chunk_index}
-          {evidence.page_start && ` · Page ${evidence.page_start}`}
+          {t('chunkMeta', { index: evidence.chunk_index })}
+          {evidence.page_start &&
+            ` · ${t('pageMeta', { page: evidence.page_start })}`}
           {isGlobalLegal && evidence.effective_at && (
-            <> · Effective: {evidence.effective_at}</>
+            <> · {t('effectiveMeta', { date: evidence.effective_at })}</>
           )}
         </span>
 
@@ -276,7 +279,7 @@ export function EvidenceCard({
       {isGlobalLegal && (
         <div className="global-law-info-row">
           <span className="text-xs text-muted italic" title={sourceDescription}>
-            Global law reference (read-only)
+            {t('globalLawReadOnlyInline')}
           </span>
           {showPolicyTooltip && policyTooltipText && (
             <span className="policy-tooltip-trigger" title={policyTooltipText}>
@@ -292,7 +295,7 @@ export function EvidenceCard({
                 <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
-              <span className="policy-tooltip-text">Why included?</span>
+              <span className="policy-tooltip-text">{t('whyIncluded')}</span>
             </span>
           )}
         </div>
@@ -377,38 +380,45 @@ export function EvidenceMetaPanel({
   evidenceScope,
   className = '',
 }: EvidenceMetaPanelProps) {
+  const t = useTranslations('evidence');
   const totalCount = workspaceCount + globalCount;
 
   if (totalCount === 0) return null;
 
   const scopeLabel =
     evidenceScope === 'workspace'
-      ? 'Workspace Only'
+      ? t('scopeWorkspace')
       : evidenceScope === 'global'
-        ? 'Global Law Only'
-        : 'Both Sources';
+        ? t('scopeGlobal')
+        : t('scopeBoth');
 
   return (
     <div className={`evidence-meta-panel ${className}`}>
-      <div className="evidence-meta-title">Evidence used</div>
+      <div className="evidence-meta-title">{t('evidenceUsed')}</div>
       <div className="evidence-meta-items">
         {workspaceCount > 0 && (
           <div className="evidence-meta-item">
             <span className="evidence-meta-icon">📄</span>
-            <span className="evidence-meta-label">Workspace documents:</span>
+            <span className="evidence-meta-label">
+              {t('workspaceDocuments')}
+            </span>
             <span className="evidence-meta-count">{workspaceCount}</span>
           </div>
         )}
         {globalCount > 0 && (
           <div className="evidence-meta-item">
             <span className="evidence-meta-icon">⚖️</span>
-            <span className="evidence-meta-label">Global law references:</span>
+            <span className="evidence-meta-label">
+              {t('globalLawReferencesLabel')}
+            </span>
             <span className="evidence-meta-count">{globalCount}</span>
           </div>
         )}
       </div>
       {evidenceScope && (
-        <div className="evidence-meta-scope">Scope: {scopeLabel}</div>
+        <div className="evidence-meta-scope">
+          {t('scopeShort')} {scopeLabel}
+        </div>
       )}
     </div>
   );
@@ -460,14 +470,17 @@ export interface PolicyTooltipProps {
 }
 
 /**
- * Generates a "Why this was used" tooltip text for global law evidence.
- * Derives from existing policy metadata without new backend calls.
+ * Localised policy tooltip for global law evidence (use inside Client Components).
  */
-export function getPolicyTooltipText(jurisdiction?: string): string {
-  if (!jurisdiction) {
-    return 'Included because your workspace policy allows global law references.';
-  }
-  return `Included because your workspace policy allows laws from ${jurisdiction}.`;
+export function usePolicyTooltipText() {
+  const t = useTranslations('evidence');
+  return useCallback(
+    (jurisdiction?: string) =>
+      jurisdiction
+        ? t('policyTooltipJurisdiction', { jurisdiction })
+        : t('policyTooltipDefault'),
+    [t]
+  );
 }
 
 // =============================================================================
@@ -497,14 +510,16 @@ export function GroupedEvidenceList({
   maxItemsPerSection = 5,
   showGlobalLawBanner = true,
   showMore = true,
-  emptyMessage = 'No evidence found',
+  emptyMessage,
 }: GroupedEvidenceListProps) {
+  const t = useTranslations('evidence');
+  const resolvedEmpty = emptyMessage ?? t('noEvidenceFound');
   const [expandedWorkspace, setExpandedWorkspace] = React.useState(false);
   const [expandedGlobal, setExpandedGlobal] = React.useState(false);
 
   if (evidence.length === 0) {
     return (
-      <div className="text-sm text-muted text-center py-4">{emptyMessage}</div>
+      <div className="text-sm text-muted text-center py-4">{resolvedEmpty}</div>
     );
   }
 
@@ -532,7 +547,7 @@ export function GroupedEvidenceList({
       {grouped.workspace.length > 0 && (
         <div className="evidence-section evidence-section-workspace">
           <EvidenceSectionHeader
-            title="Evidence from your documents"
+            title={t('evidenceFromDocuments')}
             count={grouped.workspace.length}
             sourceType="workspace_document"
           />
@@ -546,8 +561,9 @@ export function GroupedEvidenceList({
               className="text-sm text-primary text-center mt-3 w-full hover:underline"
               onClick={() => setExpandedWorkspace(true)}
             >
-              + {grouped.workspace.length - maxItemsPerSection} more workspace
-              evidence
+              {t('moreWorkspaceEvidence', {
+                count: grouped.workspace.length - maxItemsPerSection,
+              })}
             </button>
           )}
         </div>
@@ -557,7 +573,7 @@ export function GroupedEvidenceList({
       {grouped.global.length > 0 && (
         <div className="evidence-section evidence-section-global">
           <EvidenceSectionHeader
-            title="Evidence from Global Law (Read-Only)"
+            title={t('evidenceFromGlobalReadOnly')}
             count={grouped.global.length}
             sourceType="global_legal"
           />
@@ -575,8 +591,9 @@ export function GroupedEvidenceList({
               className="text-sm text-primary text-center mt-3 w-full hover:underline"
               onClick={() => setExpandedGlobal(true)}
             >
-              + {grouped.global.length - maxItemsPerSection} more global law
-              evidence
+              {t('moreGlobalLawEvidence', {
+                count: grouped.global.length - maxItemsPerSection,
+              })}
             </button>
           )}
         </div>
@@ -608,13 +625,15 @@ export function EvidenceList({
   evidence,
   maxInitialItems = 5,
   showMore = true,
-  emptyMessage = 'No evidence found',
+  emptyMessage,
 }: EvidenceListProps) {
+  const t = useTranslations('evidence');
+  const resolvedEmpty = emptyMessage ?? t('noEvidenceFound');
   const [expanded, setExpanded] = React.useState(false);
 
   if (evidence.length === 0) {
     return (
-      <div className="text-sm text-muted text-center py-4">{emptyMessage}</div>
+      <div className="text-sm text-muted text-center py-4">{resolvedEmpty}</div>
     );
   }
 
@@ -634,7 +653,9 @@ export function EvidenceList({
           className="text-sm text-primary text-center mt-3 w-full hover:underline"
           onClick={() => setExpanded(true)}
         >
-          + {evidence.length - maxInitialItems} more evidence chunks
+          {t('moreEvidenceChunks', {
+            count: evidence.length - maxInitialItems,
+          })}
         </button>
       )}
     </div>

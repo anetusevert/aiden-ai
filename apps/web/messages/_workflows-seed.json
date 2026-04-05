@@ -1,0 +1,162 @@
+{
+  "LITIGATION_CASE_FILING": {
+    "en": "Case Assessment & Filing",
+    "ar": "تقييم القضية والتقديم"
+  },
+  "LITIGATION_COURT_HEARINGS": {
+    "en": "Court Hearings & Case Management",
+    "ar": "الجلسات وإدارة القضايا"
+  },
+  "LITIGATION_EVIDENCE": {
+    "en": "Evidence Gathering & Presentation",
+    "ar": "جمع وتقديم الأدلة"
+  },
+  "LITIGATION_APPEAL": {
+    "en": "Appeal & Judicial Review",
+    "ar": "الاستئناف والمراجعة القضائية"
+  },
+  "LITIGATION_BOG": {
+    "en": "Board of Grievances Proceedings",
+    "ar": "إجراءات ديوان المظالم"
+  },
+  "CORPORATE_FORMATION": {
+    "en": "Company Formation & Registration",
+    "ar": "تأسيس وتسجيل الشركات"
+  },
+  "CORPORATE_CONTRACTS": {
+    "en": "Contract Drafting & Negotiation",
+    "ar": "صياغة العقود والتفاوض"
+  },
+  "CORPORATE_MA": {
+    "en": "M&A Transactions",
+    "ar": "عمليات الاندماج والاستحواذ"
+  },
+  "CORPORATE_FDI": {
+    "en": "Foreign Investment Structuring",
+    "ar": "هيكلة الاستثمار الأجنبي"
+  },
+  "CORPORATE_GOVERNANCE": {
+    "en": "Corporate Governance & Shareholder Matters",
+    "ar": "حوكمة الشركات وشؤون المساهمين"
+  },
+  "COMPLIANCE_PDPL": {
+    "en": "PDPL Data Privacy Compliance",
+    "ar": "الامتثال لنظام حماية البيانات الشخصية"
+  },
+  "COMPLIANCE_AML": {
+    "en": "AML / Counter-Terrorism Financing",
+    "ar": "مكافحة غسل الأموال وتمويل الإرهاب"
+  },
+  "COMPLIANCE_SAUDIZATION": {
+    "en": "Saudization & Labor Compliance",
+    "ar": "السعودة والامتثال العمالي"
+  },
+  "COMPLIANCE_LICENSING": {
+    "en": "Sector-Specific Regulatory Licensing",
+    "ar": "التراخيص التنظيمية القطاعية"
+  },
+  "COMPLIANCE_ESG": {
+    "en": "ESG & Environmental Compliance",
+    "ar": "الامتثال البيئي والاجتماعي والحوكمة"
+  },
+  "EMPLOYMENT_DISPUTES": {
+    "en": "Labor Dispute Resolution",
+    "ar": "تسوية النزاعات العمالية"
+  },
+  "EMPLOYMENT_RESTRUCTURING": {
+    "en": "Workforce Restructuring",
+    "ar": "إعادة هيكلة القوى العاملة"
+  },
+  "EMPLOYMENT_CONTRACTS": {
+    "en": "Employment Contract & Policy Drafting",
+    "ar": "صياغة عقود وسياسات العمل"
+  },
+  "EMPLOYMENT_COMPENSATION": {
+    "en": "Executive Compensation & Benefits",
+    "ar": "التعويضات والمزايا التنفيذية"
+  },
+  "EMPLOYMENT_INVESTIGATIONS": {
+    "en": "Workplace Investigations",
+    "ar": "التحقيقات في مكان العمل"
+  },
+  "ARBITRATION_CLAUSE": {
+    "en": "Arbitration Clause Drafting",
+    "ar": "صياغة شرط التحكيم"
+  },
+  "ARBITRATION_CLAIMANT": {
+    "en": "Arbitration (Claimant)",
+    "ar": "التحكيم (المدعي)"
+  },
+  "ARBITRATION_RESPONDENT": {
+    "en": "Arbitration (Respondent)",
+    "ar": "التحكيم (المدعى عليه)"
+  },
+  "ARBITRATION_FOREIGN_ENFORCEMENT": {
+    "en": "Foreign Judgment & Award Enforcement",
+    "ar": "تنفيذ الأحكام والقرارات الأجنبية"
+  },
+  "ARBITRATION_MEDIATION": {
+    "en": "Mediation & ADR",
+    "ar": "الوساطة وتسوية النزاعات البديلة"
+  },
+  "ENFORCEMENT_PROMISSORY": {
+    "en": "Promissory Note Enforcement",
+    "ar": "تنفيذ السند لأمر"
+  },
+  "ENFORCEMENT_JUDGMENT": {
+    "en": "Judgment Enforcement",
+    "ar": "تنفيذ الأحكام القضائية"
+  },
+  "ENFORCEMENT_PRE_LITIGATION": {
+    "en": "Pre-Litigation Debt Recovery",
+    "ar": "تحصيل الديون قبل التقاضي"
+  },
+  "ENFORCEMENT_BANKRUPTCY": {
+    "en": "Bankruptcy & Insolvency",
+    "ar": "الإفلاس والإعسار"
+  },
+  "ENFORCEMENT_CROSS_BORDER": {
+    "en": "Cross-Border Debt Recovery",
+    "ar": "تحصيل الديون عبر الحدود"
+  },
+  "RESEARCH_LEGAL_MEMO": {
+    "en": "Legal Research & Memoranda",
+    "ar": "البحث القانوني والمذكرات"
+  },
+  "RESEARCH_CASE_PREP": {
+    "en": "Case File Preparation",
+    "ar": "إعداد ملف القضية"
+  },
+  "RESEARCH_DUE_DILIGENCE": {
+    "en": "Due Diligence Execution",
+    "ar": "تنفيذ العناية الواجبة"
+  },
+  "RESEARCH_REGULATORY_FILING": {
+    "en": "Regulatory Filing Support",
+    "ar": "دعم الإيداعات التنظيمية"
+  },
+  "RESEARCH_CLIENT_COMMS": {
+    "en": "Client Communication & Support",
+    "ar": "التواصل مع العملاء والدعم"
+  },
+  "MANAGEMENT_CLIENT_INTAKE": {
+    "en": "Client Intake & Engagement",
+    "ar": "استقبال العملاء والتعاقد"
+  },
+  "MANAGEMENT_BILLING": {
+    "en": "Financial Oversight & Billing",
+    "ar": "الإشراف المالي والفوترة"
+  },
+  "MANAGEMENT_FIRM_COMPLIANCE": {
+    "en": "Firm Licensing & Compliance",
+    "ar": "ترخيص المكتب والامتثال"
+  },
+  "MANAGEMENT_BUSINESS_DEV": {
+    "en": "Business Development & Growth",
+    "ar": "تطوير الأعمال والنمو"
+  },
+  "MANAGEMENT_TALENT": {
+    "en": "Talent & People Management",
+    "ar": "إدارة المواهب والموارد البشرية"
+  }
+}

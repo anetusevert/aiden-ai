@@ -1,11 +1,11 @@
 """Workspace model."""
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint, func, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
@@ -51,6 +51,11 @@ class Workspace(Base):
         UUID(as_uuid=False),
         ForeignKey("policy_profiles.id", ondelete="SET NULL"),
         nullable=True,
+    )
+    settings: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        server_default=text("'{}'::jsonb"),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -11,7 +11,8 @@
  * Persists selection per workspace in localStorage.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import type { EvidenceScope } from '@/lib/apiClient';
 
 // LocalStorage key prefix
@@ -29,28 +30,6 @@ interface EvidenceScopeSelectorProps {
   /** Additional CSS classes */
   className?: string;
 }
-
-const SCOPE_OPTIONS: {
-  value: EvidenceScope;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: 'workspace',
-    label: 'Workspace Documents',
-    description: 'Search only your workspace documents',
-  },
-  {
-    value: 'global',
-    label: 'Global Law Library',
-    description: 'Search only the global legal corpus',
-  },
-  {
-    value: 'both',
-    label: 'Both Sources',
-    description: 'Search workspace and global law library',
-  },
-];
 
 function getStorageKey(workspaceId: string): string {
   return `${STORAGE_KEY_PREFIX}${workspaceId}`;
@@ -85,6 +64,16 @@ export function EvidenceScopeSelector({
   compact = false,
   className = '',
 }: EvidenceScopeSelectorProps) {
+  const t = useTranslations('evidenceScope');
+  const scopeOptions = useMemo(() => {
+    const values: EvidenceScope[] = ['workspace', 'global', 'both'];
+    return values.map(value => ({
+      value,
+      label: t(`${value}.label`),
+      description: t(`${value}.description`),
+    }));
+  }, [t]);
+
   const [scope, setScope] = useState<EvidenceScope>(
     initialScope || loadSavedScope(workspaceId)
   );
@@ -107,7 +96,7 @@ export function EvidenceScopeSelector({
   };
 
   const currentOption =
-    SCOPE_OPTIONS.find(opt => opt.value === scope) || SCOPE_OPTIONS[0];
+    scopeOptions.find(opt => opt.value === scope) || scopeOptions[0];
 
   if (compact) {
     return (
@@ -116,9 +105,9 @@ export function EvidenceScopeSelector({
           value={scope}
           onChange={e => handleScopeChange(e.target.value as EvidenceScope)}
           className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          aria-label="Evidence scope"
+          aria-label={t('ariaScope')}
         >
-          {SCOPE_OPTIONS.map(option => (
+          {scopeOptions.map(option => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -131,7 +120,7 @@ export function EvidenceScopeSelector({
   return (
     <div className={`relative ${className}`}>
       <label className="block text-sm font-medium text-gray-700 mb-1">
-        Evidence Sources
+        {t('label')}
       </label>
       <button
         type="button"
@@ -162,7 +151,7 @@ export function EvidenceScopeSelector({
           className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
           role="listbox"
         >
-          {SCOPE_OPTIONS.map(option => (
+          {scopeOptions.map(option => (
             <li
               key={option.value}
               className={`relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-gray-100 ${
@@ -228,6 +217,7 @@ export function AdvancedSettingsPanel({
   onEvidenceScopeChange,
   className = '',
 }: AdvancedSettingsPanelProps) {
+  const t = useTranslations('evidenceScope');
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -237,7 +227,7 @@ export function AdvancedSettingsPanel({
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center justify-between text-sm font-medium text-gray-700 hover:text-gray-900"
       >
-        <span>Advanced Settings</span>
+        <span>{t('advancedSettings')}</span>
         <svg
           className={`h-5 w-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
           xmlns="http://www.w3.org/2000/svg"

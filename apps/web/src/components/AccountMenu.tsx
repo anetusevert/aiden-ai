@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/lib/AuthContext';
 import { clearSession } from '@/lib/apiClient';
+import { useNavigation } from '@/components/NavigationLoader';
 import { UserAvatar } from './UserAvatar';
 import {
   DropdownMenu,
@@ -27,7 +29,10 @@ export function AccountMenu() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const tNav = useTranslations('nav');
+  const tCommon = useTranslations('common');
   const { user, logout } = useAuth();
+  const { navigateTo } = useNavigation();
 
   if (!user) return null;
 
@@ -45,7 +50,7 @@ export function AccountMenu() {
 
   const navigate = (href: string) => {
     setOpen(false);
-    router.push(href);
+    navigateTo(href);
   };
 
   const isActive = (href: string) =>
@@ -69,9 +74,19 @@ export function AccountMenu() {
       <div className="account-menu-header">
         <UserAvatar user={user} size="lg" />
         <div className="account-menu-identity">
-          <div className="account-menu-name">{user.full_name || 'User'}</div>
+          <div className="account-menu-name">
+            {user.full_name || tCommon('user')}
+          </div>
           <div className="account-menu-email">{user.email}</div>
-          <span className={getRoleBadgeClass(user.role)}>{user.role}</span>
+          <span className={getRoleBadgeClass(user.role)}>
+            {user.role === 'ADMIN'
+              ? tCommon('admin')
+              : user.role === 'EDITOR'
+                ? tCommon('editor')
+                : user.role === 'VIEWER'
+                  ? tCommon('viewer')
+                  : user.role}
+          </span>
         </div>
       </div>
 
@@ -80,75 +95,33 @@ export function AccountMenu() {
       <DropdownSection>
         <DropdownItem
           icon={<AccountIcon />}
-          label="My Account"
+          label={tNav('myAccount')}
           onClick={() => navigate('/account')}
-          active={isActive('/account') && !pathname.startsWith('/account/twin')}
+          active={
+            isActive('/account') &&
+            !pathname.startsWith('/account/twin') &&
+            !pathname.startsWith('/account/amin')
+          }
         />
         <DropdownItem
-          icon={<AIProfileIcon />}
-          label="My AI Profile"
-          onClick={() => navigate('/account/twin')}
-          active={isActive('/account/twin')}
+          icon={<AminSettingsIcon />}
+          label={tNav('myAmin')}
+          onClick={() => navigate('/account/amin')}
+          active={isActive('/account/amin')}
         />
       </DropdownSection>
-
-      {user.role === 'ADMIN' && (
-        <>
-          <DropdownDivider />
-          <DropdownSection label="Administration">
-            <DropdownItem
-              icon={<MembersIcon />}
-              label="Members"
-              onClick={() => navigate('/members')}
-              active={isActive('/members')}
-            />
-            <DropdownItem
-              icon={<AuditIcon />}
-              label="Audit Log"
-              onClick={() => navigate('/audit')}
-              active={isActive('/audit')}
-            />
-          </DropdownSection>
-        </>
-      )}
-
-      {user.is_platform_admin && (
-        <>
-          <DropdownDivider />
-          <DropdownSection label="Platform Operator">
-            <DropdownItem
-              icon={<OrgIcon />}
-              label="Organisations"
-              onClick={() => navigate('/operator/organisations')}
-              active={isActive('/operator/organisations')}
-            />
-            <DropdownItem
-              icon={<UsersIcon />}
-              label="All Users"
-              onClick={() => navigate('/operator/users')}
-              active={isActive('/operator/users')}
-            />
-            <DropdownItem
-              icon={<CorpusIcon />}
-              label="Legal Corpus"
-              onClick={() => navigate('/operator/legal-corpus')}
-              active={isActive('/operator/legal-corpus')}
-            />
-          </DropdownSection>
-        </>
-      )}
 
       <DropdownDivider />
 
       <DropdownSection>
         <DropdownItem
           icon={<SwitchIcon />}
-          label="Switch Workspace"
+          label={tNav('switchWorkspace')}
           onClick={handleSwitchWorkspace}
         />
         <DropdownItem
           icon={<LogoutIcon />}
-          label="Sign Out"
+          label={tNav('signOut')}
           onClick={handleLogout}
           danger
         />
@@ -173,7 +146,7 @@ function AccountIcon() {
   );
 }
 
-function AIProfileIcon() {
+function AminSettingsIcon() {
   return (
     <svg
       width="16"
@@ -183,97 +156,12 @@ function AIProfileIcon() {
       stroke="currentColor"
       strokeWidth="1.5"
     >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function MembersIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
-function AuditIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14,2 14,8 20,8" />
-      <line x1="12" y1="18" x2="12" y2="12" />
-      <line x1="9" y1="15" x2="15" y2="15" />
-    </svg>
-  );
-}
-
-function OrgIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9,22 9,12 15,12 15,22" />
-    </svg>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
-function CorpusIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-      <path d="M8 7h8" />
-      <path d="M8 11h8" />
-      <path d="M8 15h5" />
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <circle cx="9" cy="6" r="2" fill="currentColor" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <circle cx="15" cy="12" r="2" fill="currentColor" />
+      <line x1="4" y1="18" x2="20" y2="18" />
+      <circle cx="11" cy="18" r="2" fill="currentColor" />
     </svg>
   );
 }

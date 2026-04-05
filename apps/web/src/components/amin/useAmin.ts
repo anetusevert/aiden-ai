@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { getApiBaseUrl } from '@/lib/api';
+import { configureScreenContextTransport } from '@/lib/screenContext';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -137,6 +138,10 @@ export function useAmin() {
       ws.onopen = () => {
         setIsConnected(true);
         reconnectAttemptRef.current = 0;
+        configureScreenContextTransport({
+          connected: true,
+          send: payload => ws.send(JSON.stringify(payload)),
+        });
       };
 
       ws.onmessage = ev => {
@@ -255,6 +260,37 @@ export function useAmin() {
               break;
             }
 
+            case 'collabora_reload':
+              window.dispatchEvent(
+                new CustomEvent('collabora-reload', {
+                  detail: { docId: data.docId ?? data.doc_id },
+                })
+              );
+              break;
+
+            case 'collabora_navigate':
+              window.dispatchEvent(
+                new CustomEvent('collabora-navigate', {
+                  detail: {
+                    target_type: data.target_type,
+                    target_value: data.target_value,
+                  },
+                })
+              );
+              break;
+
+            case 'collabora_save':
+              window.dispatchEvent(new CustomEvent('collabora-save'));
+              break;
+
+            case 'document_created':
+              window.dispatchEvent(
+                new CustomEvent('document_created', {
+                  detail: { docId: data.docId ?? data.doc_id },
+                })
+              );
+              break;
+
             case 'subtask_start': {
               const tasks = (data.tasks ?? []) as string[];
               setSubTasks(
@@ -289,6 +325,7 @@ export function useAmin() {
 
       ws.onclose = () => {
         setIsConnected(false);
+        configureScreenContextTransport({ connected: false, send: null });
         const delay = Math.min(
           1000 * 2 ** reconnectAttemptRef.current,
           MAX_RECONNECT_DELAY
@@ -461,7 +498,10 @@ export function useAmin() {
 
   // clean up on unmount
   useEffect(() => {
-    return () => disconnectWs();
+    return () => {
+      configureScreenContextTransport({ connected: false, send: null });
+      disconnectWs();
+    };
   }, [disconnectWs]);
 
   return {

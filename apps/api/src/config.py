@@ -77,6 +77,16 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
+    # Collabora / WOPI
+    # collabora_url  — browser-accessible URL for the Collabora iframe (localhost:9980)
+    # wopi_internal_url — Docker-internal URL Collabora server calls for WOPI (api:8000)
+    # wopi_public_url   — browser-accessible API URL shown in editor URLs (localhost:8000)
+    # wopi_base_url     — legacy alias for wopi_internal_url, kept for backwards compat
+    collabora_url: str = "http://localhost:9980"
+    wopi_internal_url: str = "http://api:8000/api/v1/wopi"
+    wopi_public_url: str = "http://localhost:8000/api/v1/wopi"
+    wopi_base_url: str = "http://localhost:8000/api/v1/wopi"  # legacy
+
     # =========================================================================
     # S3/MinIO Storage Configuration (Canonical: S3_*)
     # =========================================================================
@@ -130,7 +140,13 @@ class Settings(BaseSettings):
         return values
 
     # CORS - stored as comma-separated string, accessed via property
-    cors_origins_str: str = "http://localhost:3000,http://127.0.0.1:3000"
+    cors_origins_str: str = (
+        "http://localhost:3000,http://127.0.0.1:3000,"
+        "http://localhost:3001,http://127.0.0.1:3001,"
+        "http://localhost:3100,http://127.0.0.1:3100,"
+        "http://localhost:3101,http://127.0.0.1:3101,"
+        "http://localhost:9980,http://127.0.0.1:9980"
+    )
 
     @property
     def cors_origins(self) -> list[str]:

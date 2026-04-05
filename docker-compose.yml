@@ -84,6 +84,14 @@ services:
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-aiden}:${POSTGRES_PASSWORD:-aiden_dev_password}@postgres:5432/${POSTGRES_DB:-aiden}
       - REDIS_URL=redis://redis:6379/0
+      # Collabora: browser-accessible URL (iframe loads from localhost:9980)
+      - COLLABORA_URL=http://localhost:9980
+      # WOPI internal: Docker-internal URL that Collabora server calls (api:8000)
+      - WOPI_INTERNAL_URL=http://api:8000/api/v1/wopi
+      # WOPI public: browser-accessible API URL (embedded in editor URLs)
+      - WOPI_PUBLIC_URL=http://localhost:8000/api/v1/wopi
+      # Legacy alias kept for backwards compat
+      - WOPI_BASE_URL=http://localhost:8000/api/v1/wopi
       # S3/MinIO Configuration (canonical S3_* vars)
       - S3_ENDPOINT_URL=http://minio:9000
       - S3_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
@@ -98,7 +106,7 @@ services:
       - LLM_API_KEY=${LLM_API_KEY:-}
       - ENVIRONMENT=${ENVIRONMENT:-dev}
       # CORS Configuration (compose reads CORS_ORIGINS from .env)
-      - CORS_ORIGINS_STR=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - CORS_ORIGINS_STR=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,http://localhost:3100,http://127.0.0.1:3100,http://localhost:3101,http://127.0.0.1:3101,http://localhost:9980,http://127.0.0.1:9980}
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,6 +116,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+      collabora:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -129,13 +139,26 @@ services:
     ports:
       - "${WEB_HOST_PORT:-3000}:3000"
     environment:
-      # Client-side URL (browser requests) - must be accessible from host
+      # Must match web URL host (localhost vs 127.0.0.1) or cookie auth breaks
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-      # Server-side URL (SSR requests) - uses Docker internal network
+      # Server-side URL (SSR from Next container → API on Docker network)
       - API_INTERNAL_BASE_URL=http://api:8000
     depends_on:
       api:
         condition: service_healthy
+
+  collabora:
+    image: collabora/code:latest
+    ports:
+      - "9980:9980"
+    environment:
+      - aliasgroup1=http://api:8000
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=true
+      - username=admin
+      - password=changeme
+    cap_add:
+      - MKNOD
+    restart: unless-stopped
 
   # Caddy Reverse Proxy (for HTTPS local dev)
   # Serves web and API from single origin: https://localhost
@@ -217,7 +240,7 @@ services:
       # Same-origin mode: API mounted at /api
       - API_ROOT_PATH=/api
       # CORS - still needed for any edge cases
-      - CORS_ORIGINS_STR=https://localhost,http://localhost:3000
+      - CORS_ORIGINS_STR=https://localhost,http://localhost:3000,http://localhost:3001,http://localhost:3100,http://localhost:3101
       # Cookie security - set COOKIE_SECURE=true to test Secure cookies under TLS
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
     depends_on:

@@ -95,7 +95,19 @@
   /* -- Layout -- */
   --amin-panel-width: 420px;
   --amin-fab-size: 64px;
-  --sidebar-width-expanded: 240px;
+  --sidebar-width-expanded: 260px;
   --sidebar-width-collapsed: 64px;
   --topbar-height: 56px;
+
+  /* -- Two-Rail Nav -- */
+  --rail1-width: 52px;
+  --rail2-width: 220px;
+  --rail1-bg: #0a0a0f;
+  --rail2-bg: var(--bg-secondary);
+
+  /* -- Two-Rail Navigation -- */
+  --rail1-width: 52px;
+  --rail2-width: 220px;
+  --rail1-bg: #0a0a0f;
+  --rail2-bg: var(--bg-secondary);
 }
