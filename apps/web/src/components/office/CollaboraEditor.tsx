@@ -439,7 +439,7 @@ export function CollaboraEditor({
         />
       ) : null}
 
-      {editorStatus !== 'ready' && editorStatus !== 'unavailable' ? (
+      {editorStatus !== 'ready' ? (
         <div className="collabora-loading">
           <span className="spinner spinner-lg" />
           <p>Amin is preparing your document...</p>
