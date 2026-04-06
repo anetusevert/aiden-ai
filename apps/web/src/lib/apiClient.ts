@@ -2288,12 +2288,57 @@ class ApiClient {
   // Legal News
   // =========================================================================
 
-  async getLegalNews(): Promise<LegalNewsResponse> {
+  async getLegalNews(
+    query?: LegalNewsQuery
+  ): Promise<LegalNewsResponse> {
     const baseUrl = getApiBaseUrl();
-    return this.fetchWithRetry<LegalNewsResponse>(`${baseUrl}/news/legal`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
+    const params = new URLSearchParams();
+    if (query?.category) params.set('category', query.category);
+    if (query?.jurisdiction) params.set('jurisdiction', query.jurisdiction);
+    if (query?.importance) params.set('importance', query.importance);
+    if (query?.limit) params.set('limit', String(query.limit));
+    if (query?.offset) params.set('offset', String(query.offset));
+    const qs = params.toString();
+    return this.fetchWithRetry<LegalNewsResponse>(
+      `${baseUrl}/news/legal${qs ? `?${qs}` : ''}`,
+      { method: 'GET', headers: this.getHeaders() }
+    );
+  }
+
+  async getBreakingNews(): Promise<BreakingNewsResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<BreakingNewsResponse>(
+      `${baseUrl}/news/breaking`,
+      { method: 'GET', headers: this.getHeaders() }
+    );
+  }
+
+  async fileNewsToWiki(itemId: string): Promise<WikiFilingResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<WikiFilingResponse>(
+      `${baseUrl}/news/${itemId}/file-to-wiki`,
+      {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+  }
+
+  async refreshNews(): Promise<NewsRefreshResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<NewsRefreshResponse>(
+      `${baseUrl}/news/refresh`,
+      {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': 'application/json',
+        },
+      }
+    );
   }
 
   async getNewsSources(): Promise<NewsSourcesResponse> {
@@ -2962,18 +3007,51 @@ export interface PurgeResponse {
 export interface LegalNewsItem {
   id: string;
   title: string;
-  summary: string;
+  title_ar?: string | null;
+  summary: string | null;
   url: string;
   image_url: string | null;
-  source: string;
+  source_name: string;
+  source_category: string;
+  jurisdiction: string;
   published_at: string;
-  category: string;
+  importance: string;
+  amin_summary?: string | null;
+  wiki_filed: boolean;
+  wiki_page_slug?: string | null;
+  tags?: string[] | null;
+  /** @deprecated kept for backward compat — use source_name */
+  source?: string;
+  /** @deprecated kept for backward compat — use source_category */
+  category?: string;
 }
 
 export interface LegalNewsResponse {
   items: LegalNewsItem[];
-  fetched_at: string;
-  source_count: number;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface BreakingNewsResponse {
+  items: LegalNewsItem[];
+}
+
+export interface WikiFilingResponse {
+  wiki_page_slug: string;
+  wiki_url: string;
+}
+
+export interface NewsRefreshResponse {
+  status: string;
+}
+
+export interface LegalNewsQuery {
+  category?: string;
+  jurisdiction?: string;
+  importance?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface NewsSourceEntry {

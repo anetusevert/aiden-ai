@@ -233,7 +233,6 @@ export default function HomePage() {
   const {
     items: newsItems,
     isLoading: newsLoading,
-    fetchedAt,
   } = useNewsPolling();
 
   const greeting = useMemo(() => getGreeting(), []);
@@ -322,7 +321,7 @@ export default function HomePage() {
               <span className="home-news-entry-button-meta">
                 {newsLoading
                   ? 'Refreshing feed...'
-                  : `${newsItems.length} stories · ${getNewsUpdatedLabel(fetchedAt)}`}
+                  : `${newsItems.length} stories · ${getNewsUpdatedLabel(null)}`}
               </span>
             </button>
           </div>
@@ -586,7 +585,7 @@ export default function HomePage() {
                 {newsLoading
                   ? 'Refreshing current legal developments'
                   : `${newsItems.length} source-linked stories · ${getNewsUpdatedLabel(
-                      fetchedAt
+                      null
                     )}`}
               </span>
             </div>

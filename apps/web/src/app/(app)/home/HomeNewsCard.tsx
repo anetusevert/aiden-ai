@@ -41,8 +41,9 @@ const SOURCE_COLORS: Record<string, string> = {
 
 export function HomeNewsCard({ item, index }: HomeNewsCardProps) {
   const [imgError, setImgError] = useState(false);
+  const sourceName = item.source_name ?? item.source ?? '';
   const accentColor =
-    SOURCE_COLORS[item.source] || 'var(--amin-accent, #d4a017)';
+    SOURCE_COLORS[sourceName] || 'var(--amin-accent, #d4a017)';
 
   return (
     <motion.a
@@ -93,7 +94,7 @@ export function HomeNewsCard({ item, index }: HomeNewsCardProps) {
               } as React.CSSProperties
             }
           >
-            {item.source}
+            {sourceName}
           </span>
           <span className="home-news-card-time">
             {timeAgo(item.published_at)}
