@@ -21,6 +21,9 @@ interface AminContextValue extends ReturnType<typeof useAmin> {
   setVoiceMode: (mode: VoiceMode) => void;
   panelSize: PanelSize;
   setPanelSize: (size: PanelSize) => void;
+  floatingMessage: string | null;
+  dismissFloatingMessage: () => void;
+  sendGreeting: () => void;
 }
 
 const AminContext = createContext<AminContextValue | null>(null);
@@ -30,6 +33,8 @@ export function AminProvider({ children }: { children: ReactNode }) {
   const [aminOpen, setAminOpen] = useState(false);
   const [voiceMode, setVoiceMode] = useState<VoiceMode>('off');
   const [panelSize, setPanelSize] = useState<PanelSize>('expanded');
+  const [floatingMessage, setFloatingMessage] = useState<string | null>(null);
+  const greetingSent = useState(false);
 
   const openPanel = useCallback(() => {
     setAminOpen(true);
@@ -45,6 +50,39 @@ export function AminProvider({ children }: { children: ReactNode }) {
       return !prev;
     });
   }, []);
+  const dismissFloatingMessage = useCallback(
+    () => setFloatingMessage(null),
+    []
+  );
+
+  const sendGreeting = useCallback(async () => {
+    if (greetingSent[0]) return;
+    greetingSent[0] = true;
+    try {
+      if (!amin.activeConversation) {
+        await amin.createConversation();
+      }
+      amin.sendMessage('__greeting__');
+    } catch {
+      /* */
+    }
+  }, [amin, greetingSent]);
+
+  const lastMsgRef = useState('');
+  const aminMessages = amin.messages;
+  if (aminMessages.length > 0) {
+    const last = aminMessages[aminMessages.length - 1];
+    if (
+      last.role === 'assistant' &&
+      last.content !== lastMsgRef[0] &&
+      !aminOpen
+    ) {
+      lastMsgRef[0] = last.content;
+      if (floatingMessage !== last.content) {
+        setTimeout(() => setFloatingMessage(last.content), 0);
+      }
+    }
+  }
 
   return (
     <AminContext.Provider
@@ -58,6 +96,9 @@ export function AminProvider({ children }: { children: ReactNode }) {
         setVoiceMode,
         panelSize,
         setPanelSize,
+        floatingMessage,
+        dismissFloatingMessage,
+        sendGreeting,
       }}
     >
       {children}

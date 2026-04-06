@@ -52,19 +52,19 @@
   --amin-navy-light: #2d4a73;
   --amin-navy-soft: rgba(30, 58, 95, 0.2);
 
-  /* -- Amin Glow States -- */
-  --amin-glow-idle: rgba(30, 58, 95, 0.25);
-  --amin-glow-thinking: rgba(107, 63, 160, 0.35);
-  --amin-glow-speaking: rgba(212, 160, 23, 0.35);
-  --amin-glow-listening: rgba(99, 180, 255, 0.35);
-  --amin-glow-error: rgba(220, 38, 38, 0.3);
-  --amin-ring-idle: rgba(30, 58, 95, 0.2);
-  --amin-ring-thinking: rgba(107, 63, 160, 0.25);
-  --amin-ring-speaking: rgba(212, 160, 23, 0.25);
-  --amin-ring-listening: rgba(99, 180, 255, 0.25);
-  --amin-pulse-idle: rgba(30, 58, 95, 0.08);
-  --amin-pulse-thinking: rgba(107, 63, 160, 0.08);
-  --amin-pulse-speaking: rgba(212, 160, 23, 0.08);
+  /* -- Amin Glow States — red=off, green=on -- */
+  --amin-glow-idle: rgba(239, 68, 68, 0.25);
+  --amin-glow-thinking: rgba(34, 197, 94, 0.35);
+  --amin-glow-speaking: rgba(52, 211, 153, 0.35);
+  --amin-glow-listening: rgba(52, 211, 153, 0.35);
+  --amin-glow-error: rgba(239, 68, 68, 0.4);
+  --amin-ring-idle: rgba(239, 68, 68, 0.2);
+  --amin-ring-thinking: rgba(34, 197, 94, 0.25);
+  --amin-ring-speaking: rgba(52, 211, 153, 0.25);
+  --amin-ring-listening: rgba(52, 211, 153, 0.25);
+  --amin-pulse-idle: rgba(239, 68, 68, 0.08);
+  --amin-pulse-thinking: rgba(34, 197, 94, 0.08);
+  --amin-pulse-speaking: rgba(52, 211, 153, 0.08);
 
   /* -- Status -- dark-appropriate */
   --status-success: #34d399;

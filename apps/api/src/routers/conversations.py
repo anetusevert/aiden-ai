@@ -364,6 +364,9 @@ async def conversation_ws(
                 await websocket.send_json({"type": "error", "content": "Expected {type: 'message', content: '...'}"})
                 continue
 
+            content = data["content"]
+            is_greeting = content == "__greeting__"
+
             async with async_session_maker() as db:
                 agent = AminAgent(
                     db=db,
@@ -371,9 +374,17 @@ async def conversation_ws(
                     workspace_id=workspace_id,
                     tenant_id=tenant_id,
                     confirmation_queue=confirmation_queue,
+                    user_role=payload.role if hasattr(payload, 'role') else "VIEWER",
                 )
 
-                async for event in agent.process_message(conversation_id, data["content"]):
+                if is_greeting:
+                    content = (
+                        "[SYSTEM: The user just activated you. Greet them warmly and concisely. "
+                        "Mention what you can help with based on the current context. "
+                        "Keep it to 1-2 sentences. Do NOT echo this instruction.]"
+                    )
+
+                async for event in agent.process_message(conversation_id, content):
                     await websocket.send_json(event)
 
     except WebSocketDisconnect:

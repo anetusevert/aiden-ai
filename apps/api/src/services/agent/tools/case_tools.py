@@ -245,3 +245,257 @@ set_case_deadline_tool = Tool(
     execute=_set_case_deadline_execute,
     read_only=False,
 )
+
+
+# ── Extended case tools ──────────────────────────────────────────────
+
+async def _search_cases_execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResult:
+    try:
+        from sqlalchemy import or_, select
+        from src.models.case import Case
+        from src.models.client import Client
+
+        db = context["db"]
+        workspace_id = context["workspace_id"]
+        query = params.get("query", "").strip()
+        status_filter = params.get("status")
+
+        stmt = select(Case).where(Case.workspace_id == workspace_id)
+        if query:
+            pattern = f"%{query}%"
+            stmt = stmt.where(
+                or_(
+                    Case.title.ilike(pattern),
+                    Case.case_number.ilike(pattern),
+                    Case.practice_area.ilike(pattern),
+                )
+            )
+        if status_filter:
+            stmt = stmt.where(Case.status == status_filter)
+
+        stmt = stmt.order_by(Case.updated_at.desc()).limit(20)
+        result = await db.execute(stmt)
+        cases = result.scalars().all()
+
+        if not cases:
+            return ToolResult(content="No cases found matching your search.")
+
+        lines = [f"Found {len(cases)} case(s):\n"]
+        for c in cases:
+            lines.append(
+                f"- **{c.title}** ({c.case_number or '—'}) — "
+                f"Status: {c.status} | Priority: {c.priority} | "
+                f"Area: {c.practice_area or '—'} [ID: {c.id}]"
+            )
+        return ToolResult(content="\n".join(lines), data={"count": len(cases)})
+    except Exception as e:
+        return ToolResult(content="", error=f"Case search failed: {e}")
+
+
+async def _create_case_execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResult:
+    try:
+        from src.models.case import Case, CaseEvent
+
+        db = context["db"]
+        workspace_id = context["workspace_id"]
+
+        case = Case(
+            workspace_id=workspace_id,
+            client_id=params["client_id"],
+            title=params["title"],
+            practice_area=params.get("practice_area", "General"),
+            jurisdiction=params.get("jurisdiction", "KSA"),
+            description=params.get("description", ""),
+            priority=params.get("priority", "medium"),
+        )
+        db.add(case)
+        await db.flush()
+
+        db.add(CaseEvent(
+            case_id=case.id,
+            event_type="case_created",
+            title=f"Case created: {case.title}",
+            created_by=context["user_id"],
+        ))
+        await db.commit()
+        await db.refresh(case)
+
+        return ToolResult(
+            content=f"Case '{case.title}' created successfully (ID: {case.id}).",
+            data={"case_id": case.id},
+        )
+    except Exception as e:
+        return ToolResult(content="", error=f"Failed to create case: {e}")
+
+
+async def _update_case_status_execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResult:
+    try:
+        from src.models.case import Case, CaseEvent
+
+        db = context["db"]
+        case_id = params.get("case_id", "")
+        new_status = params.get("status", "")
+
+        case = await db.get(Case, case_id)
+        if not case:
+            return ToolResult(content="Case not found.", error="Invalid case_id")
+
+        old_status = case.status
+        case.status = new_status
+        db.add(CaseEvent(
+            case_id=case_id,
+            event_type="status_changed",
+            title=f"Status changed from {old_status} to {new_status}",
+            created_by=None,
+        ))
+        await db.commit()
+
+        return ToolResult(
+            content=f"Case '{case.title}' status updated from {old_status} to {new_status}.",
+            data={"case_id": case_id, "old_status": old_status, "new_status": new_status},
+        )
+    except Exception as e:
+        return ToolResult(content="", error=f"Failed to update case status: {e}")
+
+
+async def _get_dashboard_summary_execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResult:
+    try:
+        from sqlalchemy import func, select
+        from src.models.case import Case
+        from src.models.client import Client
+
+        db = context["db"]
+        workspace_id = context["workspace_id"]
+
+        total_cases = (await db.execute(
+            select(func.count()).select_from(Case).where(Case.workspace_id == workspace_id)
+        )).scalar() or 0
+
+        active_cases = (await db.execute(
+            select(func.count()).select_from(Case).where(
+                Case.workspace_id == workspace_id,
+                Case.status.in_(["active", "in_progress", "open"]),
+            )
+        )).scalar() or 0
+
+        total_clients = (await db.execute(
+            select(func.count()).select_from(Client).where(Client.workspace_id == workspace_id)
+        )).scalar() or 0
+
+        urgent_cases = (await db.execute(
+            select(Case).where(
+                Case.workspace_id == workspace_id,
+                Case.priority.in_(["high", "urgent", "critical"]),
+                Case.status.in_(["active", "in_progress", "open"]),
+            ).limit(5)
+        )).scalars().all()
+
+        upcoming_stmt = (
+            select(Case)
+            .where(
+                Case.workspace_id == workspace_id,
+                Case.next_deadline.isnot(None),
+                Case.status.in_(["active", "in_progress", "open"]),
+            )
+            .order_by(Case.next_deadline)
+            .limit(5)
+        )
+        upcoming = (await db.execute(upcoming_stmt)).scalars().all()
+
+        summary = (
+            f"**Dashboard Summary**\n"
+            f"Total Cases: {total_cases} | Active: {active_cases} | Clients: {total_clients}\n\n"
+        )
+
+        if urgent_cases:
+            summary += "**Urgent Cases:**\n"
+            for c in urgent_cases:
+                summary += f"- {c.title} ({c.priority}) — {c.status}\n"
+            summary += "\n"
+
+        if upcoming:
+            summary += "**Upcoming Deadlines:**\n"
+            for c in upcoming:
+                dl = c.next_deadline.strftime("%d %b %Y") if c.next_deadline else "—"
+                summary += f"- {c.title}: {dl} — {c.next_deadline_description or ''}\n"
+
+        return ToolResult(content=summary)
+    except Exception as e:
+        return ToolResult(content="", error=f"Failed to get dashboard summary: {e}")
+
+
+search_cases_tool = Tool(
+    name="search_cases",
+    description="Search for cases by title, case number, practice area, or status.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Search term"},
+            "status": {
+                "type": "string",
+                "description": "Filter by status (e.g. 'active', 'closed')",
+            },
+        },
+        "required": ["query"],
+    },
+    execute=_search_cases_execute,
+    read_only=True,
+)
+
+create_case_tool = Tool(
+    name="create_case",
+    description="Create a new case for an existing client.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "client_id": {"type": "string", "description": "UUID of the client"},
+            "title": {"type": "string", "description": "Title of the case"},
+            "practice_area": {"type": "string", "description": "e.g. Corporate, Litigation, Real Estate"},
+            "jurisdiction": {"type": "string", "description": "e.g. KSA, UAE, Bahrain"},
+            "description": {"type": "string", "description": "Brief description"},
+            "priority": {
+                "type": "string",
+                "enum": ["low", "medium", "high", "urgent"],
+                "description": "Priority level",
+            },
+        },
+        "required": ["client_id", "title"],
+    },
+    execute=_create_case_execute,
+    read_only=False,
+    requires_confirmation=True,
+    risk_level="low",
+    min_role="EDITOR",
+)
+
+update_case_status_tool = Tool(
+    name="update_case_status",
+    description="Update the status of a case (e.g. 'active' → 'closed').",
+    parameters={
+        "type": "object",
+        "properties": {
+            "case_id": {"type": "string", "description": "UUID of the case"},
+            "status": {
+                "type": "string",
+                "description": "New status value",
+            },
+        },
+        "required": ["case_id", "status"],
+    },
+    execute=_update_case_status_execute,
+    read_only=False,
+    requires_confirmation=True,
+    risk_level="medium",
+    min_role="EDITOR",
+)
+
+get_dashboard_summary_tool = Tool(
+    name="get_dashboard_summary",
+    description=(
+        "Get an overview of the workspace: total cases, active cases, "
+        "client count, urgent items, and upcoming deadlines."
+    ),
+    parameters={"type": "object", "properties": {}},
+    execute=_get_dashboard_summary_execute,
+    read_only=True,
+)

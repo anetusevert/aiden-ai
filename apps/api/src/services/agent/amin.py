@@ -45,12 +45,14 @@ class AminAgent:
         workspace_id: str,
         tenant_id: str,
         confirmation_queue: asyncio.Queue | None = None,
+        user_role: str = "VIEWER",
     ) -> None:
         self.db = db
         self.user_id = user_id
         self.workspace_id = workspace_id
         self.tenant_id = tenant_id
         self.confirmation_queue = confirmation_queue
+        self.user_role = user_role
 
         self._registry = ToolRegistry()
         register_all_tools(self._registry)
@@ -175,7 +177,7 @@ class AminAgent:
 
         Yields events and a final _final_content sentinel.
         """
-        openai_tools = self._registry.get_openai_tools()
+        openai_tools = self._registry.get_openai_tools(role=self.user_role)
         final_content = ""
 
         for round_num in range(MAX_TOOL_ROUNDS + 1):

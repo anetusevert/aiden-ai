@@ -10,13 +10,14 @@ import { WakeWordDetector } from '@/lib/wakeWordDetector';
 import { useAuth } from '@/lib/AuthContext';
 
 const RING_COLORS = {
-  off: 'transparent',
-  active: 'var(--status-success, #34d399)',
-  passive: 'var(--status-info, #63b4ff)',
+  off: '#ef4444',
+  active: '#34d399',
+  passive: '#22c55e80',
 };
 
 export function AminMinimized() {
-  const { aminStatus, voiceMode, setVoiceMode, openPanel } = useAminContext();
+  const { aminStatus, voiceMode, setVoiceMode, openPanel, sendGreeting } =
+    useAminContext();
   const { aminVoice } = useAuth();
 
   const voiceClientRef = useRef<AminVoiceClient | null>(null);
@@ -30,20 +31,18 @@ export function AminMinimized() {
         wakeDetectorRef.current = new WakeWordDetector(() => {
           setVoiceMode('active');
           voiceClientRef.current?.resumeMicCapture();
-          openPanel();
         });
       }
       wakeDetectorRef.current.start();
     }
-  }, [setVoiceMode, openPanel]);
+  }, [setVoiceMode]);
 
   const enterActive = useCallback(() => {
     setVoiceMode('active');
     wakeDetectorRef.current?.stop();
-    openPanel();
 
-    // Ensure the voice module reflects the user's saved preference
-    // before the WebSocket connects and sends session.update.
+    sendGreeting();
+
     if (aminVoice) setVoice(aminVoice);
 
     if (!voiceClientRef.current) {
@@ -60,7 +59,7 @@ export function AminMinimized() {
     } else {
       voiceClientRef.current.resumeMicCapture();
     }
-  }, [setVoiceMode, enterPassive, openPanel, aminVoice]);
+  }, [setVoiceMode, enterPassive, sendGreeting, aminVoice]);
 
   const enterOff = useCallback(() => {
     setVoiceMode('off');
@@ -105,25 +104,26 @@ export function AminMinimized() {
       >
         <AminAvatar size={44} state={avatarState} showWaveform />
 
-        {/* Voice mode indicator ring */}
-        <AnimatePresence>
-          {voiceMode !== 'off' && (
-            <motion.div
-              className="amin-voice-ring"
-              style={{
-                position: 'absolute',
-                inset: -4,
-                borderRadius: '50%',
-                border: `2px solid ${RING_COLORS[voiceMode]}`,
-                pointerEvents: 'none',
-              }}
-              variants={voiceRingPulse}
-              initial="off"
-              animate={voiceMode}
-              exit="off"
-            />
-          )}
-        </AnimatePresence>
+        {/* State indicator ring — red=off, green=on */}
+        <motion.div
+          className="amin-voice-ring"
+          style={{
+            position: 'absolute',
+            inset: -4,
+            borderRadius: '50%',
+            border: `2px solid ${RING_COLORS[voiceMode]}`,
+            pointerEvents: 'none',
+          }}
+          animate={{
+            opacity: 1,
+            scale: voiceMode === 'off' ? 1 : [1, 1.08, 1],
+          }}
+          transition={
+            voiceMode === 'off'
+              ? { duration: 0.3 }
+              : { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+          }
+        />
       </motion.button>
     </div>
   );

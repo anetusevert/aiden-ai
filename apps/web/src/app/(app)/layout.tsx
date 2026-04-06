@@ -11,6 +11,7 @@ import { DevModeBanner } from '@/components/DevModeBanner';
 import { StubProviderBanner } from '@/components/StubProviderBanner';
 import { AminInfoPanel } from '@/components/amin/AminInfoPanel';
 import { AminMinimized } from '@/components/amin/AminMinimized';
+import { AminFloatingMessage } from '@/components/amin/AminFloatingMessage';
 import { AminProvider, useAminContext } from '@/components/amin/AminProvider';
 import EntrySequence from '@/components/shell/EntrySequence';
 import {
@@ -50,14 +51,24 @@ function AppShellInner() {
       }
     };
 
+    const navHandler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ path?: string }>;
+      const path = customEvent.detail?.path;
+      if (path) navigateTo(path);
+    };
+
     window.addEventListener('document_created', handler as EventListener);
-    return () =>
+    window.addEventListener('amin-navigate', navHandler as EventListener);
+    return () => {
       window.removeEventListener('document_created', handler as EventListener);
+      window.removeEventListener('amin-navigate', navHandler as EventListener);
+    };
   }, [navigateTo]);
 
   return (
     <>
       <AnimatePresence>{aminOpen && <AminInfoPanel />}</AnimatePresence>
+      <AminFloatingMessage />
       <AminMinimized />
     </>
   );

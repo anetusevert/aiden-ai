@@ -1,49 +1,35 @@
-"""Amin agent tools — wrappers around existing services."""
+"""Amin agent tools — auto-discovery from this package.
 
-from sqlalchemy.ext.asyncio import AsyncSession
+Every module in this package that exposes `Tool` instances at module level
+is automatically registered. No manual imports needed when adding new tools.
+"""
 
-from src.services.agent.tool_registry import ToolRegistry
+import importlib
+import logging
+import pkgutil
+from pathlib import Path
+
+from src.services.agent.tool_registry import Tool, ToolRegistry
+
+logger = logging.getLogger(__name__)
+
+_PACKAGE_DIR = Path(__file__).parent
 
 
 def register_all_tools(registry: ToolRegistry) -> None:
-    """Register all built-in Amin tools."""
-    from src.services.agent.tools.case_tools import (
-        file_to_case_tool,
-        get_case_context_tool,
-        set_case_deadline_tool,
-    )
-    from src.services.agent.tools.clause_redlines import clause_redlines_tool
-    from src.services.agent.tools.contract_review import contract_review_tool
-    from src.services.agent.tools.document_draft import document_draft_tool
-    from src.services.agent.tools.document_search import document_search_tool
-    from src.services.agent.tools.legal_corpus_search import legal_corpus_search_tool
-    from src.services.agent.tools.legal_research import legal_research_tool
-    from src.services.agent.tools.office_tools import (
-        create_document_tool,
-        edit_document_tool,
-        get_document_state_tool,
-        navigate_document_tool,
-        read_document_tool,
-    )
-    from src.services.agent.tools.summarize import summarize_tool
-    from src.services.agent.tools.translate import translate_tool
+    """Scan this package and register every Tool instance found."""
+    for module_info in pkgutil.iter_modules([str(_PACKAGE_DIR)]):
+        if module_info.name.startswith("_"):
+            continue
+        try:
+            mod = importlib.import_module(f"{__name__}.{module_info.name}")
+        except Exception:
+            logger.warning("Failed to import tool module %s", module_info.name, exc_info=True)
+            continue
 
-    for tool in [
-        document_search_tool,
-        legal_corpus_search_tool,
-        legal_research_tool,
-        contract_review_tool,
-        clause_redlines_tool,
-        document_draft_tool,
-        create_document_tool,
-        edit_document_tool,
-        read_document_tool,
-        navigate_document_tool,
-        get_document_state_tool,
-        translate_tool,
-        summarize_tool,
-        file_to_case_tool,
-        get_case_context_tool,
-        set_case_deadline_tool,
-    ]:
-        registry.register(tool)
+        for attr_name in dir(mod):
+            obj = getattr(mod, attr_name, None)
+            if isinstance(obj, Tool):
+                registry.register(obj)
+
+    logger.info("Registered %d tools via auto-discovery", len(registry.get_all()))

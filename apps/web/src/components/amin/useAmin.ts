@@ -260,6 +260,14 @@ export function useAmin() {
               break;
             }
 
+            case 'navigate':
+              window.dispatchEvent(
+                new CustomEvent('amin-navigate', {
+                  detail: { path: data.path },
+                })
+              );
+              break;
+
             case 'collabora_reload':
               window.dispatchEvent(
                 new CustomEvent('collabora-reload', {

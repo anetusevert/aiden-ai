@@ -1,7 +1,9 @@
 """Registers all tools available to Amin and provides their OpenAI function schemas."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Coroutine
+
+ROLE_HIERARCHY = {"VIEWER": 0, "EDITOR": 1, "ADMIN": 2}
 
 
 @dataclass
@@ -24,6 +26,7 @@ class Tool:
     read_only: bool = True
     requires_confirmation: bool = False
     risk_level: str = "low"
+    min_role: str = "VIEWER"
 
 
 class ToolRegistry:
@@ -44,8 +47,14 @@ class ToolRegistry:
         """Get a tool by name."""
         return self._tools.get(name)
 
-    def get_openai_tools(self) -> list[dict[str, Any]]:
-        """Get all tools in OpenAI function-calling format."""
+    def get_for_role(self, role: str) -> list[Tool]:
+        """Get tools accessible to the given role."""
+        level = ROLE_HIERARCHY.get(role.upper(), 0)
+        return [t for t in self._tools.values() if ROLE_HIERARCHY.get(t.min_role, 0) <= level]
+
+    def get_openai_tools(self, role: str | None = None) -> list[dict[str, Any]]:
+        """Get tools in OpenAI function-calling format, optionally filtered by role."""
+        tools = self.get_for_role(role) if role else list(self._tools.values())
         return [
             {
                 "type": "function",
@@ -55,5 +64,5 @@ class ToolRegistry:
                     "parameters": tool.parameters,
                 },
             }
-            for tool in self._tools.values()
+            for tool in tools
         ]
