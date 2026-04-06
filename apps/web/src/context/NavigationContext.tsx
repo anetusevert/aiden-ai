@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
   useEffect,
@@ -20,6 +21,8 @@ export type NavSection =
 
 interface NavContextValue {
   activeSection: NavSection | null;
+  panelOpen: boolean;
+  collapsePanel: () => void;
 }
 
 const ROUTE_SECTION_MAP: Array<{ prefix: string; section: NavSection }> = [
@@ -46,6 +49,8 @@ function sectionFromPath(pathname: string): NavSection | null {
 
 const NavigationCtx = createContext<NavContextValue>({
   activeSection: 'home',
+  panelOpen: true,
+  collapsePanel: () => {},
 });
 
 export function useNav() {
@@ -57,6 +62,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [activeSection, setActiveSection] = useState<NavSection | null>(
     () => sectionFromPath(pathname) ?? 'home'
   );
+  const [panelOpen, setPanelOpen] = useState(true);
 
   useEffect(() => {
     const detected = sectionFromPath(pathname);
@@ -65,8 +71,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     }
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const collapsePanel = useCallback(() => setPanelOpen(false), []);
+
   return (
-    <NavigationCtx.Provider value={{ activeSection }}>
+    <NavigationCtx.Provider value={{ activeSection, panelOpen, collapsePanel }}>
       {children}
     </NavigationCtx.Provider>
   );
