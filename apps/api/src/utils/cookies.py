@@ -4,14 +4,17 @@ This module handles setting and clearing authentication cookies.
 Uses httpOnly cookies to prevent XSS token theft.
 
 Cookie Configuration:
-- access_token: httpOnly, SameSite=Lax, Path=/
-- refresh_token: httpOnly, SameSite=Lax, Path=/auth (or /api/auth behind proxy)
+- access_token: httpOnly, Path=/
+- refresh_token: httpOnly, Path=/auth (or /api/auth behind proxy)
+- SameSite is configurable via COOKIE_SAMESITE env var (default: lax)
 
 Security Notes:
 - Secure flag is environment-dependent:
   - dev: Secure=false (allows localhost without HTTPS)
   - staging/prod: Secure=true (enforced even before SSL)
-- SameSite=Lax provides CSRF protection while allowing normal navigation
+  - SameSite=none forces Secure=true regardless of environment
+- SameSite=lax provides CSRF protection for same-site deployments
+- SameSite=none is required for cross-site deployments (e.g. separate subdomains)
 - When behind reverse proxy with API_ROOT_PATH=/api, cookie paths are adjusted
 """
 
@@ -67,7 +70,7 @@ def set_access_token_cookie(
         path=_get_access_token_path(),
         secure=settings.cookie_secure_flag,
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
     )
 
 
@@ -93,7 +96,7 @@ def set_refresh_token_cookie(
         path=_get_refresh_token_path(),
         secure=settings.cookie_secure_flag,
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
     )
 
 
@@ -128,7 +131,7 @@ def clear_access_token_cookie(response: Response) -> None:
         path=_get_access_token_path(),
         secure=settings.cookie_secure_flag,
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
     )
 
 
@@ -143,7 +146,7 @@ def clear_refresh_token_cookie(response: Response) -> None:
         path=_get_refresh_token_path(),
         secure=settings.cookie_secure_flag,
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
     )
 
 

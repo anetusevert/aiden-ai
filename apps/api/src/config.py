@@ -172,14 +172,23 @@ class Settings(BaseSettings):
     # Cookie security settings
     # In dev: Secure=false (allows localhost without HTTPS)
     # In staging/prod: Secure=true (enforced even before SSL setup)
-    # SameSite=Lax for CSRF protection while allowing normal navigation
     cookie_secure: bool | None = None  # Auto-derived from environment if None
+
+    # SameSite policy for auth cookies.
+    # "lax"  — default, safe for same-site deployments
+    # "none" — required when frontend and API are on different sites
+    #          (e.g. separate Railway *.up.railway.app subdomains)
+    #          Requires Secure=true (auto-set in non-dev environments)
+    cookie_samesite: Literal["lax", "none", "strict"] = "lax"
 
     @property
     def cookie_secure_flag(self) -> bool:
         """Get the Secure flag for cookies based on environment."""
         if self.cookie_secure is not None:
             return self.cookie_secure
+        # SameSite=none requires Secure=true regardless of environment
+        if self.cookie_samesite == "none":
+            return True
         # Auto-derive: Secure=false only in dev
         return self.environment != "dev"
 
