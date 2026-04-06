@@ -249,7 +249,7 @@ export function Rail1() {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
         >
-          <HeyAminLogo variant="mark" size={32} />
+          <HeyAminLogo variant="mark" size={44} />
         </motion.button>
         <div className="rail1-logo-divider" />
       </div>
