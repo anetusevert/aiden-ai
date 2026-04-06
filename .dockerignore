@@ -37,8 +37,11 @@ apps/web/.env.local
 .gitignore
 
 # Node / Web (not needed for API image)
+node_modules/
 apps/web/node_modules/
 apps/web/.next/
+package.json
+package-lock.json
 
 # Docker meta
 Dockerfile
