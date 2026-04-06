@@ -16,7 +16,11 @@ interface ArticleModalProps {
   onWikiFiled?: (itemId: string, slug: string) => void;
 }
 
-export function ArticleModal({ item, onClose, onWikiFiled }: ArticleModalProps) {
+export function ArticleModal({
+  item,
+  onClose,
+  onWikiFiled,
+}: ArticleModalProps) {
   const { openPanel } = useAminContext();
   const [filing, setFiling] = useState(false);
   const [filed, setFiled] = useState(false);
@@ -125,8 +129,7 @@ export function ArticleModal({ item, onClose, onWikiFiled }: ArticleModalProps) 
               </div>
               <h2 className="article-modal-title">{item.title}</h2>
               <p className="article-modal-meta">
-                {formatRelativeTime(item.published_at)} · By{' '}
-                {item.source_name}
+                {formatRelativeTime(item.published_at)} · By {item.source_name}
               </p>
               <button
                 className="article-modal-close"
@@ -201,10 +204,7 @@ export function ArticleModal({ item, onClose, onWikiFiled }: ArticleModalProps) 
                 </button>
               )}
 
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={handleCopy}
-              >
+              <button className="btn btn-outline btn-sm" onClick={handleCopy}>
                 {copied ? '✓ Copied' : 'Copy link'}
               </button>
             </div>

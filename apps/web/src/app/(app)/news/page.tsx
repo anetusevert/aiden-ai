@@ -83,12 +83,9 @@ export default function NewsPage() {
   }, [category, jurisdiction]);
 
   // wiki-file callback from modal
-  const handleWikiFiled = useCallback(
-    (itemId: string, slug: string) => {
-      // optimistic UI update is handled by the modal internally
-    },
-    []
-  );
+  const handleWikiFiled = useCallback((itemId: string, slug: string) => {
+    // optimistic UI update is handled by the modal internally
+  }, []);
 
   const featured = items[0] ?? null;
   const gridItems = useMemo(() => items.slice(1), [items]);
@@ -163,7 +160,10 @@ export default function NewsPage() {
           </>
         ) : (
           <div className="news-breaking-idle">
-            <span>Legal Intelligence — Updated {items.length > 0 ? relTime(items[0].published_at) : 'recently'}</span>
+            <span>
+              Legal Intelligence — Updated{' '}
+              {items.length > 0 ? relTime(items[0].published_at) : 'recently'}
+            </span>
             <button
               className="news-refresh-btn"
               onClick={() => void refresh()}
@@ -189,7 +189,9 @@ export default function NewsPage() {
                 className={`news-rail-cat${category === c.key ? ' news-rail-cat--active' : ''}`}
                 onClick={() => setCategory(c.key)}
               >
-                {c.icon ? <span className="news-rail-cat-icon">{c.icon}</span> : null}
+                {c.icon ? (
+                  <span className="news-rail-cat-icon">{c.icon}</span>
+                ) : null}
                 {c.label}
               </button>
             ))}
@@ -248,7 +250,10 @@ export default function NewsPage() {
             <div className="news-empty-state">
               <h2>No news available</h2>
               <p>Try adjusting your filters or trigger a refresh.</p>
-              <button className="btn btn-outline" onClick={() => void refresh()}>
+              <button
+                className="btn btn-outline"
+                onClick={() => void refresh()}
+              >
                 Refresh
               </button>
             </div>

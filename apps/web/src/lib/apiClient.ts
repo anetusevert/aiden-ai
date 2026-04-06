@@ -2288,9 +2288,7 @@ class ApiClient {
   // Legal News
   // =========================================================================
 
-  async getLegalNews(
-    query?: LegalNewsQuery
-  ): Promise<LegalNewsResponse> {
+  async getLegalNews(query?: LegalNewsQuery): Promise<LegalNewsResponse> {
     const baseUrl = getApiBaseUrl();
     const params = new URLSearchParams();
     if (query?.category) params.set('category', query.category);
@@ -2329,16 +2327,13 @@ class ApiClient {
 
   async refreshNews(): Promise<NewsRefreshResponse> {
     const baseUrl = getApiBaseUrl();
-    return this.fetchWithRetry<NewsRefreshResponse>(
-      `${baseUrl}/news/refresh`,
-      {
-        method: 'POST',
-        headers: {
-          ...this.getHeaders(),
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    return this.fetchWithRetry<NewsRefreshResponse>(`${baseUrl}/news/refresh`, {
+      method: 'POST',
+      headers: {
+        ...this.getHeaders(),
+        'Content-Type': 'application/json',
+      },
+    });
   }
 
   async getNewsSources(): Promise<NewsSourcesResponse> {

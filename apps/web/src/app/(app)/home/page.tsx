@@ -230,10 +230,7 @@ export default function HomePage() {
   const { forYou, continueItems, allGroups, trackAccess } =
     useSidebarWorkflows(null);
 
-  const {
-    items: newsItems,
-    isLoading: newsLoading,
-  } = useNewsPolling();
+  const { items: newsItems, isLoading: newsLoading } = useNewsPolling();
 
   const greeting = useMemo(() => getGreeting(), []);
   const dateStr = useMemo(() => getFormattedDate(), []);
