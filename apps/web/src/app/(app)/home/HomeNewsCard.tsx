@@ -95,7 +95,9 @@ export function HomeNewsCard({ item, index }: HomeNewsCardProps) {
           >
             {item.source}
           </span>
-          <span className="home-news-card-time">{timeAgo(item.published_at)}</span>
+          <span className="home-news-card-time">
+            {timeAgo(item.published_at)}
+          </span>
         </div>
 
         <h3 className="home-news-card-title">{item.title}</h3>

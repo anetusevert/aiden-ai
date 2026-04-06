@@ -2,11 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  motionTokens,
-  goldLineExpand,
-  marketingEntryExit,
-} from '@/lib/motion';
+import { motionTokens, goldLineExpand, marketingEntryExit } from '@/lib/motion';
 import { AminAvatar, type AminAvatarState } from '@/components/amin/AminAvatar';
 import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 
@@ -83,7 +79,11 @@ export default function MarketingEntrySequence({
                       delay: 0.15,
                     }}
                   >
-                    <AminAvatar size={96} state={avatarState} showWaveform={false} />
+                    <AminAvatar
+                      size={96}
+                      state={avatarState}
+                      showWaveform={false}
+                    />
                   </motion.div>
 
                   {/* Phase 1: Logo + gold line */}
@@ -99,7 +99,10 @@ export default function MarketingEntrySequence({
                         <motion.div
                           initial={{ opacity: 0, scale: 0.85 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.6, ease: motionTokens.ease }}
+                          transition={{
+                            duration: 0.6,
+                            ease: motionTokens.ease,
+                          }}
                         >
                           <HeyAminLogo variant="full" size={200} />
                         </motion.div>

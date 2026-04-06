@@ -35,7 +35,9 @@ interface NavContextValue extends NavState {
 
 const STORAGE_KEY = 'ha_nav_state';
 
-function persistState(state: Pick<NavState, 'activeSection' | 'panelOpen' | 'sidebarState'>) {
+function persistState(
+  state: Pick<NavState, 'activeSection' | 'panelOpen' | 'sidebarState'>
+) {
   try {
     if (state.sidebarState === 'immersive') return;
     localStorage.setItem(
@@ -98,16 +100,14 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const [state, setState] = useState<NavState>(() => {
-    const persisted = typeof window !== 'undefined' ? loadPersistedState() : null;
-    const isCompact =
-      typeof window !== 'undefined' && window.innerWidth < 1024;
+    const persisted =
+      typeof window !== 'undefined' ? loadPersistedState() : null;
+    const isCompact = typeof window !== 'undefined' && window.innerWidth < 1024;
 
     return {
       activeSection: persisted?.activeSection ?? 'home',
       panelOpen: isCompact ? false : (persisted?.panelOpen ?? true),
-      sidebarState: isCompact
-        ? 'compact'
-        : (persisted?.sidebarState ?? 'full'),
+      sidebarState: isCompact ? 'compact' : (persisted?.sidebarState ?? 'full'),
     };
   });
 
@@ -117,7 +117,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     const handler = (e: MediaQueryListEvent) => {
       if (e.matches) {
         setState(prev => {
-          const next = { ...prev, panelOpen: false, sidebarState: 'compact' as const };
+          const next = {
+            ...prev,
+            panelOpen: false,
+            sidebarState: 'compact' as const,
+          };
           persistState(next);
           return next;
         });
@@ -138,7 +142,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const selectSection = useCallback((section: NavSection) => {
     setState(prev => {
       if (prev.activeSection === section && prev.panelOpen) {
-        const next = { ...prev, panelOpen: false, sidebarState: 'compact' as const };
+        const next = {
+          ...prev,
+          panelOpen: false,
+          sidebarState: 'compact' as const,
+        };
         persistState(next);
         return next;
       }
@@ -155,7 +163,11 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const collapsePanel = useCallback(() => {
     setState(prev => {
-      const next = { ...prev, panelOpen: false, sidebarState: 'compact' as const };
+      const next = {
+        ...prev,
+        panelOpen: false,
+        sidebarState: 'compact' as const,
+      };
       persistState(next);
       return next;
     });

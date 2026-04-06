@@ -24,7 +24,10 @@ async function fetchWithClientTimeout(
     return fetch(url, init);
   }
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CLIENT_FETCH_TIMEOUT_MS);
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    CLIENT_FETCH_TIMEOUT_MS
+  );
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
@@ -929,11 +932,14 @@ class ApiClient {
     refreshPromise = (async () => {
       try {
         const baseUrl = getApiBaseUrl();
-        const response = await fetchWithClientTimeout(`${baseUrl}/auth/refresh`, {
-          method: 'POST',
-          headers: this.getHeaders(),
-          credentials: 'include',
-        });
+        const response = await fetchWithClientTimeout(
+          `${baseUrl}/auth/refresh`,
+          {
+            method: 'POST',
+            headers: this.getHeaders(),
+            credentials: 'include',
+          }
+        );
 
         if (response.ok) {
           return true;
@@ -2298,7 +2304,9 @@ class ApiClient {
     });
   }
 
-  async updateNewsSources(enabledSourceIds: string[]): Promise<NewsSourcesResponse> {
+  async updateNewsSources(
+    enabledSourceIds: string[]
+  ): Promise<NewsSourcesResponse> {
     const baseUrl = getApiBaseUrl();
     return this.fetchWithRetry<NewsSourcesResponse>(`${baseUrl}/news/sources`, {
       method: 'PUT',

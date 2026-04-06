@@ -77,7 +77,8 @@ export function AminInput({
     };
 
     window.addEventListener('amin-prefill', handler as EventListener);
-    return () => window.removeEventListener('amin-prefill', handler as EventListener);
+    return () =>
+      window.removeEventListener('amin-prefill', handler as EventListener);
   }, [autoResize]);
 
   return (

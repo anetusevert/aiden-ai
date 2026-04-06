@@ -9,6 +9,7 @@ interface DropdownMenuProps {
   trigger: React.ReactNode;
   children: React.ReactNode;
   align?: 'left' | 'right';
+  openUp?: boolean;
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export function DropdownMenu({
   trigger,
   children,
   align = 'right',
+  openUp = false,
   className = '',
 }: DropdownMenuProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,10 +63,10 @@ export function DropdownMenu({
       <AnimatePresence>
         {open && (
           <motion.div
-            className={`dropdown-menu dropdown-menu-${align}`}
-            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            className={`dropdown-menu dropdown-menu-${align}${openUp ? ' dropdown-menu-up' : ''}`}
+            initial={{ opacity: 0, scale: 0.95, y: openUp ? 4 : -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: -4 }}
+            exit={{ opacity: 0, scale: 0.97, y: openUp ? 4 : -4 }}
             transition={{ duration: 0.15, ease: [0.2, 0.8, 0.2, 1] }}
           >
             {children}

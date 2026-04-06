@@ -4,12 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { officeApi } from '@/lib/officeApi';
 import { reportScreenContext } from '@/lib/screenContext';
 
-type EditorStatus = 'loading' | 'checking' | 'ready' | 'saving' | 'error' | 'unavailable';
+type EditorStatus =
+  | 'loading'
+  | 'checking'
+  | 'ready'
+  | 'saving'
+  | 'error'
+  | 'unavailable';
 
 const COLLABORA_URL =
   process.env.NEXT_PUBLIC_COLLABORA_URL || 'http://localhost:9980';
-const COLLABORA_ENABLED =
-  process.env.NEXT_PUBLIC_COLLABORA_ENABLED !== 'false';
+const COLLABORA_ENABLED = process.env.NEXT_PUBLIC_COLLABORA_ENABLED !== 'false';
 
 async function checkCollaboraHealth(collaboraUrl: string): Promise<boolean> {
   try {
@@ -34,10 +39,16 @@ interface CollaboraEditorProps {
   onSave?: (docId: string) => void;
 }
 
-function normalizeMessage(data: unknown): { MessageId?: string; Values?: Record<string, unknown> } {
+function normalizeMessage(data: unknown): {
+  MessageId?: string;
+  Values?: Record<string, unknown>;
+} {
   if (typeof data === 'string') {
     try {
-      return JSON.parse(data) as { MessageId?: string; Values?: Record<string, unknown> };
+      return JSON.parse(data) as {
+        MessageId?: string;
+        Values?: Record<string, unknown>;
+      };
     } catch {
       return {};
     }
@@ -48,7 +59,9 @@ function normalizeMessage(data: unknown): { MessageId?: string; Values?: Record<
   return {};
 }
 
-export function useCollaboraCommands(iframeRef: React.RefObject<HTMLIFrameElement | null>) {
+export function useCollaboraCommands(
+  iframeRef: React.RefObject<HTMLIFrameElement | null>
+) {
   const postMessage = useCallback(
     (payload: Record<string, unknown>) => {
       iframeRef.current?.contentWindow?.postMessage(payload, '*');
@@ -127,17 +140,28 @@ function CollaboraUnavailable({
     <div className="collabora-unavailable">
       <div className="collabora-unavailable-card">
         <div className="collabora-unavailable-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg
+            width="40"
+            height="40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             <line x1="12" y1="9" x2="12" y2="13" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </div>
-        <h3 className="collabora-unavailable-title">Document Editor Unavailable</h3>
+        <h3 className="collabora-unavailable-title">
+          Document Editor Unavailable
+        </h3>
         <p className="collabora-unavailable-detail">
           Collabora Online is not running. Start it with:
         </p>
-        <code className="collabora-unavailable-cmd">docker compose up collabora</code>
+        <code className="collabora-unavailable-cmd">
+          docker compose up collabora
+        </code>
 
         <div className="collabora-unavailable-actions">
           <button
@@ -195,7 +219,13 @@ export function CollaboraEditor({
   const commands = useCollaboraCommands(iframeRef);
 
   const publishContext = useCallback(
-    (overrides?: Partial<{ page: number | null; slide: number | null; sheet: string | null }>) => {
+    (
+      overrides?: Partial<{
+        page: number | null;
+        slide: number | null;
+        sheet: string | null;
+      }>
+    ) => {
       reportScreenContext({
         route: `/documents/${docId}`,
         page_title: title ? `${title} | Documents` : 'Documents',
@@ -215,7 +245,17 @@ export function CollaboraEditor({
         },
       });
     },
-    [currentPage, currentSheet, currentSlide, docId, docType, editorStatus, isModified, metadata, title]
+    [
+      currentPage,
+      currentSheet,
+      currentSlide,
+      docId,
+      docType,
+      editorStatus,
+      isModified,
+      metadata,
+      title,
+    ]
   );
 
   const loadEditor = useCallback(async () => {
@@ -253,7 +293,10 @@ export function CollaboraEditor({
       const messageId = payload.MessageId;
       const values = payload.Values ?? {};
 
-      if (messageId === 'App_LoadingStatus' && values.Status === 'Frame_Ready') {
+      if (
+        messageId === 'App_LoadingStatus' &&
+        values.Status === 'Frame_Ready'
+      ) {
         setEditorStatus('ready');
         publishContext();
         return;
@@ -282,7 +325,9 @@ export function CollaboraEditor({
         setIsModified(false);
         onSave?.(docId);
         publishContext();
-        window.dispatchEvent(new CustomEvent('collabora-saved', { detail: { docId } }));
+        window.dispatchEvent(
+          new CustomEvent('collabora-saved', { detail: { docId } })
+        );
       }
     };
 
@@ -293,16 +338,23 @@ export function CollaboraEditor({
   useEffect(() => {
     const reloadHandler = async (event: Event) => {
       const customEvent = event as CustomEvent<{ docId?: string }>;
-      if (customEvent.detail?.docId && customEvent.detail.docId !== docId) return;
+      if (customEvent.detail?.docId && customEvent.detail.docId !== docId)
+        return;
       await loadEditor();
     };
     const navigateHandler = (event: Event) => {
-      const customEvent = event as CustomEvent<{ target_type?: string; target_value?: string | number }>;
+      const customEvent = event as CustomEvent<{
+        target_type?: string;
+        target_value?: string | number;
+      }>;
       const targetType = customEvent.detail?.target_type;
       const targetValue = customEvent.detail?.target_value;
       if (targetType === 'sheet' && typeof targetValue === 'string') {
         commands.gotoSheet(targetValue);
-      } else if ((targetType === 'page' || targetType === 'slide') && targetValue != null) {
+      } else if (
+        (targetType === 'page' || targetType === 'slide') &&
+        targetValue != null
+      ) {
         commands.gotoPage(targetValue);
       }
     };
@@ -312,16 +364,26 @@ export function CollaboraEditor({
     };
     const unoHandler = (event: Event) => {
       const customEvent = event as CustomEvent<{ command?: string }>;
-      if (customEvent.detail?.command) commands.executeUno(customEvent.detail.command);
+      if (customEvent.detail?.command)
+        commands.executeUno(customEvent.detail.command);
     };
 
     window.addEventListener('collabora-reload', reloadHandler as EventListener);
-    window.addEventListener('collabora-navigate', navigateHandler as EventListener);
+    window.addEventListener(
+      'collabora-navigate',
+      navigateHandler as EventListener
+    );
     window.addEventListener('collabora-save', saveHandler);
     window.addEventListener('collabora-uno', unoHandler as EventListener);
     return () => {
-      window.removeEventListener('collabora-reload', reloadHandler as EventListener);
-      window.removeEventListener('collabora-navigate', navigateHandler as EventListener);
+      window.removeEventListener(
+        'collabora-reload',
+        reloadHandler as EventListener
+      );
+      window.removeEventListener(
+        'collabora-navigate',
+        navigateHandler as EventListener
+      );
       window.removeEventListener('collabora-save', saveHandler);
       window.removeEventListener('collabora-uno', unoHandler as EventListener);
     };
@@ -335,7 +397,9 @@ export function CollaboraEditor({
   }, [commands, editorStatus]);
 
   if (editorStatus === 'unavailable') {
-    return <CollaboraUnavailable docId={docId} onRetry={() => void loadEditor()} />;
+    return (
+      <CollaboraUnavailable docId={docId} onRetry={() => void loadEditor()} />
+    );
   }
 
   return (

@@ -39,10 +39,13 @@ export function AminEyes({ state, size }: AminEyesProps) {
       const delay = minMs + Math.random() * (maxMs - minMs);
       timerRef.current = setTimeout(() => {
         setIsBlinking(true);
-        setTimeout(() => {
-          setIsBlinking(false);
-          scheduleBlink();
-        }, (BLINK_DURATION * 2 + 0.1) * 1000);
+        setTimeout(
+          () => {
+            setIsBlinking(false);
+            scheduleBlink();
+          },
+          (BLINK_DURATION * 2 + 0.1) * 1000
+        );
       }, delay);
     };
 

@@ -10,7 +10,14 @@
   background: var(--bg-primary, #0e0f11);
   color: var(--text-primary, #f0f0f3);
   min-height: 100vh;
-  font-family: var(--font-body, -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif);
+  font-family: var(
+    --font-body,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Inter',
+    'Segoe UI',
+    sans-serif
+  );
 }
 
 .ha-mkt * {
@@ -326,13 +333,17 @@
   align-items: center;
   justify-content: center;
   padding: 0.875rem 2rem;
-  background: var(--amin-accent-gradient, linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #e0b332 100%));
+  background: var(
+    --amin-accent-gradient,
+    linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #e0b332 100%)
+  );
   color: #0e0f11 !important;
   font-size: 0.9375rem;
   font-weight: 600;
   border-radius: 10px;
   text-decoration: none !important;
-  transition: transform var(--duration-base) var(--ease-out),
+  transition:
+    transform var(--duration-base) var(--ease-out),
     opacity var(--duration-base) var(--ease-out),
     box-shadow var(--duration-base) var(--ease-out);
   cursor: pointer;
@@ -440,7 +451,9 @@
   border-radius: 100px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: border-color 200ms ease, background 200ms ease;
+  transition:
+    border-color 200ms ease,
+    background 200ms ease;
 }
 
 .ha-meet-pill:hover {
@@ -470,7 +483,8 @@
   background: var(--glass-bg, rgba(255, 255, 255, 0.03));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  transition: border-color 250ms ease,
+  transition:
+    border-color 250ms ease,
     background 250ms ease,
     box-shadow 250ms ease;
 }
@@ -478,7 +492,9 @@
 .ha-tile:hover {
   border-color: rgba(212, 160, 23, 0.2);
   background: var(--glass-bg-hover, rgba(255, 255, 255, 0.05));
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(212, 160, 23, 0.08);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(212, 160, 23, 0.08);
 }
 
 .ha-tile-icon {
@@ -787,7 +803,8 @@
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.07));
   border-radius: 10px;
   background: var(--glass-bg, rgba(255, 255, 255, 0.03));
-  transition: border-color var(--duration-base) var(--ease-out),
+  transition:
+    border-color var(--duration-base) var(--ease-out),
     box-shadow var(--duration-base) var(--ease-out);
 }
 
@@ -896,14 +913,18 @@
 .ha-btn-submit {
   width: 100%;
   padding: 0.9375rem;
-  background: var(--amin-accent-gradient, linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #e0b332 100%));
+  background: var(
+    --amin-accent-gradient,
+    linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #e0b332 100%)
+  );
   color: #0e0f11 !important;
   font-size: 0.9375rem;
   font-weight: 600;
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  transition: opacity var(--duration-base) var(--ease-out),
+  transition:
+    opacity var(--duration-base) var(--ease-out),
     transform var(--duration-base) var(--ease-out),
     box-shadow var(--duration-base) var(--ease-out);
   margin-top: 0.5rem;

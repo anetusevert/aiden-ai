@@ -10,11 +10,7 @@ interface HeyAminLogoProps {
 
 const DEFAULT_SIZE = { full: 140, mark: 32 } as const;
 
-export function HeyAminLogo({
-  variant,
-  size,
-  className,
-}: HeyAminLogoProps) {
+export function HeyAminLogo({ variant, size, className }: HeyAminLogoProps) {
   const resolvedSize = size ?? DEFAULT_SIZE[variant];
 
   if (variant === 'mark') {

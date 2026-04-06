@@ -61,7 +61,9 @@ export default function DocumentDetailPage() {
     }
 
     void resolve();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [authLoading, isAuthenticated, documentId]);
 
   const fetchDocument = useCallback(async () => {

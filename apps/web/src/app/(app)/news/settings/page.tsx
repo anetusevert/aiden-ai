@@ -94,14 +94,17 @@ export default function NewsSettingsPage() {
           Choose which legal news sources appear in your workspace feed.
           {enabledCount > 0 && (
             <span className="news-settings-count">
-              {' '}{enabledCount} of {sources.length} enabled
+              {' '}
+              {enabledCount} of {sources.length} enabled
             </span>
           )}
         </p>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
-      {success && <div className="alert alert-success">Sources updated successfully.</div>}
+      {success && (
+        <div className="alert alert-success">Sources updated successfully.</div>
+      )}
 
       {loading ? (
         <div className="loading">Loading sources...</div>

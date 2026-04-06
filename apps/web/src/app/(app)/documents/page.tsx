@@ -2,8 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { officeApi, type OfficeDocType, type OfficeDocument } from '@/lib/officeApi';
-import { staggerContainer, staggerItem, routeTransition, glassReveal } from '@/lib/motion';
+import {
+  officeApi,
+  type OfficeDocType,
+  type OfficeDocument,
+} from '@/lib/officeApi';
+import {
+  staggerContainer,
+  staggerItem,
+  routeTransition,
+  glassReveal,
+} from '@/lib/motion';
 import { useNavigation } from '@/components/NavigationLoader';
 
 const FILTERS: Array<{ key: 'all' | OfficeDocType; label: string }> = [
@@ -59,7 +68,9 @@ export default function DocumentsPage() {
         setDocuments(data.items);
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load documents.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load documents.'
+        );
       } finally {
         setLoading(false);
       }
@@ -89,7 +100,9 @@ export default function DocumentsPage() {
       setShowCreatePanel(false);
       navigateTo(`/documents/${document.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create document.');
+      setError(
+        err instanceof Error ? err.message : 'Failed to create document.'
+      );
     } finally {
       setCreating(false);
     }
@@ -102,7 +115,8 @@ export default function DocumentsPage() {
           <div>
             <h1 className="page-title">Documents</h1>
             <p className="page-subtitle">
-              Create and manage live Word, Excel, and PowerPoint documents with Amin.
+              Create and manage live Word, Excel, and PowerPoint documents with
+              Amin.
             </p>
           </div>
           <button
@@ -156,7 +170,9 @@ export default function DocumentsPage() {
               variants={staggerItem}
               onClick={() => navigateTo(`/documents/${document.id}`)}
             >
-              <div className="doc-card-icon">{iconForDocType(document.doc_type)}</div>
+              <div className="doc-card-icon">
+                {iconForDocType(document.doc_type)}
+              </div>
               <div className="doc-card-title">{document.title}</div>
               <div className="doc-card-meta">
                 <span>{formatDate(document.updated_at)}</span>
@@ -167,7 +183,8 @@ export default function DocumentsPage() {
           {documents.length === 0 ? (
             <div className="card">
               <div className="card-body">
-                No office documents yet. Create one to start editing with Amin and Collabora.
+                No office documents yet. Create one to start editing with Amin
+                and Collabora.
               </div>
             </div>
           ) : null}
@@ -224,7 +241,10 @@ export default function DocumentsPage() {
           </div>
 
           <div className="create-doc-panel-actions">
-            <button className="btn btn-outline" onClick={() => setShowCreatePanel(false)}>
+            <button
+              className="btn btn-outline"
+              onClick={() => setShowCreatePanel(false)}
+            >
               Cancel
             </button>
             <button

@@ -158,7 +158,13 @@ function DocumentEmptyIcon() {
 
 function PlayIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
       <polygon points="5 3 19 12 5 21 5 3" />
     </svg>
   );
@@ -334,9 +340,9 @@ export default function KnowledgeBasePage() {
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [triggerBusyId, setTriggerBusyId] = useState<string | null>(null);
-  const triggerErrorTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map()
-  );
+  const triggerErrorTimeouts = useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map());
   const [triggerErrors, setTriggerErrors] = useState<Record<string, string>>(
     {}
   );
@@ -695,13 +701,18 @@ export default function KnowledgeBasePage() {
         ) : stats ? (
           <>
             <div className="kb-kpi-card">
-              <span className="kb-kpi-value">{stats.total_instruments.toLocaleString()}</span>
+              <span className="kb-kpi-value">
+                {stats.total_instruments.toLocaleString()}
+              </span>
               <span className="kb-kpi-label">Legal Instruments</span>
             </div>
             <div className="kb-kpi-card">
               <span className="kb-kpi-value">
                 {stats.active_sources}
-                <span className="kb-kpi-secondary"> / {stats.total_sources}</span>
+                <span className="kb-kpi-secondary">
+                  {' '}
+                  / {stats.total_sources}
+                </span>
               </span>
               <span className="kb-kpi-label">Active Sources</span>
             </div>
@@ -720,7 +731,9 @@ export default function KnowledgeBasePage() {
               <span className="kb-kpi-label">Running Jobs</span>
             </div>
             <div className="kb-kpi-card">
-              <span className="kb-kpi-value">{stats.items_harvested_7d.toLocaleString()}</span>
+              <span className="kb-kpi-value">
+                {stats.items_harvested_7d.toLocaleString()}
+              </span>
               <span className="kb-kpi-label">Harvested (7d)</span>
             </div>
           </>
@@ -735,9 +748,10 @@ export default function KnowledgeBasePage() {
             {Object.entries(stats.instruments_by_jurisdiction)
               .sort(([, a], [, b]) => b - a)
               .map(([jurisdiction, count]) => {
-                const pct = stats.total_instruments > 0
-                  ? (count / stats.total_instruments) * 100
-                  : 0;
+                const pct =
+                  stats.total_instruments > 0
+                    ? (count / stats.total_instruments) * 100
+                    : 0;
                 return (
                   <div key={jurisdiction} className="kb-jurisdiction-row">
                     <span className="kb-jurisdiction-name">{jurisdiction}</span>
@@ -749,7 +763,9 @@ export default function KnowledgeBasePage() {
                         transition={{ duration: 0.6, ease: 'easeOut' }}
                       />
                     </div>
-                    <span className="kb-jurisdiction-count">{count.toLocaleString()}</span>
+                    <span className="kb-jurisdiction-count">
+                      {count.toLocaleString()}
+                    </span>
                   </div>
                 );
               })}
@@ -917,7 +933,9 @@ export default function KnowledgeBasePage() {
                                     )}
                                     {(() => {
                                       const dur = jobDurationSeconds(lastJob);
-                                      return dur != null ? `, ${formatDuration(dur)}` : '';
+                                      return dur != null
+                                        ? `, ${formatDuration(dur)}`
+                                        : '';
                                     })()}
                                   </span>
                                 )}
@@ -1081,9 +1099,11 @@ export default function KnowledgeBasePage() {
                             </td>
                             <td>
                               <span>
-                                {job.items_upserted} upserted / {job.items_failed} failed
+                                {job.items_upserted} upserted /{' '}
+                                {job.items_failed} failed
                               </span>
-                              {(job.status === 'running' || job.status === 'pending') &&
+                              {(job.status === 'running' ||
+                                job.status === 'pending') &&
                                 job.items_listed > 0 && (
                                   <div className="kb-job-progress-track">
                                     <motion.div
@@ -1092,12 +1112,16 @@ export default function KnowledgeBasePage() {
                                       animate={{
                                         width: `${Math.min(
                                           100,
-                                          ((job.items_upserted + job.items_failed) /
+                                          ((job.items_upserted +
+                                            job.items_failed) /
                                             job.items_listed) *
                                             100
                                         )}%`,
                                       }}
-                                      transition={{ duration: 0.4, ease: 'easeOut' }}
+                                      transition={{
+                                        duration: 0.4,
+                                        ease: 'easeOut',
+                                      }}
                                     />
                                   </div>
                                 )}
@@ -1155,81 +1179,78 @@ export default function KnowledgeBasePage() {
           initial={glassReveal.initial}
           animate={glassReveal.animate}
         >
-              {addFormError && (
-                <p className="form-hint text-error kb-modal-error">
-                  {addFormError}
-                </p>
-              )}
-              <Select
-                label="Connector"
-                options={[...CONNECTOR_OPTIONS]}
-                value={connectorName}
-                onChange={e => onConnectorChange(e.target.value)}
-              />
+          {addFormError && (
+            <p className="form-hint text-error kb-modal-error">
+              {addFormError}
+            </p>
+          )}
+          <Select
+            label="Connector"
+            options={[...CONNECTOR_OPTIONS]}
+            value={connectorName}
+            onChange={e => onConnectorChange(e.target.value)}
+          />
+          <Input
+            label="Display name"
+            value={addDisplayName}
+            onChange={e => setAddDisplayName(e.target.value)}
+            required
+          />
+          <Input
+            label="Jurisdiction"
+            value={addJurisdiction}
+            onChange={e => setAddJurisdiction(e.target.value)}
+            required
+          />
+          <Input
+            label="Source URL"
+            optional
+            placeholder="https://…"
+            value={addSourceUrl}
+            onChange={e => setAddSourceUrl(e.target.value)}
+          />
+          <Select
+            label="Schedule"
+            options={SCHEDULE_SELECT_OPTIONS}
+            value={addSchedule}
+            onChange={e => setAddSchedule(e.target.value)}
+          />
+          {addSchedule === CUSTOM_SENTINEL && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+            >
               <Input
-                label="Display name"
-                value={addDisplayName}
-                onChange={e => setAddDisplayName(e.target.value)}
-                required
+                label="Cron expression"
+                hint="Five fields: minute hour day-of-month month day-of-week"
+                value={addCustomCron}
+                onChange={e => setAddCustomCron(e.target.value)}
+                placeholder="0 2 * * *"
               />
-              <Input
-                label="Jurisdiction"
-                value={addJurisdiction}
-                onChange={e => setAddJurisdiction(e.target.value)}
-                required
-              />
-              <Input
-                label="Source URL"
-                optional
-                placeholder="https://…"
-                value={addSourceUrl}
-                onChange={e => setAddSourceUrl(e.target.value)}
-              />
-              <Select
-                label="Schedule"
-                options={SCHEDULE_SELECT_OPTIONS}
-                value={addSchedule}
-                onChange={e => setAddSchedule(e.target.value)}
-              />
-              {addSchedule === CUSTOM_SENTINEL && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                >
-                  <Input
-                    label="Cron expression"
-                    hint="Five fields: minute hour day-of-month month day-of-week"
-                    value={addCustomCron}
-                    onChange={e => setAddCustomCron(e.target.value)}
-                    placeholder="0 2 * * *"
-                  />
-                </motion.div>
-              )}
-              <Input
-                label="Harvest limit"
-                type="number"
-                min={10}
-                max={5000}
-                value={addHarvest}
-                onChange={e =>
-                  setAddHarvest(
-                    Math.min(
-                      5000,
-                      Math.max(10, parseInt(e.target.value, 10) || 10)
-                    )
-                  )
-                }
-              />
-              <div className="form-group kb-toggle-row">
-                <span className="form-label">Enabled</span>
-                <EnabledSwitch
-                  id="add-enabled"
-                  enabled={addEnabled}
-                  onChange={setAddEnabled}
-                />
-              </div>
-            </motion.form>
+            </motion.div>
+          )}
+          <Input
+            label="Harvest limit"
+            type="number"
+            min={10}
+            max={5000}
+            value={addHarvest}
+            onChange={e =>
+              setAddHarvest(
+                Math.min(5000, Math.max(10, parseInt(e.target.value, 10) || 10))
+              )
+            }
+          />
+          <div className="form-group kb-toggle-row">
+            <span className="form-label">Enabled</span>
+            <EnabledSwitch
+              id="add-enabled"
+              enabled={addEnabled}
+              onChange={setAddEnabled}
+            />
+          </div>
+        </motion.form>
       </Modal>
 
       {editOpen && editSource && (
@@ -1264,56 +1285,56 @@ export default function KnowledgeBasePage() {
             initial={glassReveal.initial}
             animate={glassReveal.animate}
           >
-              {editFormError && (
-                <p className="form-hint text-error kb-modal-error">
-                  {editFormError}
-                </p>
-              )}
+            {editFormError && (
+              <p className="form-hint text-error kb-modal-error">
+                {editFormError}
+              </p>
+            )}
+            <Input
+              label="Display name"
+              value={editDisplayName}
+              onChange={e => setEditDisplayName(e.target.value)}
+              required
+            />
+            <Select
+              label="Schedule"
+              options={SCHEDULE_SELECT_OPTIONS}
+              value={editSchedule}
+              onChange={e => setEditSchedule(e.target.value)}
+            />
+            {editSchedule === CUSTOM_SENTINEL && (
               <Input
-                label="Display name"
-                value={editDisplayName}
-                onChange={e => setEditDisplayName(e.target.value)}
-                required
+                label="Cron expression"
+                hint="Five fields: minute hour day-of-month month day-of-week"
+                value={editCustomCron}
+                onChange={e => setEditCustomCron(e.target.value)}
+                placeholder="0 2 * * *"
               />
-              <Select
-                label="Schedule"
-                options={SCHEDULE_SELECT_OPTIONS}
-                value={editSchedule}
-                onChange={e => setEditSchedule(e.target.value)}
-              />
-              {editSchedule === CUSTOM_SENTINEL && (
-                <Input
-                  label="Cron expression"
-                  hint="Five fields: minute hour day-of-month month day-of-week"
-                  value={editCustomCron}
-                  onChange={e => setEditCustomCron(e.target.value)}
-                  placeholder="0 2 * * *"
-                />
-              )}
-              <Input
-                label="Harvest limit"
-                type="number"
-                min={10}
-                max={5000}
-                value={editHarvest}
-                onChange={e =>
-                  setEditHarvest(
-                    Math.min(
-                      5000,
-                      Math.max(10, parseInt(e.target.value, 10) || 10)
-                    )
+            )}
+            <Input
+              label="Harvest limit"
+              type="number"
+              min={10}
+              max={5000}
+              value={editHarvest}
+              onChange={e =>
+                setEditHarvest(
+                  Math.min(
+                    5000,
+                    Math.max(10, parseInt(e.target.value, 10) || 10)
                   )
-                }
+                )
+              }
+            />
+            <div className="form-group kb-toggle-row">
+              <span className="form-label">Enabled</span>
+              <EnabledSwitch
+                id="edit-enabled"
+                enabled={editEnabled}
+                onChange={setEditEnabled}
               />
-              <div className="form-group kb-toggle-row">
-                <span className="form-label">Enabled</span>
-                <EnabledSwitch
-                  id="edit-enabled"
-                  enabled={editEnabled}
-                  onChange={setEditEnabled}
-                />
-              </div>
-            </motion.form>
+            </div>
+          </motion.form>
         </Modal>
       )}
 
@@ -1323,7 +1344,11 @@ export default function KnowledgeBasePage() {
         title="Job details"
         size="lg"
         footer={
-          <Button variant="outline" type="button" onClick={() => setJobDetailId(null)}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => setJobDetailId(null)}
+          >
             Close
           </Button>
         }
@@ -1343,7 +1368,9 @@ export default function KnowledgeBasePage() {
             transition={{ duration: motionTokens.duration.base }}
           >
             <div className="kb-detail-header">
-              <span className="kb-detail-connector">{jobDetail.connector_name}</span>
+              <span className="kb-detail-connector">
+                {jobDetail.connector_name}
+              </span>
               <JobStatusBadge status={jobDetail.status} />
               <Badge
                 variant={
@@ -1388,7 +1415,9 @@ export default function KnowledgeBasePage() {
                 <span className="kb-stat-label">Listed</span>
               </div>
               <div className="kb-stat">
-                <span className="kb-stat-value">{jobDetail.items_upserted}</span>
+                <span className="kb-stat-value">
+                  {jobDetail.items_upserted}
+                </span>
                 <span className="kb-stat-label">Upserted</span>
               </div>
               <div className="kb-stat">

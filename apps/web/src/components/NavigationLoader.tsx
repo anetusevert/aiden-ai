@@ -163,7 +163,11 @@ function NavigationOverlay({
             <motion.div
               className="nav-loader-mark"
               animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
               style={{ marginBottom: 12 }}
             >
               <HeyAminLogo variant="mark" size={40} />

@@ -64,20 +64,20 @@ pnpm dev
 
 ## Pages
 
-| Route              | Description                                           |
-| ------------------ | ----------------------------------------------------- |
-| `/`                | Home page with quick links and API health status      |
-| `/setup`           | Bootstrap new tenant/workspace/admin with templates   |
-| `/login`           | Dev login with tenant/workspace/email                 |
-| `/documents`       | Document list and upload (with indexing status)       |
-| `/documents/[id]`  | Document details, version history, and reindex        |
-| `/documents/[id]/versions/[versionId]/viewer` | Document text viewer with chunk navigation |
-| `/research`        | Legal research with question input and cited answers  |
-| `/contract-review` | Contract review workflow with findings and evidence   |
-| `/clause-redlines` | Clause library analysis with suggested redlines       |
-| `/members`         | Workspace member management (Admin only)              |
-| `/audit`           | Audit log viewer (Admin only)                         |
-| `/account`         | User profile and session info                         |
+| Route                                         | Description                                          |
+| --------------------------------------------- | ---------------------------------------------------- |
+| `/`                                           | Home page with quick links and API health status     |
+| `/setup`                                      | Bootstrap new tenant/workspace/admin with templates  |
+| `/login`                                      | Dev login with tenant/workspace/email                |
+| `/documents`                                  | Document list and upload (with indexing status)      |
+| `/documents/[id]`                             | Document details, version history, and reindex       |
+| `/documents/[id]/versions/[versionId]/viewer` | Document text viewer with chunk navigation           |
+| `/research`                                   | Legal research with question input and cited answers |
+| `/contract-review`                            | Contract review workflow with findings and evidence  |
+| `/clause-redlines`                            | Clause library analysis with suggested redlines      |
+| `/members`                                    | Workspace member management (Admin only)             |
+| `/audit`                                      | Audit log viewer (Admin only)                        |
+| `/account`                                    | User profile and session info                        |
 
 ## Demo Flow
 
@@ -169,13 +169,13 @@ The response includes:
 
 All workflow pages display a status badge at the top of results indicating the reliability of the output:
 
-| Status | Badge Text | Description |
-|--------|------------|-------------|
-| `success` | **Verified Output** | All citations validated successfully |
-| `insufficient_sources` | **Insufficient Evidence** | Not enough sources for confident output |
-| `policy_denied` | **Policy Blocked** | Request blocked by workspace policy |
-| `citation_violation` | **Citation Enforcement Reduced Output** | Output reduced due to citation validation failures |
-| `validation_failed` / `generation_failed` | **Generation Failed** | LLM error or invalid response |
+| Status                                    | Badge Text                              | Description                                        |
+| ----------------------------------------- | --------------------------------------- | -------------------------------------------------- |
+| `success`                                 | **Verified Output**                     | All citations validated successfully               |
+| `insufficient_sources`                    | **Insufficient Evidence**               | Not enough sources for confident output            |
+| `policy_denied`                           | **Policy Blocked**                      | Request blocked by workspace policy                |
+| `citation_violation`                      | **Citation Enforcement Reduced Output** | Output reduced due to citation validation failures |
+| `validation_failed` / `generation_failed` | **Generation Failed**                   | LLM error or invalid response                      |
 
 The badge is driven strictly by `meta.status` from the API response - no heuristics or client-side logic.
 
@@ -245,11 +245,11 @@ Both Contract Review and Clause Redlines support exporting results to Microsoft 
 
 **Button States:**
 
-| State | Description |
-|-------|-------------|
-| Enabled (Blue) | Export available - workflow completed successfully |
+| State           | Description                                                      |
+| --------------- | ---------------------------------------------------------------- |
+| Enabled (Blue)  | Export available - workflow completed successfully               |
 | Disabled (Gray) | Export not available - workflow failed or has unsupported status |
-| Spinning | Export in progress |
+| Spinning        | Export in progress                                               |
 
 **Exportable Statuses:**
 
@@ -275,6 +275,7 @@ Example: `Employment_Agreement_contract-review_20260125.docx`
 **Legal Disclaimer:**
 
 Exported documents include a legal disclaimer stating:
+
 - The document does NOT constitute legal advice
 - Users should consult qualified legal counsel
 - Accuracy depends on source document quality
@@ -285,12 +286,12 @@ Playbooks provide pre-configured settings for common contract review scenarios. 
 
 **Available Playbooks:**
 
-| Playbook | Region | Review Mode | Focus Areas | Output Language | Guidance Hint |
-|----------|--------|-------------|-------------|-----------------|---------------|
-| UAE Procurement MSA | UAE | Standard | Liability, Termination, Payment, Governing Law | English | Prioritize UAE governing law clauses, DIFC/ADGM considerations, and standard procurement terms. |
-| UAE NDA | UAE | Quick | Confidentiality, Termination, Governing Law | English | Focus on confidentiality scope, permitted disclosures, term/survival periods, and UAE law compliance. |
-| KSA Procurement MSA | KSA | Standard | Liability, Termination, Payment, Governing Law | Arabic | Prioritize Saudi law compliance, Sharia considerations, and government procurement regulations. |
-| KSA NDA | KSA | Quick | Confidentiality, Termination, Governing Law | Arabic | Focus on confidentiality under Saudi law, Arabic language requirements, and KSA jurisdiction clauses. |
+| Playbook            | Region | Review Mode | Focus Areas                                    | Output Language | Guidance Hint                                                                                         |
+| ------------------- | ------ | ----------- | ---------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| UAE Procurement MSA | UAE    | Standard    | Liability, Termination, Payment, Governing Law | English         | Prioritize UAE governing law clauses, DIFC/ADGM considerations, and standard procurement terms.       |
+| UAE NDA             | UAE    | Quick       | Confidentiality, Termination, Governing Law    | English         | Focus on confidentiality scope, permitted disclosures, term/survival periods, and UAE law compliance. |
+| KSA Procurement MSA | KSA    | Standard    | Liability, Termination, Payment, Governing Law | Arabic          | Prioritize Saudi law compliance, Sharia considerations, and government procurement regulations.       |
+| KSA NDA             | KSA    | Quick       | Confidentiality, Termination, Governing Law    | Arabic          | Focus on confidentiality under Saudi law, Arabic language requirements, and KSA jurisdiction clauses. |
 
 **Using Playbooks:**
 
@@ -387,6 +388,7 @@ Navigate to `/members` (visible in navigation only for ADMIN users):
 3. Click "Send Invite"
 
 **Notes:**
+
 - If the user exists in the tenant, they're added to the workspace
 - If not, a new user is created (dev "invite" - no email is sent)
 - Each email can only be added once per workspace
@@ -403,6 +405,7 @@ Navigate to `/members` (visible in navigation only for ADMIN users):
 - The member is immediately removed from the workspace
 
 **Restrictions:**
+
 - Cannot remove yourself
 - Cannot remove/demote the last admin (at least one admin must remain)
 - Non-admin users see the list but cannot make changes
@@ -412,6 +415,7 @@ Navigate to `/members` (visible in navigation only for ADMIN users):
 Navigate to `/audit` (visible in navigation only for ADMIN users):
 
 Member management actions are logged:
+
 - `workspace.member.add`: Member invited/added
 - `workspace.member.role.update`: Role changed
 - `workspace.member.remove`: Member removed
@@ -478,12 +482,13 @@ The web app uses **httpOnly cookie-based authentication** for enterprise securit
 
 The application is designed for same-origin deployment in production:
 
-| Mode | Description | API URL |
-|------|-------------|---------|
-| **Cross-origin (dev)** | Web at :3000, API at :8000 | `http://localhost:8000` |
-| **Same-origin (prod)** | Both at same origin via proxy | `/api` |
+| Mode                   | Description                   | API URL                 |
+| ---------------------- | ----------------------------- | ----------------------- |
+| **Cross-origin (dev)** | Web at :3000, API at :8000    | `http://localhost:8000` |
+| **Same-origin (prod)** | Both at same origin via proxy | `/api`                  |
 
 **Why Same-Origin?**
+
 - No CORS complexity
 - SameSite=Lax cookies work seamlessly
 - No need for SameSite=None (which requires Secure and has browser restrictions)
@@ -509,11 +514,11 @@ NEXT_PUBLIC_API_PREFIX=/api
 
 Only non-sensitive context is stored:
 
-| Key | Description |
-|-----|-------------|
-| `aiden_tenant_id` | Current tenant ID (for login pre-fill) |
-| `aiden_workspace_id` | Current workspace ID (for login pre-fill) |
-| `aiden_workspace_context` | Workspace language/jurisdiction defaults |
+| Key                       | Description                               |
+| ------------------------- | ----------------------------------------- |
+| `aiden_tenant_id`         | Current tenant ID (for login pre-fill)    |
+| `aiden_workspace_id`      | Current workspace ID (for login pre-fill) |
+| `aiden_workspace_context` | Workspace language/jurisdiction defaults  |
 
 **Tokens are NEVER stored in localStorage.**
 
@@ -528,24 +533,27 @@ The API client automatically handles token expiry:
 
 ### Logout Flows
 
-| Action | Effect |
-|--------|--------|
-| Sign Out | Clears cookies, revokes current session |
+| Action              | Effect                                                         |
+| ------------------- | -------------------------------------------------------------- |
+| Sign Out            | Clears cookies, revokes current session                        |
 | Sign Out Everywhere | Clears cookies, revokes ALL sessions, increments token_version |
 
 ### Troubleshooting
 
 **Cookies not being sent?**
+
 - Ensure requests include `credentials: "include"`
 - Check browser's cookie settings (third-party cookies, SameSite)
 - In development, cookies work over HTTP localhost
 
 **Getting 401 after refresh?**
+
 - Check if token_version was incremented (admin action)
 - Check if refresh token was revoked (security measure)
 - Clear cookies and log in again
 
 **CORS errors with credentials?**
+
 - Backend must have `allow_credentials=True` in CORS config
 - `Access-Control-Allow-Origin` cannot be `*` with credentials
 - Frontend origin must be in allowed origins list
@@ -567,13 +575,13 @@ Key principles:
 
 ### Available Templates
 
-| Template | Region | Workflows | Jurisdictions | Default Language |
-| -------- | ------ | --------- | ------------- | ---------------- |
-| UAE In-House (General Counsel) | UAE | LEGAL_RESEARCH_V1, CONTRACT_REVIEW_V1 | UAE, DIFC, ADGM | mixed |
-| UAE Procurement (Contract-heavy) | UAE | CONTRACT_REVIEW_V1 | UAE, DIFC, ADGM | en |
-| UAE Compliance | UAE | LEGAL_RESEARCH_V1 | UAE, DIFC, ADGM | en |
-| KSA In-House (General Counsel) | KSA | LEGAL_RESEARCH_V1, CONTRACT_REVIEW_V1 | KSA | ar |
-| KSA Procurement (Contract-heavy) | KSA | CONTRACT_REVIEW_V1 | KSA | ar |
+| Template                         | Region | Workflows                             | Jurisdictions   | Default Language |
+| -------------------------------- | ------ | ------------------------------------- | --------------- | ---------------- |
+| UAE In-House (General Counsel)   | UAE    | LEGAL_RESEARCH_V1, CONTRACT_REVIEW_V1 | UAE, DIFC, ADGM | mixed            |
+| UAE Procurement (Contract-heavy) | UAE    | CONTRACT_REVIEW_V1                    | UAE, DIFC, ADGM | en               |
+| UAE Compliance                   | UAE    | LEGAL_RESEARCH_V1                     | UAE, DIFC, ADGM | en               |
+| KSA In-House (General Counsel)   | KSA    | LEGAL_RESEARCH_V1, CONTRACT_REVIEW_V1 | KSA             | ar               |
+| KSA Procurement (Contract-heavy) | KSA    | CONTRACT_REVIEW_V1                    | KSA             | ar               |
 
 ### Template Configuration
 
@@ -685,13 +693,14 @@ await apiClient.logoutAll();
 
 Sessions may be forcibly terminated in several scenarios:
 
-| Scenario | Cause | User Experience |
-|----------|-------|-----------------|
-| Admin action | Administrator calls `/auth/logout-all` for your account | Redirected to login |
-| Deployment | Token version changed after server update/migration | Redirected to login |
-| Security response | Suspected credential compromise | Redirected to login |
+| Scenario          | Cause                                                   | User Experience     |
+| ----------------- | ------------------------------------------------------- | ------------------- |
+| Admin action      | Administrator calls `/auth/logout-all` for your account | Redirected to login |
+| Deployment        | Token version changed after server update/migration     | Redirected to login |
+| Security response | Suspected credential compromise                         | Redirected to login |
 
 When forced logout occurs:
+
 1. The API returns a structured error with `error_code: "token_revoked"`
 2. The web client clears all session data automatically
 3. User is redirected to `/login?reason=session_expired`
@@ -704,6 +713,7 @@ This is intentional behavior for security - not an error condition.
 The API client is located at `src/lib/apiClient.ts` and provides:
 
 ### Authentication Methods
+
 - `devLogin()` - Login with credentials (sets cookies)
 - `refreshAccessToken()` - Refresh tokens (called automatically on 401)
 - `logout()` - Logout current session (clears cookies)
@@ -711,9 +721,11 @@ The API client is located at `src/lib/apiClient.ts` and provides:
 - `getMe()` - Get current user info
 
 ### Bootstrap/Setup
+
 - `bootstrapTenant()` - Create tenant with bootstrap
 
 ### Documents
+
 - `listDocuments()` - List workspace documents
 - `getDocument()` - Get document with versions
 - `uploadDocument()` - Upload new document
@@ -723,15 +735,18 @@ The API client is located at `src/lib/apiClient.ts` and provides:
 - `getDocumentVersionChunks()` - Get all chunks for a document version (Viewer+)
 
 ### Workflows
+
 - `legalResearch()` - Execute legal research workflow
 - `contractReview()` - Execute contract review workflow
 - `clauseRedlines()` - Execute clause redlines workflow
 
 ### Exports
+
 - `exportContractReviewDocx()` - Export contract review results to DOCX (Viewer+)
 - `exportClauseRedlinesDocx()` - Export clause redlines results to DOCX (Viewer+)
 
 ### Admin
+
 - `createPolicyProfile()` - Create a policy profile (Admin only)
 - `attachWorkspacePolicyProfile()` - Attach policy profile to workspace (Admin only)
 - `getAuditLogs()` - Fetch audit log entries (Admin only)
@@ -752,6 +767,7 @@ All authenticated requests include `credentials: "include"` for automatic cookie
 | ADMIN  | Yes            | Yes         | Yes          | Yes            | Yes        |
 
 The UI automatically:
+
 - Disables upload buttons for VIEWER role users
 - Shows Members and Audit links only for ADMIN users
 - Disables member management actions for non-ADMIN users

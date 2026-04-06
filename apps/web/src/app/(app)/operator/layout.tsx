@@ -159,7 +159,8 @@ export default function OperatorLayout({
       <style jsx>{`
         .operator-subnav {
           background: var(--bg-elevated, var(--card-bg, #1a1d24));
-          border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+          border-bottom: 1px solid
+            var(--border-color, rgba(255, 255, 255, 0.08));
           padding: 0 var(--space-6);
         }
         .operator-subnav-inner {

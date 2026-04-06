@@ -42,11 +42,15 @@ export function useAminAvatarState(): AminAvatarState {
       setIsSleeping(false);
       clearTimeout(sleepTimer.current);
       // Only restart the sleep timer if currently idle
-      sleepTimer.current = setTimeout(() => setIsSleeping(true), SLEEP_TIMEOUT_MS);
+      sleepTimer.current = setTimeout(
+        () => setIsSleeping(true),
+        SLEEP_TIMEOUT_MS
+      );
     };
 
     window.addEventListener('amin-user-message', handleUserMessage);
-    return () => window.removeEventListener('amin-user-message', handleUserMessage);
+    return () =>
+      window.removeEventListener('amin-user-message', handleUserMessage);
   }, []);
 
   if (isSleeping && aminStatus === 'idle') return 'sleeping';

@@ -23,10 +23,7 @@ function ForYouDot({ reason }: { reason: ScoredWorkflow['reason'] }) {
     recent: '#64748b',
   };
   return (
-    <span
-      className="r2-foryou-dot"
-      style={{ background: colors[reason] }}
-    />
+    <span className="r2-foryou-dot" style={{ background: colors[reason] }} />
   );
 }
 
@@ -72,7 +69,13 @@ export function HomePanel({ soul }: HomePanelProps) {
       {forYou.length > 0 && (
         <div className="r2-section">
           <div className="r2-section-label r2-section-label-gold">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              stroke="none"
+            >
               <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
             </svg>
             FOR YOU
@@ -87,7 +90,9 @@ export function HomePanel({ soul }: HomePanelProps) {
                   className={`r2-link${isActive(href) ? ' r2-link-active' : ''}`}
                   onClick={e => handleClick(e, scored.workflow)}
                 >
-                  <span className="r2-link-text">{displayName(scored.workflow)}</span>
+                  <span className="r2-link-text">
+                    {displayName(scored.workflow)}
+                  </span>
                   <ForYouDot reason={scored.reason} />
                 </Link>
               );
@@ -97,7 +102,10 @@ export function HomePanel({ soul }: HomePanelProps) {
             <Link
               href="/home"
               className="r2-see-all"
-              onClick={e => { e.preventDefault(); navigateTo('/home'); }}
+              onClick={e => {
+                e.preventDefault();
+                navigateTo('/home');
+              }}
             >
               See all
             </Link>
@@ -109,7 +117,14 @@ export function HomePanel({ soul }: HomePanelProps) {
       {continueItems.length > 0 && (
         <div className="r2-section">
           <div className="r2-section-label">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
@@ -125,8 +140,12 @@ export function HomePanel({ soul }: HomePanelProps) {
                   className={`r2-link r2-link-stacked${isActive(href) ? ' r2-link-active' : ''}`}
                   onClick={e => handleClick(e, item.workflow)}
                 >
-                  <span className="r2-link-text">{displayName(item.workflow)}</span>
-                  <span className="r2-link-meta">{timeAgo(item.lastAccessedAt)}</span>
+                  <span className="r2-link-text">
+                    {displayName(item.workflow)}
+                  </span>
+                  <span className="r2-link-meta">
+                    {timeAgo(item.lastAccessedAt)}
+                  </span>
                 </Link>
               );
             })}

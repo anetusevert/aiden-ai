@@ -306,7 +306,8 @@
     "heyaminBrand": "HeyAmin",
     "myAiProfile": "My AI Profile",
     "findingsCount": "Findings: {count}",
-    "findingsSection": "Findings ({count})"
+    "findingsSection": "Findings ({count})",
+    "account": "اکاؤنٹ"
   },
   "nav": {
     "documents": "دستاویزات",

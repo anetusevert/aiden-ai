@@ -2,7 +2,10 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { reportScreenContext, useCurrentScreenContext } from '@/lib/screenContext';
+import {
+  reportScreenContext,
+  useCurrentScreenContext,
+} from '@/lib/screenContext';
 
 export function useScreenContext() {
   const pathname = usePathname();

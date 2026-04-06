@@ -72,11 +72,16 @@ export function AminAvatar({
   })();
 
   const imgTransition = (() => {
-    if (s === 'thinking') return { duration: 2, repeat: Infinity, ease: 'easeInOut' };
-    if (s === 'speaking') return { duration: 0.6, repeat: Infinity, ease: 'easeInOut' };
-    if (s === 'listening') return { type: 'spring' as const, stiffness: 200, damping: 20 };
-    if (s === 'sleeping') return { duration: 4, repeat: Infinity, ease: 'easeInOut' };
-    if (s === 'success') return { type: 'spring' as const, stiffness: 300, damping: 15 };
+    if (s === 'thinking')
+      return { duration: 2, repeat: Infinity, ease: 'easeInOut' };
+    if (s === 'speaking')
+      return { duration: 0.6, repeat: Infinity, ease: 'easeInOut' };
+    if (s === 'listening')
+      return { type: 'spring' as const, stiffness: 200, damping: 20 };
+    if (s === 'sleeping')
+      return { duration: 4, repeat: Infinity, ease: 'easeInOut' };
+    if (s === 'success')
+      return { type: 'spring' as const, stiffness: 300, damping: 15 };
     return { duration: 0.4, ease: 'easeOut' };
   })();
 
@@ -128,8 +133,10 @@ export function AminAvatar({
   })();
 
   const ringTransition = (() => {
-    if (s === 'thinking') return { duration: 1.5, repeat: Infinity, ease: 'easeInOut' };
-    if (s === 'speaking') return { duration: 0.5, repeat: Infinity, ease: 'easeInOut' };
+    if (s === 'thinking')
+      return { duration: 1.5, repeat: Infinity, ease: 'easeInOut' };
+    if (s === 'speaking')
+      return { duration: 0.5, repeat: Infinity, ease: 'easeInOut' };
     if (s === 'success') return { duration: 0.3 };
     return { duration: 0.4, ease: 'easeOut' };
   })();
@@ -146,8 +153,10 @@ export function AminAvatar({
   })();
 
   const glowTransition = (() => {
-    if (s === 'thinking') return { duration: 1.5, repeat: Infinity, ease: 'easeInOut' };
-    if (s === 'speaking') return { duration: 0.5, repeat: Infinity, ease: 'easeInOut' };
+    if (s === 'thinking')
+      return { duration: 1.5, repeat: Infinity, ease: 'easeInOut' };
+    if (s === 'speaking')
+      return { duration: 0.5, repeat: Infinity, ease: 'easeInOut' };
     if (s === 'success') return { duration: 0.6, ease: 'easeOut' };
     return { duration: 0.5, ease: 'easeOut' };
   })();
@@ -193,7 +202,9 @@ export function AminAvatar({
 
       {/* Waveform (speaking only) */}
       <AnimatePresence mode="wait">
-        {s === 'speaking' && showWaveform && <AminWaveform key="waveform" size={size} />}
+        {s === 'speaking' && showWaveform && (
+          <AminWaveform key="waveform" size={size} />
+        )}
       </AnimatePresence>
 
       {/* Thinking dots */}

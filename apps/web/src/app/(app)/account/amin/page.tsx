@@ -51,7 +51,11 @@ interface LanguageOption {
 
 const LANGUAGES: LanguageOption[] = [
   { code: 'en', flag: '\u{1F1EC}\u{1F1E7}', label: 'English' },
-  { code: 'ar', flag: '\u{1F1F8}\u{1F1E6}', label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629' },
+  {
+    code: 'ar',
+    flag: '\u{1F1F8}\u{1F1E6}',
+    label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629',
+  },
   { code: 'fr', flag: '\u{1F1EB}\u{1F1F7}', label: 'Fran\u00E7ais' },
   { code: 'ur', flag: '\u{1F1F5}\u{1F1F0}', label: '\u0627\u0631\u062F\u0648' },
   { code: 'tl', flag: '\u{1F1F5}\u{1F1ED}', label: 'Filipino' },
@@ -63,8 +67,11 @@ const LANGUAGES: LanguageOption[] = [
 
 export default function MyAminPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, setAminPreferences } =
-    useAuth();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    setAminPreferences,
+  } = useAuth();
 
   const [selectedVoice, setSelectedVoice] = useState<VoiceId>('onyx');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
@@ -152,9 +159,7 @@ export default function MyAminPage() {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : 'Failed to save preferences'
-      );
+      setError(e instanceof Error ? e.message : 'Failed to save preferences');
     } finally {
       setSaving(false);
     }
@@ -207,7 +212,9 @@ export default function MyAminPage() {
           setPreviewPlaying(voiceId);
           try {
             connectAminAudioSource(audio);
-          } catch { /* audio context may fail in some browsers */ }
+          } catch {
+            /* audio context may fail in some browsers */
+          }
         });
 
         audio.addEventListener('ended', () => {
@@ -241,8 +248,19 @@ export default function MyAminPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <motion.div {...glassReveal} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div className="page-header" style={{ paddingBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+    <motion.div
+      {...glassReveal}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+    >
+      <div
+        className="page-header"
+        style={{
+          paddingBottom: 'var(--space-3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-4)',
+        }}
+      >
         <AminAvatar
           size={96}
           state={previewPlaying ? 'speaking' : 'idle'}
@@ -267,8 +285,14 @@ export default function MyAminPage() {
         }}
       >
         {/* Left column — Voice */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="card-header" style={{ paddingBottom: 'var(--space-2)' }}>
+        <div
+          className="card"
+          style={{ display: 'flex', flexDirection: 'column' }}
+        >
+          <div
+            className="card-header"
+            style={{ paddingBottom: 'var(--space-2)' }}
+          >
             <h3 className="card-title">Voice</h3>
             <p
               style={{
@@ -293,7 +317,7 @@ export default function MyAminPage() {
               padding: '0 var(--space-5) var(--space-5)',
             }}
           >
-            {VOICES.map((voice) => {
+            {VOICES.map(voice => {
               const isSelected = selectedVoice === voice.id;
               const isPreviewing = previewingVoice === voice.id;
               const isPlaying = previewPlaying === voice.id;
@@ -367,7 +391,7 @@ export default function MyAminPage() {
                   {/* Preview button */}
                   <button
                     type="button"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       if (isPlaying) {
                         stopCurrentPreview();
@@ -402,7 +426,10 @@ export default function MyAminPage() {
                     {isPreviewing && <Spinner />}
                     {isPlaying && '\u25FC Playing'}
                     {hasError && 'Preview unavailable'}
-                    {!isPreviewing && !isPlaying && !hasError && '\u25B6 Preview'}
+                    {!isPreviewing &&
+                      !isPlaying &&
+                      !hasError &&
+                      '\u25B6 Preview'}
                   </button>
                 </motion.button>
               );
@@ -411,8 +438,14 @@ export default function MyAminPage() {
         </div>
 
         {/* Right column — Language */}
-        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="card-header" style={{ paddingBottom: 'var(--space-2)' }}>
+        <div
+          className="card"
+          style={{ display: 'flex', flexDirection: 'column' }}
+        >
+          <div
+            className="card-header"
+            style={{ paddingBottom: 'var(--space-2)' }}
+          >
             <h3 className="card-title">Language</h3>
             <p
               style={{
@@ -437,7 +470,7 @@ export default function MyAminPage() {
               padding: '0 var(--space-5) var(--space-5)',
             }}
           >
-            {LANGUAGES.map((lang) => {
+            {LANGUAGES.map(lang => {
               const isSelected = selectedLanguage === lang.code;
               return (
                 <motion.button

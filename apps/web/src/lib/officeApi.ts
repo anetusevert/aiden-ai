@@ -48,7 +48,11 @@ function extractErrorMessage(status: number, body: string): string {
     const parsed = JSON.parse(body);
     const detail = parsed?.detail;
     if (typeof detail === 'string') return detail;
-    if (typeof detail === 'object' && detail !== null && typeof detail.message === 'string') {
+    if (
+      typeof detail === 'object' &&
+      detail !== null &&
+      typeof detail.message === 'string'
+    ) {
       return detail.message;
     }
   } catch {
@@ -112,7 +116,9 @@ export const officeApi = {
     if (params?.limit) query.set('limit', String(params.limit));
     if (params?.offset) query.set('offset', String(params.offset));
     const suffix = query.toString() ? `?${query.toString()}` : '';
-    return officeFetch<OfficeDocumentListResponse>(`/api/v1/office/documents${suffix}`);
+    return officeFetch<OfficeDocumentListResponse>(
+      `/api/v1/office/documents${suffix}`
+    );
   },
 
   countDocuments() {

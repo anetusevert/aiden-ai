@@ -26,10 +26,7 @@ import {
   getWorkflowHref,
   renderCategoryIcon,
 } from '@/lib/workflowPresentation';
-import {
-  apiClient,
-  type LegalResearchResponse,
-} from '@/lib/apiClient';
+import { apiClient, type LegalResearchResponse } from '@/lib/apiClient';
 import { officeApi, type OfficeDocument } from '@/lib/officeApi';
 import { reportScreenContext } from '@/lib/screenContext';
 import {
@@ -115,7 +112,9 @@ function useWorkflowSession(workflowId: string, totalSteps: number) {
     try {
       const stored = localStorage.getItem(getSessionKey(workflowId));
       if (stored) return JSON.parse(stored) as WorkflowSession;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return createFreshSession(workflowId);
   });
 
@@ -126,7 +125,9 @@ function useWorkflowSession(workflowId: string, totalSteps: number) {
       setSession(next);
       try {
         localStorage.setItem(getSessionKey(workflowId), JSON.stringify(next));
-      } catch { /* quota */ }
+      } catch {
+        /* quota */
+      }
     },
     [workflowId]
   );
@@ -141,7 +142,9 @@ function useWorkflowSession(workflowId: string, totalSteps: number) {
         try {
           localStorage.removeItem(getSessionKey(workflowId));
           localStorage.removeItem(getDocKey(workflowId));
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         setShowCompletion(true);
         return { ...prev, completedSteps: completed };
       }
@@ -152,11 +155,10 @@ function useWorkflowSession(workflowId: string, totalSteps: number) {
         completedSteps: completed,
       };
       try {
-        localStorage.setItem(
-          getSessionKey(workflowId),
-          JSON.stringify(next)
-        );
-      } catch { /* quota */ }
+        localStorage.setItem(getSessionKey(workflowId), JSON.stringify(next));
+      } catch {
+        /* quota */
+      }
       return next;
     });
   }, [totalSteps, workflowId]);
@@ -174,7 +176,9 @@ function useWorkflowSession(workflowId: string, totalSteps: number) {
       persist(next);
       try {
         localStorage.setItem(getDocKey(workflowId), docId);
-      } catch { /* quota */ }
+      } catch {
+        /* quota */
+      }
     },
     [persist, session, workflowId]
   );
@@ -245,12 +249,18 @@ const stepTransition = {
   animate: {
     x: 0,
     opacity: 1,
-    transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease },
+    transition: {
+      duration: motionTokens.duration.slow,
+      ease: motionTokens.ease,
+    },
   },
   exit: {
     x: -20,
     opacity: 0,
-    transition: { duration: motionTokens.duration.fast, ease: motionTokens.ease },
+    transition: {
+      duration: motionTokens.duration.fast,
+      ease: motionTokens.ease,
+    },
   },
 };
 
@@ -259,7 +269,10 @@ const railSlideIn = {
   animate: {
     x: 0,
     opacity: 1,
-    transition: { duration: motionTokens.duration.slow, ease: motionTokens.ease },
+    transition: {
+      duration: motionTokens.duration.slow,
+      ease: motionTokens.ease,
+    },
   },
 };
 
@@ -301,7 +314,14 @@ function StepRail({
   return (
     <motion.aside className="exec-rail" {...railSlideIn}>
       <button className="exec-rail-exit" onClick={onExit} type="button">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <polyline points="15 18 9 12 15 6" />
         </svg>
         Exit
@@ -337,7 +357,9 @@ function StepRail({
               <button
                 type="button"
                 className={`exec-rail-step ${isShaking ? 'exec-rail-step--shake' : ''}`}
-                data-state={isCompleted ? 'completed' : isActive ? 'active' : 'upcoming'}
+                data-state={
+                  isCompleted ? 'completed' : isActive ? 'active' : 'upcoming'
+                }
                 onClick={() => handleStepClick(idx)}
               >
                 <span
@@ -351,7 +373,14 @@ function StepRail({
                   }
                 >
                   {isCompleted && (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#fff"
+                      strokeWidth="3"
+                    >
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
@@ -410,7 +439,9 @@ function StepTopBar({
         className={`exec-topbar-advance ${canAdvance ? '' : 'exec-topbar-advance--disabled'}`}
         disabled={!canAdvance}
         onClick={onAdvance}
-        title={canAdvance ? undefined : 'Complete the step below before advancing'}
+        title={
+          canAdvance ? undefined : 'Complete the step below before advancing'
+        }
       >
         {isLastStep ? 'Complete Workflow' : 'Mark Step Complete'} →
       </button>
@@ -458,7 +489,14 @@ function ResearchStepContent({
   return (
     <div className="exec-research">
       <div className="exec-research-banner">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
@@ -617,7 +655,14 @@ function DocumentStepContent({
           onClick={createDocument}
           disabled={creating}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
             <line x1="12" y1="18" x2="12" y2="12" />
@@ -632,7 +677,14 @@ function DocumentStepContent({
           className="exec-document-card"
           onClick={() => fileInputRef.current?.click()}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
@@ -686,7 +738,11 @@ function ReviewStepContent({
           >
             Open Contract Review Tool
           </a>
-          <button type="button" className="btn btn-outline" onClick={onComplete}>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={onComplete}
+          >
             Mark review complete
           </button>
         </div>
@@ -694,9 +750,7 @@ function ReviewStepContent({
     );
   }
 
-  return (
-    <GuidanceStepContent step={step} onComplete={onComplete} />
-  );
+  return <GuidanceStepContent step={step} onComplete={onComplete} />;
 }
 
 // ============================================================================
@@ -760,7 +814,14 @@ function GuidanceStepContent({
         className="btn btn-outline exec-guidance-open-amin"
         onClick={openPanel}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
         Open Amin
@@ -829,7 +890,14 @@ function CompletionModal({
           viewBox="0 0 80 80"
           fill="none"
         >
-          <circle cx="40" cy="40" r="36" stroke="#d4a017" strokeWidth="3" opacity="0.3" />
+          <circle
+            cx="40"
+            cy="40"
+            r="36"
+            stroke="#d4a017"
+            strokeWidth="3"
+            opacity="0.3"
+          />
           <path
             className="exec-completion-check-path"
             d="M24 42 L34 52 L56 30"
@@ -891,10 +959,7 @@ export default function WorkflowExecutePage() {
   const category = params.category as WorkflowCategory;
   const workflowId = params.workflowId;
 
-  const workflow = useMemo(
-    () => getWorkflowById(workflowId),
-    [workflowId]
-  );
+  const workflow = useMemo(() => getWorkflowById(workflowId), [workflowId]);
 
   const steps = workflow?.steps ?? [];
   const accent = WORKFLOW_CATEGORY_ACCENTS[category] ?? '#d4a017';
@@ -922,7 +987,9 @@ export default function WorkflowExecutePage() {
     try {
       const stored = localStorage.getItem(getDocKey(workflowId));
       if (stored) setAttachedDoc(stored);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [attachedDocId, searchParams, setAttachedDoc, workflowId]);
 
   // Report screen context on every step change
@@ -957,15 +1024,27 @@ export default function WorkflowExecutePage() {
         attached_doc_id: attachedDocId,
       },
     });
-  }, [workflow, currentStep, completedSteps, attachedDocId, category, workflowId, steps]);
+  }, [
+    workflow,
+    currentStep,
+    completedSteps,
+    attachedDocId,
+    category,
+    workflowId,
+    steps,
+  ]);
 
   // Determine current step type and whether advance is allowed
   const currentStepDef = steps[currentStep];
-  const stepType = currentStepDef && workflow
-    ? classifyStepType(currentStepDef, workflow)
-    : 'guidance';
+  const stepType =
+    currentStepDef && workflow
+      ? classifyStepType(currentStepDef, workflow)
+      : 'guidance';
 
-  const canAdvance = completedSteps.includes(currentStep) || stepType === 'research' || stepType === 'document';
+  const canAdvance =
+    completedSteps.includes(currentStep) ||
+    stepType === 'research' ||
+    stepType === 'document';
   const isLastStep = currentStep >= steps.length - 1;
 
   if (!workflow) {
@@ -989,10 +1068,7 @@ export default function WorkflowExecutePage() {
     switch (stepType) {
       case 'research':
         return (
-          <ResearchStepContent
-            step={currentStepDef}
-            onComplete={advanceStep}
-          />
+          <ResearchStepContent step={currentStepDef} onComplete={advanceStep} />
         );
       case 'document':
         return (
@@ -1016,10 +1092,7 @@ export default function WorkflowExecutePage() {
       case 'guidance':
       default:
         return (
-          <GuidanceStepContent
-            step={currentStepDef}
-            onComplete={advanceStep}
-          />
+          <GuidanceStepContent step={currentStepDef} onComplete={advanceStep} />
         );
     }
   };
@@ -1054,10 +1127,7 @@ export default function WorkflowExecutePage() {
 
         <div className="exec-content">
           <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              {...stepTransition}
-            >
+            <motion.div key={currentStep} {...stepTransition}>
               {renderStepContent()}
             </motion.div>
           </AnimatePresence>

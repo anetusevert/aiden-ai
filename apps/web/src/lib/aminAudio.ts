@@ -11,7 +11,7 @@ function getOrCreateContext(): AudioContext {
 }
 
 export function connectAminAudioSource(
-  audioElement: HTMLAudioElement,
+  audioElement: HTMLAudioElement
 ): AnalyserNode {
   const ctx = getOrCreateContext();
 
@@ -41,13 +41,17 @@ export function disconnectAminAudio(): void {
   if (sourceNode) {
     try {
       sourceNode.disconnect();
-    } catch { /* already disconnected */ }
+    } catch {
+      /* already disconnected */
+    }
     sourceNode = null;
   }
   if (analyser) {
     try {
       analyser.disconnect();
-    } catch { /* already disconnected */ }
+    } catch {
+      /* already disconnected */
+    }
     analyser = null;
   }
   connectedElement = null;

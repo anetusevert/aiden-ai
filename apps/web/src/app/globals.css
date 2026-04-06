@@ -4736,7 +4736,9 @@ a.mkt-footer-link:hover {
   cursor: pointer;
   z-index: 2;
   padding: 0;
-  transition: color 150ms ease, background 150ms ease;
+  transition:
+    color 150ms ease,
+    background 150ms ease;
 }
 
 .rail2-collapse:hover {
@@ -5072,7 +5074,9 @@ a.mkt-footer-link:hover {
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
-  transition: background 150ms ease, color 150ms ease;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
   color: #64748b;
   padding: 0;
 }
@@ -5152,6 +5156,24 @@ a.mkt-footer-link:hover {
   box-shadow: 0 0 0 2px var(--amin-accent-soft);
 }
 
+/* Rail1 user dropdown — opens upward from the bottom-left avatar */
+.rail1-user-dropdown {
+  position: relative;
+}
+
+.rail1-user-dropdown .dropdown-menu {
+  top: auto;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: auto;
+  min-width: 240px;
+}
+
+.rail1-user-dropdown .dropdown-menu-left {
+  left: 0;
+  right: auto;
+}
+
 /* ---- Rail 2: Context panel ---- */
 .rail2 {
   flex-shrink: 0;
@@ -5195,7 +5217,9 @@ a.mkt-footer-link:hover {
   color: #64748b;
   cursor: pointer;
   z-index: 2;
-  transition: color 150ms ease, background 150ms ease;
+  transition:
+    color 150ms ease,
+    background 150ms ease;
   padding: 0;
 }
 
@@ -5266,7 +5290,9 @@ a.mkt-footer-link:hover {
   color: var(--text-secondary, #9a9ba2);
   text-decoration: none;
   border-radius: 6px;
-  transition: background 120ms ease, color 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
   position: relative;
   overflow: hidden;
   border-left: 2px solid transparent;
@@ -5375,7 +5401,9 @@ a.mkt-footer-link:hover {
   border: 1px solid rgba(212, 160, 23, 0.3);
   border-radius: 6px;
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
   margin-bottom: 8px;
 }
 
@@ -5412,7 +5440,6 @@ a.mkt-footer-link:hover {
     padding: var(--space-6) var(--space-4);
   }
 }
-
 
 .app-loading {
   display: flex;
@@ -5643,7 +5670,10 @@ a.mkt-footer-link:hover {
   box-shadow: var(--shadow-xl);
 }
 
-.app-shell a:not(.btn):not(.sidebar-link):not(.r2-link):not(.rail1-logo):not(.rail1-avatar):not(.r2-see-all) {
+.app-shell
+  a:not(.btn):not(.sidebar-link):not(.r2-link):not(.rail1-logo):not(
+    .rail1-avatar
+  ):not(.r2-see-all) {
   color: var(--status-info);
 }
 
@@ -6296,6 +6326,11 @@ a.mkt-footer-link:hover {
 
 .dropdown-menu-left {
   left: 0;
+}
+
+.dropdown-menu-up {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 .dropdown-item {
@@ -7116,8 +7151,8 @@ textarea:focus-visible {
   gap: var(--space-4);
   max-width: 420px;
   padding: var(--space-8) var(--space-6);
-  background: var(--surface-raised, rgba(255,255,255,0.04));
-  border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+  background: var(--surface-raised, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
   border-radius: var(--radius-xl, 16px);
   text-align: center;
 }
@@ -7150,7 +7185,7 @@ textarea:focus-visible {
   display: block;
   padding: var(--space-2) var(--space-4);
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border-subtle, rgba(255,255,255,0.1));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
   border-radius: var(--radius-md, 8px);
   font-family: 'Fira Code', 'Cascadia Code', monospace;
   font-size: 0.8125rem;
@@ -9074,7 +9109,9 @@ textarea:focus-visible {
   border: 1px solid var(--glass-border);
   background: var(--glass-bg);
   cursor: pointer;
-  transition: border-color 0.18s, background 0.18s;
+  transition:
+    border-color 0.18s,
+    background 0.18s;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -9514,7 +9551,9 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.3s, background-color 0.3s;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s;
 }
 
 .exec-rail-step[data-state='active'] .exec-rail-indicator {
@@ -9618,7 +9657,10 @@ textarea:focus-visible {
   font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .exec-topbar-advance:hover:not(:disabled) {
@@ -9754,7 +9796,9 @@ textarea:focus-visible {
   background: var(--glass-bg);
   cursor: pointer;
   text-align: center;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .exec-document-card:hover {
@@ -9826,7 +9870,9 @@ textarea:focus-visible {
   color: var(--text);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .exec-guidance-prompt:hover {
@@ -9938,20 +9984,38 @@ textarea:focus-visible {
 /* ── Keyframes ── */
 
 @keyframes exec-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 @keyframes exec-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px); }
-  40% { transform: translateX(4px); }
-  60% { transform: translateX(-2px); }
-  80% { transform: translateX(2px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
 }
 
 @keyframes exec-check-draw {
-  to { stroke-dashoffset: 0; }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* ==========================================================================

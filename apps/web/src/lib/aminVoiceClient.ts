@@ -65,7 +65,8 @@ const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
 };
 
 function _buildSessionInstructions(): string {
-  const langInstruction = LANGUAGE_INSTRUCTIONS[_activeLanguage] ?? LANGUAGE_INSTRUCTIONS.en;
+  const langInstruction =
+    LANGUAGE_INSTRUCTIONS[_activeLanguage] ?? LANGUAGE_INSTRUCTIONS.en;
   return `${langInstruction}\n\nYou are Amin, an AI legal assistant specialized in GCC and Saudi Arabian law. You are professional, concise, and helpful.`;
 }
 
@@ -92,7 +93,9 @@ export function getVoice(): string {
 export function setLanguage(language: string): void {
   _activeLanguage = language;
   if (_singletonInstance?.connected) {
-    _singletonInstance.sendSessionUpdate({ instructions: _buildSessionInstructions() });
+    _singletonInstance.sendSessionUpdate({
+      instructions: _buildSessionInstructions(),
+    });
   }
 }
 
@@ -179,7 +182,10 @@ export class AminVoiceClient {
       // the upstream OpenAI connection and send its own session.update first.
       setTimeout(() => {
         if (this._disconnected || this.ws !== ws) return;
-        this.sendSessionUpdate({ voice: _activeVoice, instructions: _buildSessionInstructions() });
+        this.sendSessionUpdate({
+          voice: _activeVoice,
+          instructions: _buildSessionInstructions(),
+        });
       }, 300);
 
       if (!this._micPaused) {

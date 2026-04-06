@@ -104,7 +104,11 @@ export default function EntrySequence({
                       ease: [0.22, 1, 0.36, 1],
                     }}
                   >
-                    <AminAvatar size={120} state={avatarState} showWaveform={false} />
+                    <AminAvatar
+                      size={120}
+                      state={avatarState}
+                      showWaveform={false}
+                    />
                   </motion.div>
                 </motion.div>
               )}
@@ -175,7 +179,11 @@ export default function EntrySequence({
                     gap: 16,
                   }}
                 >
-                  <AminAvatar size={120} state={avatarState} showWaveform={false} />
+                  <AminAvatar
+                    size={120}
+                    state={avatarState}
+                    showWaveform={false}
+                  />
                   <motion.p
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}

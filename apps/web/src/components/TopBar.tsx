@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { AccountMenu } from './AccountMenu';
 import { useAuth } from '@/lib/AuthContext';
 import {
   getCategoryMeta,
@@ -144,10 +143,6 @@ export function TopBar() {
             {breadcrumb.current}
           </span>
         </nav>
-      </div>
-
-      <div className="topbar-right">
-        <AccountMenu />
       </div>
     </header>
   );

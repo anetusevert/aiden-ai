@@ -41,7 +41,10 @@ function renderPreview(document: OfficeDocument) {
     return (
       <div className="document-preview-list">
         {slides.map((slide, index) => (
-          <div key={`${index}-${String(slide)}`} className="document-preview-card">
+          <div
+            key={`${index}-${String(slide)}`}
+            className="document-preview-card"
+          >
             <strong>Slide {index + 1}</strong>
             <span>{String(slide)}</span>
           </div>
@@ -75,7 +78,9 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
         setDraftTitle(data.title);
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load document.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load document.'
+        );
       } finally {
         setLoading(false);
       }
@@ -122,7 +127,9 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
       });
       setDocument(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to rename document.');
+      setError(
+        err instanceof Error ? err.message : 'Failed to rename document.'
+      );
     }
   }
 
@@ -135,7 +142,9 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
       await officeApi.deleteDocument(document.id);
       navigateTo('/documents');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete document.');
+      setError(
+        err instanceof Error ? err.message : 'Failed to delete document.'
+      );
     }
   }
 
@@ -161,7 +170,9 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
   }
 
   if (!document) {
-    return <div className="alert alert-error">{error || 'Document not found.'}</div>;
+    return (
+      <div className="alert alert-error">{error || 'Document not found.'}</div>
+    );
   }
 
   return (
@@ -175,14 +186,18 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
               <div>
                 <h1 className="page-title">{document.title}</h1>
                 <p className="page-subtitle">
-                  Live office document with Collabora editing and Amin context awareness.
+                  Live office document with Collabora editing and Amin context
+                  awareness.
                 </p>
               </div>
               <div className="document-actions">
                 <button className="btn btn-outline" onClick={askAmin}>
                   Ask Amin
                 </button>
-                <button className="btn btn-outline" onClick={() => setMode('edit')}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setMode('edit')}
+                >
                   Open in Editor
                 </button>
                 <a
@@ -211,7 +226,10 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
                 ))}
               </div>
               <div className="card-footer document-footer-actions">
-                <button className="btn btn-outline" onClick={handleDeleteDocument}>
+                <button
+                  className="btn btn-outline"
+                  onClick={handleDeleteDocument}
+                >
                   Delete
                 </button>
               </div>
@@ -240,11 +258,16 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
               </button>
               <button
                 className="btn btn-outline"
-                onClick={() => window.dispatchEvent(new CustomEvent('collabora-save'))}
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent('collabora-save'))
+                }
               >
                 Save
               </button>
-              <button className="btn btn-primary" onClick={() => setMode('view')}>
+              <button
+                className="btn btn-primary"
+                onClick={() => setMode('view')}
+              >
                 Close Editor
               </button>
             </div>
@@ -257,7 +280,10 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
             metadata={document.metadata_}
             onClose={() => setMode('view')}
             onSave={() => {
-              void officeApi.getDocument(document.id).then(setDocument).catch(() => {});
+              void officeApi
+                .getDocument(document.id)
+                .then(setDocument)
+                .catch(() => {});
             }}
           />
         </div>

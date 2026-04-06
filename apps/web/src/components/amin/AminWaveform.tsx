@@ -28,7 +28,7 @@ export function AminWaveform({ size }: AminWaveformProps) {
       const rotation = (angle * 180) / Math.PI + 90;
       return { x, y, rotation };
     },
-    [arcRadius, svgSize, size],
+    [arcRadius, svgSize, size]
   );
 
   useEffect(() => {
@@ -58,10 +58,9 @@ export function AminWaveform({ size }: AminWaveformProps) {
         for (let i = 0; i < BAR_COUNT; i++) {
           const bar = bars[i];
           if (!bar) continue;
-          const h =
-            Math.abs(Math.sin(now / 200 + i * 0.4)) * 16 + MIN_HEIGHT;
+          const h = Math.abs(Math.sin(now / 200 + i * 0.4)) * 16 + MIN_HEIGHT;
           bar.setAttribute('height', String(h));
-          bar.setAttribute('opacity', String(0.5 + h / MAX_HEIGHT * 0.5));
+          bar.setAttribute('opacity', String(0.5 + (h / MAX_HEIGHT) * 0.5));
         }
       }
 
@@ -88,7 +87,9 @@ export function AminWaveform({ size }: AminWaveformProps) {
         return (
           <rect
             key={i}
-            ref={el => { barsRef.current[i] = el; }}
+            ref={el => {
+              barsRef.current[i] = el;
+            }}
             x={x - BAR_WIDTH / 2}
             y={y}
             width={BAR_WIDTH}

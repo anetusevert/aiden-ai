@@ -119,9 +119,12 @@ export function AminPanel() {
       {documentContext ? (
         <div className="amin-doc-context">
           <div>
-            <div className="amin-doc-context-title">{documentContext.title}</div>
+            <div className="amin-doc-context-title">
+              {documentContext.title}
+            </div>
             <div className="amin-doc-context-badge">
-              {documentContext.doc_type.toUpperCase()} · {documentContext.current_view.toUpperCase()}
+              {documentContext.doc_type.toUpperCase()} ·{' '}
+              {documentContext.current_view.toUpperCase()}
             </div>
           </div>
           <button className="btn btn-outline" onClick={handleDocumentShortcut}>

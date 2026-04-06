@@ -9,7 +9,11 @@ export function MarketingHeader() {
 
   return (
     <header className="ha-header">
-      <Link href="/" className="ha-logo" style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <Link
+        href="/"
+        className="ha-logo"
+        style={{ display: 'inline-flex', alignItems: 'center' }}
+      >
         <HeyAminLogo variant="full" size={120} />
       </Link>
       <nav>

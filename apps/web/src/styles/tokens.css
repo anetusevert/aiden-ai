@@ -40,7 +40,12 @@
   --amin-accent-hover: #e0b332;
   --amin-accent-soft: rgba(212, 160, 23, 0.12);
   --amin-accent-medium: rgba(212, 160, 23, 0.22);
-  --amin-accent-gradient: linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #e0b332 100%);
+  --amin-accent-gradient: linear-gradient(
+    135deg,
+    #b8860b 0%,
+    #d4a017 50%,
+    #e0b332 100%
+  );
 
   /* -- Amin Navy -- secondary brand color */
   --amin-navy: #1e3a5f;
@@ -80,9 +85,12 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.6);
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  --shadow-amin-idle: 0 0 20px rgba(30, 58, 95, 0.12), 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-amin-active: 0 0 20px rgba(212, 160, 23, 0.15), 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glass:
+    0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-amin-idle:
+    0 0 20px rgba(30, 58, 95, 0.12), 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-amin-active:
+    0 0 20px rgba(212, 160, 23, 0.15), 0 8px 32px rgba(0, 0, 0, 0.4);
 
   /* -- Transitions -- */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
