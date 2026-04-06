@@ -32,6 +32,7 @@ from src.routers import (
     tenants_router,
     twins_router,
     voice_ws,
+    wiki_router,
     workflows_router,
     workspace_policy_router,
     workspaces_router,
@@ -151,6 +152,7 @@ app.include_router(organizations_router)
 app.include_router(scraping_router)
 app.include_router(news_router)
 app.include_router(office_router)
+app.include_router(wiki_router)
 app.include_router(wopi_router)
 
 # WebSocket route for streaming Amin responses

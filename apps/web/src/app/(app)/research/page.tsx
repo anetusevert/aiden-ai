@@ -8,6 +8,7 @@ import {
   LegalResearchResponse,
   ResearchFilters,
   EvidenceScope,
+  type WikiIngestResponse,
 } from '@/lib/apiClient';
 import { useAuth } from '@/lib/AuthContext';
 import { WorkflowStatusBadge } from '@/components/WorkflowStatusBadge';
@@ -21,6 +22,7 @@ import { toEvidenceItemFromChunk } from '@/lib/evidence';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
 import { useTranslations } from 'next-intl';
+import { useNavigation } from '@/components/NavigationLoader';
 import { WorkflowLaunchBanner } from '@/components/workflows/WorkflowLaunchBanner';
 
 type OutputLanguage = 'en' | 'ar';
@@ -400,6 +402,11 @@ export default function ResearchPage() {
                     />
                   </div>
                 )}
+
+                {/* File to Wiki */}
+                {result.answer_text && !result.insufficient_sources && (
+                  <FileToWiki question={question} answerText={result.answer_text} />
+                )}
               </div>
             </div>
           )}
@@ -428,5 +435,67 @@ export default function ResearchPage() {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function FileToWiki({ question, answerText }: { question: string; answerText: string }) {
+  const [filing, setFiling] = useState(false);
+  const [filed, setFiled] = useState(false);
+  const [filedSlug, setFiledSlug] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const { navigateTo } = useNavigation();
+
+  const handleFile = async () => {
+    setFiling(true);
+    setError(false);
+    try {
+      const res = await apiClient.ingestToWiki({
+        source_text: answerText,
+        source_title: question,
+        source_type: 'research_result',
+      });
+      setFiled(true);
+      setFiledSlug(res.page_slug);
+    } catch {
+      setError(true);
+    } finally {
+      setFiling(false);
+    }
+  };
+
+  return (
+    <div className="wiki-file-suggestions" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+      <span style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, display: 'block' }}>
+        File this research to the knowledge wiki
+      </span>
+      {filed ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#34d399', fontSize: 14 }}>✓ Filed</span>
+          {filedSlug && (
+            <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => navigateTo(`/wiki/${filedSlug}`)}>
+              View in wiki →
+            </button>
+          )}
+        </div>
+      ) : (
+        <button
+          className="btn btn-outline"
+          onClick={handleFile}
+          disabled={filing}
+          style={{ fontSize: 13 }}
+        >
+          {filing ? (
+            <>
+              <span className="spinner spinner-sm" style={{ marginRight: 6 }} />
+              Filing...
+            </>
+          ) : error ? (
+            'Failed — Retry'
+          ) : (
+            '+ File this research to wiki'
+          )}
+        </button>
+      )}
+    </div>
   );
 }

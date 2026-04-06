@@ -15,6 +15,7 @@ export type NavSection =
   | 'workflows'
   | 'documents'
   | 'intelligence'
+  | 'wiki'
   | 'knowledge'
   | 'admin';
 
@@ -67,6 +68,7 @@ const ROUTE_SECTION_MAP: Array<{ prefix: string; section: NavSection }> = [
   { prefix: '/documents', section: 'documents' },
   { prefix: '/news', section: 'intelligence' },
   { prefix: '/global-legal', section: 'intelligence' },
+  { prefix: '/wiki', section: 'wiki' },
   { prefix: '/operator/knowledge-base', section: 'knowledge' },
   { prefix: '/operator', section: 'admin' },
   { prefix: '/members', section: 'admin' },

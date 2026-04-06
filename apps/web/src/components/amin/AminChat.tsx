@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { AminAvatar, type AminAvatarState } from './AminAvatar';
 import { AminToolStatus } from './AminToolStatus';
+import { WikiCitationChip } from '@/components/wiki/WikiCitationChip';
 import { messageEnter, staggerContainer, staggerItem } from '@/lib/motion';
 import type {
   Message,
@@ -15,6 +16,27 @@ import type {
   SubTaskInfo,
   AminStatus,
 } from './useAmin';
+
+function inlineWikiLinks(children: React.ReactNode): React.ReactNode {
+  if (typeof children === 'string') {
+    const parts = children.split(/(\[\[[a-z0-9-]+\]\])/g);
+    if (parts.length === 1) return children;
+    return parts.map((part, i) => {
+      const m = part.match(/^\[\[([a-z0-9-]+)\]\]$/);
+      if (m) return <WikiCitationChip key={i} slug={m[1]} />;
+      return part;
+    });
+  }
+  if (Array.isArray(children)) {
+    return children.map((c, i) => (typeof c === 'string' ? inlineWikiLinks(c) : c));
+  }
+  return children;
+}
+
+const wikiMarkdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => <p>{inlineWikiLinks(children)}</p>,
+  li: ({ children }: { children?: React.ReactNode }) => <li>{inlineWikiLinks(children)}</li>,
+};
 
 interface AminChatProps {
   messages: Message[];
@@ -113,7 +135,7 @@ export function AminChat({
             {msg.role === 'user' ? (
               msg.content
             ) : (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={wikiMarkdownComponents}>
                 {msg.content}
               </ReactMarkdown>
             )}
@@ -143,7 +165,7 @@ export function AminChat({
             />
           </div>
           <div className="amin-message amin-message-assistant">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={wikiMarkdownComponents}>
               {streamingContent}
             </ReactMarkdown>
             <span className="amin-streaming-cursor">{'\u258a'}</span>

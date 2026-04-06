@@ -28,6 +28,7 @@ from src.services.workspace_membership_service import (
     UserNotFoundError,
     WorkspaceMembershipService,
 )
+from src.services.wiki_service import WikiService
 from src.services.workspace_service import WorkspaceService
 from src.utils.hashing import hash_question
 
@@ -57,6 +58,7 @@ __all__ = [
     "SearchResult",
     "TenantService",
     "UserNotFoundError",
+    "WikiService",
     "WorkspaceService",
     "UserService",
     "WorkspaceMembershipService",

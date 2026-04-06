@@ -103,6 +103,26 @@ const NAV_ICONS: NavIconDef[] = [
     ),
   },
   {
+    id: 'wiki',
+    label: 'Knowledge Wiki',
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        <path d="M8 7h8" />
+        <path d="M8 11h6" />
+      </svg>
+    ),
+    directRoute: '/wiki',
+  },
+  {
     id: 'knowledge',
     label: 'Knowledge Base',
     adminOnly: true,
@@ -207,6 +227,7 @@ export function Rail1() {
         workflows: ['/workflows'],
         documents: ['/documents'],
         intelligence: ['/news', '/global-legal'],
+        wiki: ['/wiki'],
         knowledge: ['/operator/knowledge-base'],
         admin: ['/operator', '/members', '/audit'],
       };

@@ -2512,6 +2512,106 @@ class ApiClient {
       }
     );
   }
+
+  // ===========================================================================
+  // Wiki
+  // ===========================================================================
+
+  async getWikiPages(params?: {
+    search?: string;
+    category?: string;
+    jurisdiction?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<WikiPageListResponse> {
+    const baseUrl = getApiBaseUrl();
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    if (params?.category) qs.set('category', params.category);
+    if (params?.jurisdiction) qs.set('jurisdiction', params.jurisdiction);
+    if (params?.limit) qs.set('limit', params.limit.toString());
+    if (params?.offset) qs.set('offset', params.offset.toString());
+    const q = qs.toString();
+    return this.fetchWithRetry<WikiPageListResponse>(
+      `${baseUrl}/wiki/pages${q ? '?' + q : ''}`,
+      { method: 'GET', headers: this.getHeaders() }
+    );
+  }
+
+  async getWikiPage(slug: string): Promise<WikiPageDetail> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<WikiPageDetail>(`${baseUrl}/wiki/pages/${slug}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+  }
+
+  async updateWikiPage(
+    slug: string,
+    instruction: string
+  ): Promise<{ status: string; page_slug: string; version: number }> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry(`${baseUrl}/wiki/pages/${slug}/update`, {
+      method: 'POST',
+      headers: { ...this.getHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instruction }),
+    });
+  }
+
+  async getWikiGraph(): Promise<WikiGraphResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<WikiGraphResponse>(`${baseUrl}/wiki/graph`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+  }
+
+  async getWikiLogs(params?: {
+    operation?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<WikiLogListResponse> {
+    const baseUrl = getApiBaseUrl();
+    const qs = new URLSearchParams();
+    if (params?.operation) qs.set('operation', params.operation);
+    if (params?.limit) qs.set('limit', params.limit.toString());
+    if (params?.offset) qs.set('offset', params.offset.toString());
+    const q = qs.toString();
+    return this.fetchWithRetry<WikiLogListResponse>(
+      `${baseUrl}/wiki/log${q ? '?' + q : ''}`,
+      { method: 'GET', headers: this.getHeaders() }
+    );
+  }
+
+  async getWikiHealth(): Promise<WikiHealthResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<WikiHealthResponse>(`${baseUrl}/wiki/health`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+  }
+
+  async runWikiLint(): Promise<{ status: string; message: string }> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry(`${baseUrl}/wiki/lint`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+  }
+
+  async ingestToWiki(data: {
+    source_text: string;
+    source_title: string;
+    source_type?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<WikiIngestResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<WikiIngestResponse>(`${baseUrl}/wiki/ingest`, {
+      method: 'POST',
+      headers: { ...this.getHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // ============================================================================
@@ -2884,6 +2984,95 @@ export interface NewsSourceEntry {
 
 export interface NewsSourcesResponse {
   sources: NewsSourceEntry[];
+}
+
+// =============================================================================
+// Wiki Types
+// =============================================================================
+
+export interface WikiPageSummary {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  summary: string;
+  jurisdiction: string | null;
+  inbound_link_count: number;
+  version: number;
+  is_stale: boolean;
+  has_contradictions: boolean;
+  updated_at: string;
+}
+
+export interface WikiBacklink {
+  slug: string;
+  title: string;
+  context: string;
+}
+
+export interface WikiPageDetail extends WikiPageSummary {
+  content_md: string;
+  source_doc_ids: string[];
+  created_by_tool: string;
+  created_at: string;
+  backlinks: WikiBacklink[];
+  outlinks: WikiBacklink[];
+}
+
+export interface WikiPageListResponse {
+  items: WikiPageSummary[];
+  total: number;
+}
+
+export interface WikiGraphNode {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  jurisdiction: string | null;
+  inbound_link_count: number;
+}
+
+export interface WikiGraphEdge {
+  from: string;
+  to: string;
+  context: string;
+}
+
+export interface WikiGraphResponse {
+  nodes: WikiGraphNode[];
+  edges: WikiGraphEdge[];
+}
+
+export interface WikiLogEntry {
+  id: string;
+  operation: string;
+  page_slug: string | null;
+  source_description: string;
+  amin_summary: string;
+  pages_affected: string[];
+  created_at: string;
+}
+
+export interface WikiLogListResponse {
+  items: WikiLogEntry[];
+  total: number;
+}
+
+export interface WikiHealthResponse {
+  page_count: number;
+  orphan_count: number;
+  stale_count: number;
+  contradiction_count: number;
+}
+
+export interface WikiIngestResponse {
+  status: string;
+  page_slug: string;
+  page_title: string;
+  action: string;
+  links_created: number;
+  contradictions: string[];
 }
 
 /**

@@ -21,6 +21,7 @@ from src.models.scraping_source import ScrapingSource
 from src.models.tenant import Tenant
 from src.models.twin import TwinObservation, UserTwin
 from src.models.user import User
+from src.models.wiki import WikiIndex, WikiLink, WikiLog, WikiPage
 from src.models.workspace import Workspace
 from src.models.workspace_membership import WorkspaceMembership
 
@@ -47,6 +48,10 @@ __all__ = [
     "ScrapingSource",
     "Tenant",
     "TwinObservation",
+    "WikiIndex",
+    "WikiLink",
+    "WikiLog",
+    "WikiPage",
     "Workspace",
     "User",
     "UserTwin",
