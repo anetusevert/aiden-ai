@@ -28,14 +28,20 @@ function inlineWikiLinks(children: React.ReactNode): React.ReactNode {
     });
   }
   if (Array.isArray(children)) {
-    return children.map((c, i) => (typeof c === 'string' ? inlineWikiLinks(c) : c));
+    return children.map((c, i) =>
+      typeof c === 'string' ? inlineWikiLinks(c) : c
+    );
   }
   return children;
 }
 
 const wikiMarkdownComponents = {
-  p: ({ children }: { children?: React.ReactNode }) => <p>{inlineWikiLinks(children)}</p>,
-  li: ({ children }: { children?: React.ReactNode }) => <li>{inlineWikiLinks(children)}</li>,
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p>{inlineWikiLinks(children)}</p>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => (
+    <li>{inlineWikiLinks(children)}</li>
+  ),
 };
 
 interface AminChatProps {
@@ -135,7 +141,10 @@ export function AminChat({
             {msg.role === 'user' ? (
               msg.content
             ) : (
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={wikiMarkdownComponents}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={wikiMarkdownComponents}
+              >
                 {msg.content}
               </ReactMarkdown>
             )}
@@ -165,7 +174,10 @@ export function AminChat({
             />
           </div>
           <div className="amin-message amin-message-assistant">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={wikiMarkdownComponents}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={wikiMarkdownComponents}
+            >
               {streamingContent}
             </ReactMarkdown>
             <span className="amin-streaming-cursor">{'\u258a'}</span>

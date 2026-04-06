@@ -405,7 +405,10 @@ export default function ResearchPage() {
 
                 {/* File to Wiki */}
                 {result.answer_text && !result.insufficient_sources && (
-                  <FileToWiki question={question} answerText={result.answer_text} />
+                  <FileToWiki
+                    question={question}
+                    answerText={result.answer_text}
+                  />
                 )}
               </div>
             </div>
@@ -438,7 +441,13 @@ export default function ResearchPage() {
   );
 }
 
-function FileToWiki({ question, answerText }: { question: string; answerText: string }) {
+function FileToWiki({
+  question,
+  answerText,
+}: {
+  question: string;
+  answerText: string;
+}) {
   const [filing, setFiling] = useState(false);
   const [filed, setFiled] = useState(false);
   const [filedSlug, setFiledSlug] = useState<string | null>(null);
@@ -464,15 +473,33 @@ function FileToWiki({ question, answerText }: { question: string; answerText: st
   };
 
   return (
-    <div className="wiki-file-suggestions" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-      <span style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8, display: 'block' }}>
+    <div
+      className="wiki-file-suggestions"
+      style={{
+        marginTop: 16,
+        paddingTop: 16,
+        borderTop: '1px solid var(--border)',
+      }}
+    >
+      <span
+        style={{
+          fontSize: 13,
+          color: 'var(--text-muted)',
+          marginBottom: 8,
+          display: 'block',
+        }}
+      >
         File this research to the knowledge wiki
       </span>
       {filed ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ color: '#34d399', fontSize: 14 }}>✓ Filed</span>
           {filedSlug && (
-            <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => navigateTo(`/wiki/${filedSlug}`)}>
+            <button
+              className="btn btn-outline"
+              style={{ fontSize: 12 }}
+              onClick={() => navigateTo(`/wiki/${filedSlug}`)}
+            >
               View in wiki →
             </button>
           )}

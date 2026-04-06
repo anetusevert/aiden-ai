@@ -2540,10 +2540,13 @@ class ApiClient {
 
   async getWikiPage(slug: string): Promise<WikiPageDetail> {
     const baseUrl = getApiBaseUrl();
-    return this.fetchWithRetry<WikiPageDetail>(`${baseUrl}/wiki/pages/${slug}`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
+    return this.fetchWithRetry<WikiPageDetail>(
+      `${baseUrl}/wiki/pages/${slug}`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(),
+      }
+    );
   }
 
   async updateWikiPage(

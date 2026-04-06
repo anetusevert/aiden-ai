@@ -16,7 +16,7 @@ export function HeyAminLogo({ variant, size, className }: HeyAminLogoProps) {
   if (variant === 'mark') {
     return (
       <img
-        src="/brand/heyamin-logo-stacked.png"
+        src="/brand/ha-logo-mark.png"
         alt="HeyAmin"
         className={className}
         style={{

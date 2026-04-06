@@ -666,26 +666,17 @@ export function Sidebar({
               navigateTo('/home');
             }}
           >
-            {collapsed ? (
-              <span
-                className="sidebar-logo-mark"
-                style={{ color: 'var(--amin-accent, #d4a017)' }}
-              >
-                H
-              </span>
-            ) : (
-              <>
-                <span style={{ fontWeight: 300 }}>Hey</span>
-                <span
-                  style={{
-                    fontWeight: 700,
-                    color: 'var(--amin-accent, #d4a017)',
-                  }}
-                >
-                  Amin
-                </span>
-              </>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/ha-logo-mark.png"
+              alt="HeyAmin"
+              style={{
+                width: collapsed ? 28 : 36,
+                height: collapsed ? 28 : 36,
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
           </Link>
         </div>
 

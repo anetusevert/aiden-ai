@@ -14,7 +14,14 @@ const OP_COLORS: Record<string, string> = {
   lint: '#94a3b8',
 };
 
-const FILTER_OPS = ['All', 'Ingest', 'Query', 'Update', 'Create', 'Lint'] as const;
+const FILTER_OPS = [
+  'All',
+  'Ingest',
+  'Query',
+  'Update',
+  'Create',
+  'Lint',
+] as const;
 
 function timeAgo(dateStr: string): string {
   const date = new Date(dateStr);
@@ -67,17 +74,28 @@ export default function WikiLogPage() {
     <motion.div {...fadeUp} style={{ padding: 24 }}>
       <div className="page-header" style={{ marginBottom: 16 }}>
         <h1 className="page-title">Wiki Log</h1>
-        <p className="page-subtitle">Every operation Amin performs on the knowledge base</p>
+        <p className="page-subtitle">
+          Every operation Amin performs on the knowledge base
+        </p>
       </div>
 
       {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div
+        style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}
+      >
         {FILTER_OPS.map(op => (
           <button
             key={op}
             className={`badge ${activeOp === op ? 'badge-gold' : 'badge-muted'}`}
             onClick={() => setActiveOp(op)}
-            style={activeOp === op ? { borderColor: '#d4a017', background: 'rgba(212,160,23,0.15)' } : undefined}
+            style={
+              activeOp === op
+                ? {
+                    borderColor: '#d4a017',
+                    background: 'rgba(212,160,23,0.15)',
+                  }
+                : undefined
+            }
           >
             {op}
           </button>
@@ -89,11 +107,21 @@ export default function WikiLogPage() {
           <span className="spinner" />
         </div>
       ) : logs.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div
+          style={{
+            padding: 40,
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+          }}
+        >
           No wiki log entries yet.
         </div>
       ) : (
-        <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {logs.map(log => (
             <motion.div
               key={log.id}
@@ -106,7 +134,9 @@ export default function WikiLogPage() {
                 borderBottom: '1px solid var(--border)',
                 cursor: 'pointer',
               }}
-              onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
+              onClick={() =>
+                setExpandedId(expandedId === log.id ? null : log.id)
+              }
             >
               <span
                 className="badge"
@@ -121,18 +151,37 @@ export default function WikiLogPage() {
                 {log.operation}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: '#fff' }}>{log.amin_summary}</div>
+                <div style={{ fontSize: 14, color: '#fff' }}>
+                  {log.amin_summary}
+                </div>
                 {expandedId === log.id && log.pages_affected.length > 0 && (
-                  <div style={{ marginTop: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      marginTop: 8,
+                      display: 'flex',
+                      gap: 4,
+                      flexWrap: 'wrap',
+                    }}
+                  >
                     {log.pages_affected.map((slug, i) => (
-                      <span key={i} className="badge badge-muted" style={{ fontSize: 11 }}>
+                      <span
+                        key={i}
+                        className="badge badge-muted"
+                        style={{ fontSize: 11 }}
+                      >
                         {slug}
                       </span>
                     ))}
                   </div>
                 )}
               </div>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: 'var(--text-muted)',
+                  flexShrink: 0,
+                }}
+              >
                 {timeAgo(log.created_at)}
               </span>
             </motion.div>

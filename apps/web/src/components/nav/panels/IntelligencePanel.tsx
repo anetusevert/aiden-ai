@@ -15,7 +15,10 @@ export function IntelligencePanel() {
     pathname === href || pathname.startsWith(href + '/');
 
   useEffect(() => {
-    apiClient.getWikiHealth().then(setWikiHealth).catch(() => {});
+    apiClient
+      .getWikiHealth()
+      .then(setWikiHealth)
+      .catch(() => {});
   }, []);
 
   const wikiIssues = wikiHealth

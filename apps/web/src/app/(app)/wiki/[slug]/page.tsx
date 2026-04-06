@@ -86,7 +86,9 @@ export default function WikiPageView() {
       setUpdateText('');
       setUpdateOpen(false);
       await loadPage();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setUpdating(false);
   };
 
@@ -112,7 +114,9 @@ export default function WikiPageView() {
 
   if (error || !page) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+      <div
+        style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}
+      >
         {error || 'Page not found'}
       </div>
     );
@@ -124,10 +128,26 @@ export default function WikiPageView() {
       <div className="wiki-content-col">
         <div className="wiki-content-scroll">
           {/* Breadcrumb */}
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, display: 'flex', gap: 6 }}>
-            <button className="wiki-breadcrumb-link" onClick={() => navigateTo('/wiki')}>Wiki</button>
+          <div
+            style={{
+              fontSize: 13,
+              color: 'var(--text-muted)',
+              marginBottom: 16,
+              display: 'flex',
+              gap: 6,
+            }}
+          >
+            <button
+              className="wiki-breadcrumb-link"
+              onClick={() => navigateTo('/wiki')}
+            >
+              Wiki
+            </button>
             <span>→</span>
-            <button className="wiki-breadcrumb-link" onClick={() => navigateTo(`/wiki?category=${page.category}`)}>
+            <button
+              className="wiki-breadcrumb-link"
+              onClick={() => navigateTo(`/wiki?category=${page.category}`)}
+            >
               {page.category.charAt(0).toUpperCase() + page.category.slice(1)}
             </button>
             <span>→</span>
@@ -135,27 +155,57 @@ export default function WikiPageView() {
           </div>
 
           {/* Header */}
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 12 }}>{page.title}</h1>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: '#fff',
+              marginBottom: 12,
+            }}
+          >
+            {page.title}
+          </h1>
+          <div
+            style={{
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+              marginBottom: 16,
+            }}
+          >
             {page.jurisdiction && (
               <span className="badge badge-muted">{page.jurisdiction}</span>
             )}
-            <span className="badge" style={{ background: CATEGORY_COLORS[page.category] + '22', color: CATEGORY_COLORS[page.category], border: `1px solid ${CATEGORY_COLORS[page.category]}44` }}>
+            <span
+              className="badge"
+              style={{
+                background: CATEGORY_COLORS[page.category] + '22',
+                color: CATEGORY_COLORS[page.category],
+                border: `1px solid ${CATEGORY_COLORS[page.category]}44`,
+              }}
+            >
               {page.category}
             </span>
             <span className="badge badge-muted">v{page.version}</span>
-            <span className="badge badge-muted">Updated {timeAgo(page.updated_at)}</span>
+            <span className="badge badge-muted">
+              Updated {timeAgo(page.updated_at)}
+            </span>
           </div>
 
           {/* Banners */}
           {page.is_stale && (
-            <div className="alert alert-neutral" style={{ marginBottom: 12, borderColor: '#f59e0b44' }}>
-              ⏰ This page may be outdated — last updated {timeAgo(page.updated_at)}
+            <div
+              className="alert alert-neutral"
+              style={{ marginBottom: 12, borderColor: '#f59e0b44' }}
+            >
+              ⏰ This page may be outdated — last updated{' '}
+              {timeAgo(page.updated_at)}
             </div>
           )}
           {page.has_contradictions && (
             <div className="alert alert-error" style={{ marginBottom: 12 }}>
-              ⚠ Contradictions detected on this page. Review with Amin recommended.
+              ⚠ Contradictions detected on this page. Review with Amin
+              recommended.
             </div>
           )}
 
@@ -177,7 +227,16 @@ export default function WikiPageView() {
           </div>
 
           {/* Actions */}
-          <div style={{ borderTop: '1px solid var(--border)', marginTop: 24, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div
+            style={{
+              borderTop: '1px solid var(--border)',
+              marginTop: 24,
+              paddingTop: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+          >
             <button className="btn btn-outline" onClick={handleAskAmin}>
               Ask Amin about this →
             </button>
@@ -188,7 +247,9 @@ export default function WikiPageView() {
                 onClick={() => setUpdateOpen(!updateOpen)}
                 style={{ width: '100%', textAlign: 'left' }}
               >
-                {updateOpen ? '▼ Update with new info' : '▶ Update with new info'}
+                {updateOpen
+                  ? '▼ Update with new info'
+                  : '▶ Update with new info'}
               </button>
               {updateOpen && (
                 <div style={{ marginTop: 8 }}>
@@ -221,12 +282,22 @@ export default function WikiPageView() {
           <div className="wiki-sidebar-label">SOURCES</div>
           {page.source_doc_ids.length > 0 ? (
             page.source_doc_ids.map((id, i) => (
-              <div key={i} style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4, wordBreak: 'break-all' }}>
+              <div
+                key={i}
+                style={{
+                  fontSize: 13,
+                  color: 'var(--text-muted)',
+                  marginBottom: 4,
+                  wordBreak: 'break-all',
+                }}
+              >
                 {id}
               </div>
             ))
           ) : (
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No source documents linked</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              No source documents linked
+            </div>
           )}
         </div>
 
@@ -242,7 +313,9 @@ export default function WikiPageView() {
                 >
                   {bl.title}
                 </button>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{bl.context}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {bl.context}
+                </div>
               </div>
             ))
           ) : (
@@ -257,7 +330,15 @@ export default function WikiPageView() {
           <div className="wiki-sidebar-label">LINKS TO</div>
           {page.outlinks.length > 0 ? (
             page.outlinks.map(ol => (
-              <div key={ol.slug} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <div
+                key={ol.slug}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginBottom: 6,
+                }}
+              >
                 <span className="wiki-dot" style={{ background: '#638cff' }} />
                 <button
                   className="wiki-sidebar-link"
@@ -268,7 +349,9 @@ export default function WikiPageView() {
               </div>
             ))
           ) : (
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No outbound links</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              No outbound links
+            </div>
           )}
         </div>
       </div>
