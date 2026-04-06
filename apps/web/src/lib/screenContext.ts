@@ -32,6 +32,23 @@ let currentPayload: ScreenContextPayload = {
   ui_state: {},
 };
 
+interface ActiveCaseContext {
+  case_id: string;
+  case_title: string;
+  client_name: string;
+  practice_area?: string;
+}
+
+let activeCaseContext: ActiveCaseContext | null = null;
+
+export function setActiveCaseContext(ctx: ActiveCaseContext | null) {
+  activeCaseContext = ctx;
+}
+
+export function getActiveCaseContext() {
+  return activeCaseContext;
+}
+
 let sender: Sender | null = null;
 let connected = false;
 const queue: ScreenContextPayload[] = [];
@@ -73,8 +90,17 @@ export function configureScreenContextTransport(options: {
 }
 
 export function reportScreenContext(payload: ScreenContextPayload) {
+  const enrichedState = { ...payload.ui_state };
+  if (activeCaseContext) {
+    enrichedState.active_case_id = activeCaseContext.case_id;
+    enrichedState.active_case_title = activeCaseContext.case_title;
+    enrichedState.active_case_client = activeCaseContext.client_name;
+    if (activeCaseContext.practice_area)
+      enrichedState.active_case_practice_area = activeCaseContext.practice_area;
+  }
   currentPayload = {
     ...payload,
+    ui_state: enrichedState,
     type: 'screen_context',
   };
   emit();

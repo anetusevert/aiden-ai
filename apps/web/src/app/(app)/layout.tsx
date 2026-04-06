@@ -22,6 +22,7 @@ import { AnimatePresence } from 'framer-motion';
 import { I18nProvider } from '@/components/I18nProvider';
 import { useScreenContext } from '@/hooks/useScreenContext';
 import { useTranslations } from 'next-intl';
+import { setActiveCaseContext } from '@/lib/screenContext';
 
 function AppShellLoading() {
   const t = useTranslations('common');
@@ -86,6 +87,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .getMySoul()
       .then(s => setSoul(s))
       .catch(() => {});
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetch('/api/v1/cases/active', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data)
+          setActiveCaseContext({
+            case_id: data.case_id,
+            case_title: data.case_title,
+            client_name: data.client_name,
+            practice_area: data.practice_area,
+          });
+        else setActiveCaseContext(null);
+      })
+      .catch(() => setActiveCaseContext(null));
   }, [isAuthenticated]);
 
   const handleEntryComplete = useCallback(() => {

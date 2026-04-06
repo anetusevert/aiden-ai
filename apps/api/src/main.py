@@ -11,6 +11,8 @@ from src.middleware import RequestIdMiddleware
 from src.routers import (
     audit_router,
     auth_router,
+    cases_router,
+    clients_router,
     conversation_ws,
     conversations_router,
     documents_router,
@@ -152,6 +154,8 @@ app.include_router(organizations_router)
 app.include_router(scraping_router)
 app.include_router(news_router)
 app.include_router(office_router)
+app.include_router(clients_router)
+app.include_router(cases_router)
 app.include_router(wiki_router)
 app.include_router(wopi_router)
 

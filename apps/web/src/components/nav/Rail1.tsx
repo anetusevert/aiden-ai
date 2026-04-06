@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { clearSession } from '@/lib/apiClient';
 import { useNavigation } from '@/components/NavigationLoader';
-import { type NavSection } from '@/context/NavigationContext';
+import { useNav, type NavSection } from '@/context/NavigationContext';
 import { UserAvatar } from '@/components/UserAvatar';
 import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 import { AminAvatar } from '@/components/amin/AminAvatar';
@@ -43,6 +43,42 @@ const NAV_ICONS: NavIconDef[] = [
       >
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
         <polyline points="9,22 9,12 15,12 15,22" />
+      </svg>
+    ),
+  },
+  {
+    id: 'clients',
+    label: 'Clients',
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    id: 'cases',
+    label: 'Cases',
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <rect x="2" y="7" width="20" height="14" rx="2" />
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
       </svg>
     ),
   },
@@ -103,45 +139,9 @@ const NAV_ICONS: NavIconDef[] = [
       </svg>
     ),
   },
-  {
-    id: 'wiki',
-    label: 'Knowledge Wiki',
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        <path d="M8 7h8" />
-        <path d="M8 11h6" />
-      </svg>
-    ),
-    directRoute: '/wiki',
-  },
-  {
-    id: 'knowledge',
-    label: 'Knowledge Base',
-    adminOnly: true,
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <ellipse cx="12" cy="5" rx="9" ry="3" />
-        <path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3" />
-        <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
-      </svg>
-    ),
-  },
+];
+
+const BOTTOM_ICONS: NavIconDef[] = [
   {
     id: 'admin',
     label: 'Admin',
@@ -177,6 +177,7 @@ export function Rail1() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { navigateTo } = useNavigation();
+  const { togglePanel } = useNav();
   const tNav = useTranslations('nav');
   const tCommon = useTranslations('common');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -186,13 +187,13 @@ export function Rail1() {
   const isAdmin = user?.role === 'ADMIN';
 
   const SECTION_ROUTES: Record<NavSection, string> = {
-    home: '/home',
+    home: '/dashboard',
+    clients: '/clients',
+    cases: '/cases',
     workflows: '/workflows/litigation',
     documents: '/documents',
     intelligence: '/news',
-    wiki: '/wiki',
-    knowledge: '/operator/knowledge-base',
-    admin: '/members',
+    admin: '/operator/knowledge-base',
   };
 
   const handleLogout = async () => {
@@ -215,21 +216,13 @@ export function Rail1() {
   const isRouteActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/');
 
-  const handleIconClick = useCallback(
-    (def: NavIconDef) => {
-      const route = def.directRoute ?? SECTION_ROUTES[def.id] ?? '/home';
-      navigateTo(route);
-    },
-    [navigateTo] // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
   const SECTION_ROUTE_GROUPS: Record<NavSection, string[]> = {
-    home: ['/home'],
+    home: ['/home', '/dashboard'],
+    clients: ['/clients'],
+    cases: ['/cases'],
     workflows: ['/workflows'],
     documents: ['/documents'],
-    intelligence: ['/news', '/global-legal'],
-    wiki: ['/wiki'],
-    knowledge: ['/operator/knowledge-base'],
+    intelligence: ['/news', '/wiki', '/research', '/global-legal'],
     admin: ['/operator', '/members', '/audit'],
   };
 
@@ -241,13 +234,31 @@ export function Rail1() {
     );
   };
 
+  const handleIconClick = useCallback(
+    (def: NavIconDef) => {
+      const section = def.id;
+      const currentSection = Object.entries(SECTION_ROUTE_GROUPS).find(
+        ([, routes]) =>
+          routes.some(r => pathname === r || pathname.startsWith(r + '/'))
+      )?.[0];
+
+      if (section === currentSection && section === 'home') {
+        togglePanel();
+        return;
+      }
+
+      const route = def.directRoute ?? SECTION_ROUTES[section] ?? '/dashboard';
+      navigateTo(route);
+    },
+    [navigateTo, pathname, togglePanel] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   return (
     <div className="rail1">
-      {/* Logo */}
       <div className="rail1-top">
         <motion.button
           className="rail1-logo-heyamin"
-          onClick={() => navigateTo('/home')}
+          onClick={() => navigateTo('/dashboard')}
           type="button"
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
@@ -257,7 +268,6 @@ export function Rail1() {
         <div className="rail1-logo-divider" />
       </div>
 
-      {/* Main nav icons */}
       <nav className="rail1-nav">
         {NAV_ICONS.filter(def => !def.adminOnly || isAdmin).map(def => (
           <button
@@ -272,8 +282,42 @@ export function Rail1() {
         ))}
       </nav>
 
-      {/* Bottom pinned */}
       <div className="rail1-bottom">
+        {BOTTOM_ICONS.filter(def => !def.adminOnly || isAdmin).map(def => (
+          <button
+            key={def.id}
+            className={`rail1-icon${isIconActive(def.id) ? ' rail1-icon-active' : ''}`}
+            onClick={() => handleIconClick(def)}
+            type="button"
+          >
+            {def.icon}
+            <span className="rail1-tooltip">{def.label}</span>
+          </button>
+        ))}
+
+        <button
+          className="rail1-icon"
+          onClick={() => navigateTo('/account/amin')}
+          type="button"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <circle cx="9" cy="6" r="2" fill="currentColor" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <circle cx="15" cy="12" r="2" fill="currentColor" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+            <circle cx="11" cy="18" r="2" fill="currentColor" />
+          </svg>
+          <span className="rail1-tooltip">My Amin</span>
+        </button>
+
         <button
           className="rail1-icon rail1-amin-btn"
           onClick={toggleAminPanel}
@@ -333,12 +377,6 @@ export function Rail1() {
                   !pathname.startsWith('/account/amin')
                 }
               />
-              <DropdownItem
-                icon={<AminSettingsIcon />}
-                label={tNav('myAmin')}
-                onClick={() => userNavigate('/account/amin')}
-                active={isRouteActive('/account/amin')}
-              />
             </DropdownSection>
 
             <DropdownDivider />
@@ -375,26 +413,6 @@ function AccountIcon() {
     >
       <circle cx="12" cy="12" r="3" />
       <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-    </svg>
-  );
-}
-
-function AminSettingsIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <line x1="4" y1="6" x2="20" y2="6" />
-      <circle cx="9" cy="6" r="2" fill="currentColor" />
-      <line x1="4" y1="12" x2="20" y2="12" />
-      <circle cx="15" cy="12" r="2" fill="currentColor" />
-      <line x1="4" y1="18" x2="20" y2="18" />
-      <circle cx="11" cy="18" r="2" fill="currentColor" />
     </svg>
   );
 }

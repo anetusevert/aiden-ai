@@ -10,6 +10,11 @@ from sqlalchemy import engine_from_config, pool
 from src.database import Base
 from src.models import (  # noqa: F401
     AuditLog,
+    Case,
+    CaseDocument,
+    CaseEvent,
+    CaseNote,
+    Client,
     Conversation,
     Document,
     DocumentVersion,

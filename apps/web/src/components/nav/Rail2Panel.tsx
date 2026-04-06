@@ -2,10 +2,11 @@
 
 import { useNav } from '@/context/NavigationContext';
 import { HomePanel } from './panels/HomePanel';
+import { ClientsPanel } from './panels/ClientsPanel';
+import { CasesPanel } from './panels/CasesPanel';
 import { WorkflowsPanel } from './panels/WorkflowsPanel';
 import { DocumentsPanel } from './panels/DocumentsPanel';
 import { IntelligencePanel } from './panels/IntelligencePanel';
-import { KnowledgePanel } from './panels/KnowledgePanel';
 import { AdminPanel } from './panels/AdminPanel';
 import type { SoulDetail } from '@/lib/apiClient';
 
@@ -19,7 +20,6 @@ export function Rail2Panel({ soul }: Rail2PanelProps) {
   return (
     <div className={`rail2${panelOpen ? ' rail2-open' : ''}`}>
       <div className="rail2-inner">
-        {/* Collapse chevron */}
         <button
           className="rail2-collapse"
           onClick={collapsePanel}
@@ -39,13 +39,13 @@ export function Rail2Panel({ soul }: Rail2PanelProps) {
           </svg>
         </button>
 
-        {/* Panel content */}
         <div className="rail2-content">
           {activeSection === 'home' && <HomePanel soul={soul} />}
+          {activeSection === 'clients' && <ClientsPanel />}
+          {activeSection === 'cases' && <CasesPanel />}
           {activeSection === 'workflows' && <WorkflowsPanel />}
           {activeSection === 'documents' && <DocumentsPanel />}
           {activeSection === 'intelligence' && <IntelligencePanel />}
-          {activeSection === 'knowledge' && <KnowledgePanel />}
           {activeSection === 'admin' && <AdminPanel />}
         </div>
       </div>

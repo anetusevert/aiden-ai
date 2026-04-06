@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   apiClient,
@@ -24,11 +24,21 @@ import { fadeUp } from '@/lib/motion';
 import { useTranslations } from 'next-intl';
 import { useNavigation } from '@/components/NavigationLoader';
 import { WorkflowLaunchBanner } from '@/components/workflows/WorkflowLaunchBanner';
+import { getActiveCaseContext } from '@/lib/screenContext';
 
 type OutputLanguage = 'en' | 'ar';
 
 export default function ResearchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const caseIdParam = searchParams.get('case');
+  const [activeCase, setActiveCase] = useState<{
+    case_id: string;
+    case_title: string;
+    client_name: string;
+    practice_area?: string;
+    jurisdiction?: string;
+  } | null>(null);
   const t = useTranslations('common');
   const tEvidence = useTranslations('evidence');
   const {
@@ -58,6 +68,36 @@ export default function ResearchPage() {
   const handleEvidenceScopeChange = useCallback((scope: EvidenceScope) => {
     setEvidenceScope(scope);
   }, []);
+
+  useEffect(() => {
+    if (caseIdParam) {
+      fetch(`/api/v1/cases/${caseIdParam}`, { credentials: 'include' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (data) {
+            setActiveCase({
+              case_id: data.id,
+              case_title: data.title,
+              client_name: data.client?.display_name ?? '',
+              practice_area: data.practice_area,
+              jurisdiction: data.jurisdiction,
+            });
+            if (data.jurisdiction && !jurisdiction)
+              setJurisdiction(data.jurisdiction);
+          }
+        })
+        .catch(() => {});
+    } else {
+      const ctx = getActiveCaseContext();
+      if (ctx)
+        setActiveCase({
+          case_id: ctx.case_id,
+          case_title: ctx.case_title,
+          client_name: ctx.client_name,
+          practice_area: ctx.practice_area,
+        });
+    }
+  }, [caseIdParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -117,7 +157,29 @@ export default function ResearchPage() {
     <motion.div {...fadeUp}>
       <WorkflowLaunchBanner currentRoute="/research" />
 
-      {/* Page Header */}
+      {activeCase && (
+        <div
+          className="exec-case-banner"
+          style={{ marginBottom: 'var(--space-3)' }}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+          </svg>
+          <span>
+            Research for: <strong>{activeCase.case_title}</strong> |{' '}
+            {activeCase.client_name}
+          </span>
+        </div>
+      )}
+
       <div className="page-header">
         <h1 className="page-title">Legal Research</h1>
         <p className="page-subtitle">

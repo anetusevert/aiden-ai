@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
 import { officeApi } from '@/lib/officeApi';
 import { OfficeDocDetail } from './OfficeDocDetail';
+import { getActiveCaseContext } from '@/lib/screenContext';
 
 type DocKind = 'loading' | 'office' | 'legal' | 'not-found';
 
@@ -45,6 +46,41 @@ export default function DocumentDetailPage() {
   } | null>(null);
 
   const isAdmin = user?.role === 'ADMIN';
+  const [attachingToCase, setAttachingToCase] = useState(false);
+  const [attachResult, setAttachResult] = useState<{
+    ok: boolean;
+    msg: string;
+  } | null>(null);
+  const activeCase = getActiveCaseContext();
+
+  const handleAttachToCase = async () => {
+    if (!activeCase) return;
+    setAttachingToCase(true);
+    setAttachResult(null);
+    try {
+      const res = await fetch(`/api/v1/cases/${activeCase.case_id}/documents`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          document_id: documentId,
+          document_role: 'general',
+        }),
+      });
+      if (res.ok) {
+        setAttachResult({
+          ok: true,
+          msg: `Attached to ${activeCase.case_title}`,
+        });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setAttachResult({ ok: false, msg: data.detail ?? 'Failed to attach' });
+      }
+    } catch {
+      setAttachResult({ ok: false, msg: 'Network error' });
+    }
+    setAttachingToCase(false);
+  };
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
@@ -253,15 +289,38 @@ export default function DocumentDetailPage() {
           <h1 className="page-title">{document.title}</h1>
           <p className="page-subtitle">Document details and version history</p>
         </div>
-        {canEdit && (
-          <button
-            onClick={() => setShowVersionForm(!showVersionForm)}
-            className="btn btn-primary"
-          >
-            {showVersionForm ? 'Cancel' : 'Upload New Version'}
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {activeCase && canEdit && (
+            <button
+              onClick={handleAttachToCase}
+              className="btn btn-outline"
+              disabled={attachingToCase}
+              title={`Attach to case: ${activeCase.case_title}`}
+            >
+              {attachingToCase
+                ? 'Attaching...'
+                : `Attach to ${activeCase.case_title}`}
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={() => setShowVersionForm(!showVersionForm)}
+              className="btn btn-primary"
+            >
+              {showVersionForm ? 'Cancel' : 'Upload New Version'}
+            </button>
+          )}
+        </div>
       </div>
+
+      {attachResult && (
+        <div
+          className={`alert ${attachResult.ok ? 'alert-success' : 'alert-error'}`}
+          style={{ marginBottom: '1rem' }}
+        >
+          {attachResult.msg}
+        </div>
+      )}
 
       {showVersionForm && (
         <div className="card mb-4">

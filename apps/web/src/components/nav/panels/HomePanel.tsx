@@ -1,157 +1,153 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useNavigation } from '@/components/NavigationLoader';
-import { useSidebarWorkflows } from '@/hooks/useSidebarWorkflows';
-import { getWorkflowHref } from '@/lib/workflowPresentation';
 import { useAuth } from '@/lib/AuthContext';
 import type { SoulDetail } from '@/lib/apiClient';
-import type { WorkflowDefinition } from '@/lib/workflowRegistry';
-import type { ScoredWorkflow } from '@/hooks/useSidebarWorkflows';
+
+interface CaseBrief {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  practice_area: string;
+  next_deadline: string | null;
+  client_display_name: string;
+  urgent: boolean;
+}
+
+interface DashboardData {
+  active_cases: number;
+  high_priority: number;
+  due_today: CaseBrief[];
+  due_this_week: CaseBrief[];
+  recently_accessed: CaseBrief[];
+}
 
 interface HomePanelProps {
   soul: SoulDetail | null;
 }
 
-function ForYouDot({ reason }: { reason: ScoredWorkflow['reason'] }) {
-  if (reason === 'default') return null;
-  const colors: Record<string, string> = {
-    twin_match: '#d4a017',
-    frequent: '#6366f1',
-    recent: '#64748b',
-  };
-  return (
-    <span className="r2-foryou-dot" style={{ background: colors[reason] }} />
-  );
-}
-
-function timeAgo(ts: number) {
-  const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 export function HomePanel({ soul }: HomePanelProps) {
-  const pathname = usePathname();
   const { navigateTo } = useNavigation();
-  const { appLanguage } = useAuth();
-  const { forYou, continueItems, trackAccess } = useSidebarWorkflows(soul);
+  const { user } = useAuth();
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
 
-  const displayName = useCallback(
-    (wf: WorkflowDefinition) => {
-      if (appLanguage === 'ar') return wf.name_ar;
-      return wf.name;
-    },
-    [appLanguage]
-  );
+  useEffect(() => {
+    fetch('/api/v1/cases/dashboard', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data) setDashboard(data);
+      })
+      .catch(() => {});
+  }, []);
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent, wf: WorkflowDefinition) => {
-      e.preventDefault();
-      trackAccess(wf.id);
-      navigateTo(getWorkflowHref(wf));
-    },
-    [trackAccess, navigateTo]
-  );
+  const firstName = user?.full_name?.split(' ')[0] ?? 'Counsellor';
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + '/');
+  const handleCaseClick = (c: CaseBrief) => {
+    fetch(`/api/v1/cases/${c.id}/set-active`, {
+      method: 'POST',
+      credentials: 'include',
+    }).catch(() => {});
+    navigateTo(`/cases/${c.id}`);
+  };
+
+  const dueSoonCases = [
+    ...(dashboard?.due_today ?? []),
+    ...(dashboard?.due_this_week ?? []),
+  ].slice(0, 4);
 
   return (
     <>
-      {/* FOR YOU */}
-      {forYou.length > 0 && (
+      <div className="r2-home-greeting">
+        {getGreeting()}, {firstName}
+      </div>
+
+      {dashboard && (
+        <div className="r2-stat-row">
+          <span className="r2-stat-chip">
+            {dashboard.active_cases} Active Cases
+          </span>
+          <span className="r2-stat-chip r2-stat-chip-warn">
+            {dashboard.high_priority} High Priority
+          </span>
+          <span className="r2-stat-chip">
+            {dueSoonCases.length} Due This Week
+          </span>
+        </div>
+      )}
+
+      {dueSoonCases.length > 0 && (
         <div className="r2-section">
-          <div className="r2-section-label r2-section-label-gold">
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              stroke="none"
-            >
-              <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
-            </svg>
-            FOR YOU
-          </div>
+          <div className="r2-section-label r2-section-label-warn">DUE SOON</div>
           <div className="r2-link-list">
-            {forYou.slice(0, 4).map(scored => {
-              const href = getWorkflowHref(scored.workflow);
-              return (
-                <Link
-                  key={scored.workflow.id}
-                  href={href}
-                  className={`r2-link${isActive(href) ? ' r2-link-active' : ''}`}
-                  onClick={e => handleClick(e, scored.workflow)}
-                >
-                  <span className="r2-link-text">
-                    {displayName(scored.workflow)}
-                  </span>
-                  <ForYouDot reason={scored.reason} />
-                </Link>
-              );
-            })}
+            {dueSoonCases.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                className="r2-link r2-link-stacked"
+                onClick={() => handleCaseClick(c)}
+              >
+                <span
+                  className={`r2-due-dot ${c.urgent ? 'r2-due-dot-red' : 'r2-due-dot-amber'}`}
+                />
+                <span className="r2-link-text">{c.title}</span>
+                <span className="r2-link-meta">{c.next_deadline}</span>
+              </button>
+            ))}
           </div>
-          {forYou.length > 4 && (
-            <Link
-              href="/home"
-              className="r2-see-all"
-              onClick={e => {
-                e.preventDefault();
-                navigateTo('/home');
-              }}
-            >
-              See all
-            </Link>
+          {dueSoonCases.length === 0 && (
+            <div className="r2-empty">No upcoming deadlines</div>
           )}
         </div>
       )}
 
-      {/* CONTINUE */}
-      {continueItems.length > 0 && (
-        <div className="r2-section">
-          <div className="r2-section-label">
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            CONTINUE
-          </div>
-          <div className="r2-link-list">
-            {continueItems.slice(0, 4).map(item => {
-              const href = getWorkflowHref(item.workflow);
-              return (
-                <Link
-                  key={item.workflow.id}
-                  href={href}
-                  className={`r2-link r2-link-stacked${isActive(href) ? ' r2-link-active' : ''}`}
-                  onClick={e => handleClick(e, item.workflow)}
+      {dashboard?.recently_accessed &&
+        dashboard.recently_accessed.length > 0 && (
+          <div className="r2-section">
+            <div className="r2-section-label">CONTINUE</div>
+            <div className="r2-link-list">
+              {dashboard.recently_accessed.slice(0, 3).map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="r2-link r2-link-stacked"
+                  onClick={() => handleCaseClick(c)}
                 >
-                  <span className="r2-link-text">
-                    {displayName(item.workflow)}
-                  </span>
-                  <span className="r2-link-meta">
-                    {timeAgo(item.lastAccessedAt)}
-                  </span>
-                </Link>
-              );
-            })}
+                  <span className="r2-link-text">{c.title}</span>
+                  <span className="r2-link-meta">{c.client_display_name}</span>
+                </button>
+              ))}
+            </div>
           </div>
+        )}
+
+      <div className="r2-section">
+        <div className="r2-quick-actions">
+          <button
+            type="button"
+            className="r2-action-btn"
+            onClick={() => navigateTo('/clients?new=true')}
+          >
+            + New Client
+          </button>
+          <button
+            type="button"
+            className="r2-action-btn r2-action-btn-primary"
+            onClick={() => navigateTo('/cases?new=true')}
+          >
+            + New Case
+          </button>
         </div>
-      )}
+      </div>
     </>
   );
 }

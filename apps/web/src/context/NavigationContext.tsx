@@ -12,11 +12,11 @@ import { usePathname } from 'next/navigation';
 
 export type NavSection =
   | 'home'
+  | 'clients'
+  | 'cases'
   | 'workflows'
   | 'documents'
   | 'intelligence'
-  | 'wiki'
-  | 'knowledge'
   | 'admin';
 
 interface NavContextValue {
@@ -27,13 +27,16 @@ interface NavContextValue {
 }
 
 const ROUTE_SECTION_MAP: Array<{ prefix: string; section: NavSection }> = [
+  { prefix: '/dashboard', section: 'home' },
   { prefix: '/home', section: 'home' },
+  { prefix: '/clients', section: 'clients' },
+  { prefix: '/cases', section: 'cases' },
   { prefix: '/workflows', section: 'workflows' },
   { prefix: '/documents', section: 'documents' },
   { prefix: '/news', section: 'intelligence' },
+  { prefix: '/wiki', section: 'intelligence' },
+  { prefix: '/research', section: 'intelligence' },
   { prefix: '/global-legal', section: 'intelligence' },
-  { prefix: '/wiki', section: 'wiki' },
-  { prefix: '/operator/knowledge-base', section: 'knowledge' },
   { prefix: '/operator', section: 'admin' },
   { prefix: '/members', section: 'admin' },
   { prefix: '/audit', section: 'admin' },
@@ -64,13 +67,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const [activeSection, setActiveSection] = useState<NavSection | null>(
     () => sectionFromPath(pathname) ?? 'home'
   );
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(() => {
+    const initial = sectionFromPath(pathname) ?? 'home';
+    return initial !== 'home';
+  });
 
   useEffect(() => {
     const detected = sectionFromPath(pathname);
     if (detected && detected !== activeSection) {
       setActiveSection(detected);
-      setPanelOpen(true);
+      setPanelOpen(detected !== 'home');
     }
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 

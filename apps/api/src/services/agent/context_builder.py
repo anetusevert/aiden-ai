@@ -81,20 +81,86 @@ def _build_language_directive(twin: UserTwin | None) -> str:
     )
 
 
+async def build_case_context(user_id: str, db) -> str:
+    """Build the active case context block for Amin's system prompt."""
+    try:
+        from src.models.case import Case, CaseEvent
+        from src.models.client import Client
+        from src.services.agent.screen_context import get_redis_client
+
+        redis_client = get_redis_client()
+        active_case_id = await redis_client.get(f"active_case:{user_id}")
+        if not active_case_id:
+            return "ACTIVE CASE: None. The lawyer has not opened a specific case yet.\n"
+
+        case = await db.get(Case, active_case_id)
+        if not case:
+            return "ACTIVE CASE: None.\n"
+
+        client = await db.get(Client, case.client_id)
+
+        from sqlalchemy import select
+        recent_events = await db.execute(
+            select(CaseEvent)
+            .where(CaseEvent.case_id == case.id)
+            .order_by(CaseEvent.event_date.desc())
+            .limit(3)
+        )
+        events_text = "\n".join([
+            f"  - {e.title} ({e.event_date.strftime('%d %b')})"
+            for e in recent_events.scalars()
+        ])
+
+        deadline_text = ""
+        if case.next_deadline:
+            deadline_text = f"{case.next_deadline.strftime('%d %B %Y')} — {case.next_deadline_description or ''}"
+        else:
+            deadline_text = "No deadline set"
+
+        court_line = f"\nCourt: {case.court_name}" if case.court_name else ""
+        opposing_line = f"\nOpposing Party: {case.opposing_party}" if case.opposing_party else ""
+
+        return (
+            f"\nACTIVE CASE CONTEXT:\n"
+            f"The lawyer is currently working on the following case. Tailor ALL responses to this context.\n\n"
+            f"Client: {client.display_name} ({client.client_type})\n"
+            f"Case: {case.title}\n"
+            f"Case Number: {case.case_number or 'Not assigned'}\n"
+            f"Practice Area: {case.practice_area}\n"
+            f"Jurisdiction: {case.jurisdiction}\n"
+            f"Status: {case.status} | Priority: {case.priority}\n"
+            f"Next Deadline: {deadline_text}"
+            f"{court_line}"
+            f"{opposing_line}\n\n"
+            f"Case Brief: {case.amin_briefing or case.description or 'No brief available.'}\n\n"
+            f"Recent Activity:\n{events_text or '  No recent activity.'}\n\n"
+            f"You have full context of this case. When the lawyer asks for research, drafting, "
+            f"analysis, or any legal assistance, relate it to this case and client unless they "
+            f"explicitly ask about something else.\n"
+        )
+    except Exception as e:
+        logger.debug("Failed to build case context: %s", e)
+        return "ACTIVE CASE: None.\n"
+
+
 def build_system_prompt(
     soul: dict[str, str],
     twin: UserTwin | None = None,
     screen_context_text: str | None = None,
+    case_context_text: str | None = None,
 ) -> str:
     """Build the complete system prompt from Soul + Twin.
 
     IMPORTANT: language directive is always the absolute first content.
+    Case context is injected after language directive but before soul context.
     """
-    # Language directive MUST be first — before soul, before everything
     language_directive = _build_language_directive(twin)
 
     soul_prompt = get_soul_system_prompt()
     parts: list[str] = [language_directive + soul_prompt]
+
+    if case_context_text:
+        parts.insert(1, "## Active Case\n" + case_context_text)
 
     if twin is not None:
         twin_section = build_twin_context(twin)

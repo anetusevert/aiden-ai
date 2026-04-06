@@ -7,6 +7,11 @@ from src.services.agent.tool_registry import ToolRegistry
 
 def register_all_tools(registry: ToolRegistry) -> None:
     """Register all built-in Amin tools."""
+    from src.services.agent.tools.case_tools import (
+        file_to_case_tool,
+        get_case_context_tool,
+        set_case_deadline_tool,
+    )
     from src.services.agent.tools.clause_redlines import clause_redlines_tool
     from src.services.agent.tools.contract_review import contract_review_tool
     from src.services.agent.tools.document_draft import document_draft_tool
@@ -37,5 +42,8 @@ def register_all_tools(registry: ToolRegistry) -> None:
         get_document_state_tool,
         translate_tool,
         summarize_tool,
+        file_to_case_tool,
+        get_case_context_tool,
+        set_case_deadline_tool,
     ]:
         registry.register(tool)

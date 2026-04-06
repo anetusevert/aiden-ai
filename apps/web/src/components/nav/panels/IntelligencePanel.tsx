@@ -1,29 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useNavigation } from '@/components/NavigationLoader';
-import { apiClient, type WikiHealthResponse } from '@/lib/apiClient';
 
 export function IntelligencePanel() {
   const pathname = usePathname();
   const { navigateTo } = useNavigation();
-  const [wikiHealth, setWikiHealth] = useState<WikiHealthResponse | null>(null);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/');
-
-  useEffect(() => {
-    apiClient
-      .getWikiHealth()
-      .then(setWikiHealth)
-      .catch(() => {});
-  }, []);
-
-  const wikiIssues = wikiHealth
-    ? wikiHealth.contradiction_count + wikiHealth.stale_count
-    : 0;
 
   return (
     <>
@@ -57,33 +43,6 @@ export function IntelligencePanel() {
         </Link>
 
         <Link
-          href="/global-legal"
-          className={`r2-link${isActive('/global-legal') ? ' r2-link-active' : ''}`}
-          onClick={e => {
-            e.preventDefault();
-            navigateTo('/global-legal');
-          }}
-        >
-          <span className="r2-link-icon">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="2" y1="12" x2="22" y2="12" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg>
-          </span>
-          <span className="r2-link-text">Global Legal Library</span>
-        </Link>
-
-        <div className="r2-divider" />
-
-        <Link
           href="/wiki"
           className={`r2-link${isActive('/wiki') && !isActive('/wiki/log') ? ' r2-link-active' : ''}`}
           onClick={e => {
@@ -107,21 +66,6 @@ export function IntelligencePanel() {
             </svg>
           </span>
           <span className="r2-link-text">Knowledge Wiki</span>
-          {wikiIssues > 0 && (
-            <span
-              style={{
-                marginLeft: 'auto',
-                fontSize: 10,
-                color: '#f59e0b',
-                background: 'rgba(245,158,11,0.12)',
-                border: '1px solid rgba(245,158,11,0.25)',
-                borderRadius: 8,
-                padding: '1px 6px',
-              }}
-            >
-              {wikiIssues} issues
-            </span>
-          )}
         </Link>
 
         <Link
@@ -145,6 +89,30 @@ export function IntelligencePanel() {
             </svg>
           </span>
           <span className="r2-link-text">Wiki Log</span>
+        </Link>
+
+        <Link
+          href="/research"
+          className={`r2-link${isActive('/research') ? ' r2-link-active' : ''}`}
+          onClick={e => {
+            e.preventDefault();
+            navigateTo('/research');
+          }}
+        >
+          <span className="r2-link-icon">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </span>
+          <span className="r2-link-text">Legal Research</span>
         </Link>
       </div>
     </>

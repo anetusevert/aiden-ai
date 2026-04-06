@@ -1,0 +1,439 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigation } from '@/components/NavigationLoader';
+import { reportScreenContext } from '@/lib/screenContext';
+import {
+  fadeUp,
+  staggerContainer,
+  staggerItem,
+  tileMotion,
+  glassReveal,
+  glassBackdrop,
+} from '@/lib/motion';
+
+interface ClientItem {
+  id: string;
+  display_name: string;
+  client_type: string;
+  email: string | null;
+  phone: string | null;
+  cr_number: string | null;
+  national_id: string | null;
+  org_type: string | null;
+  case_count: number;
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  individual: '#38bdf8',
+  company: '#34d399',
+  organisation: '#a78bfa',
+};
+
+export default function ClientsPage() {
+  const { navigateTo } = useNavigation();
+  const searchParams = useSearchParams();
+  const [clients, setClients] = useState<ClientItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [showNewModal, setShowNewModal] = useState(false);
+
+  useEffect(() => {
+    reportScreenContext({
+      route: '/clients',
+      page_title: 'Clients',
+      document: null,
+      ui_state: {},
+    });
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') setShowNewModal(true);
+  }, [searchParams]);
+
+  const fetchClients = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (typeFilter) params.set('client_type', typeFilter);
+    params.set('limit', '50');
+    try {
+      const res = await fetch(`/api/v1/clients?${params}`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setClients(data.items ?? []);
+        setTotal(data.total ?? 0);
+      }
+    } catch {
+      /* */
+    }
+    setLoading(false);
+  }, [search, typeFilter]);
+
+  useEffect(() => {
+    const timer = setTimeout(fetchClients, 300);
+    return () => clearTimeout(timer);
+  }, [fetchClients]);
+
+  const types = ['', 'individual', 'company', 'organisation'];
+
+  return (
+    <motion.div
+      className="page-container"
+      {...fadeUp}
+      style={{
+        height: '100%',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <div className="page-header">
+        <h1 className="page-title">Clients</h1>
+        <button
+          type="button"
+          className="btn btn-gold"
+          onClick={() => setShowNewModal(true)}
+        >
+          + New Client
+        </button>
+      </div>
+
+      <div className="page-filters">
+        <input
+          type="text"
+          className="page-search"
+          placeholder="Search clients..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <div className="page-filter-chips">
+          {types.map(t => (
+            <button
+              key={t || 'all'}
+              type="button"
+              className={`chip${typeFilter === t ? ' chip-active' : ''}`}
+              onClick={() => setTypeFilter(t)}
+            >
+              {t || 'All'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflow: 'auto', padding: 'var(--space-4)' }}>
+        {loading && <div className="page-loading">Loading clients...</div>}
+        <motion.div
+          className="client-grid"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          {clients.map((c, i) => (
+            <motion.div
+              key={c.id}
+              className="client-card"
+              variants={staggerItem}
+              whileHover={tileMotion.hover}
+              whileTap={tileMotion.tap}
+              onClick={() => navigateTo(`/clients/${c.id}`)}
+            >
+              <div className="client-card-top">
+                <div
+                  className="client-card-type-icon"
+                  style={{ color: TYPE_COLORS[c.client_type] }}
+                >
+                  {c.client_type === 'company'
+                    ? '🏢'
+                    : c.client_type === 'organisation'
+                      ? '🌐'
+                      : '👤'}
+                </div>
+                <span className="client-card-type-badge">{c.client_type}</span>
+              </div>
+              <div className="client-card-name">{c.display_name}</div>
+              <div className="client-card-secondary">
+                {c.client_type === 'company' &&
+                  c.cr_number &&
+                  `CR: ${c.cr_number}`}
+                {c.client_type === 'individual' &&
+                  c.national_id &&
+                  `ID: ${c.national_id}`}
+                {c.client_type === 'organisation' && c.org_type && c.org_type}
+              </div>
+              {(c.email || c.phone) && (
+                <div className="client-card-contact">
+                  {c.email && <span>{c.email}</span>}
+                  {c.phone && <span>{c.phone}</span>}
+                </div>
+              )}
+              <div className="client-card-footer">
+                <span className="client-card-cases">{c.case_count} cases</span>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+        {!loading && clients.length === 0 && (
+          <div className="page-empty">
+            <h3>No clients yet</h3>
+            <p>Create your first client to get started</p>
+            <button
+              type="button"
+              className="btn btn-gold"
+              onClick={() => setShowNewModal(true)}
+            >
+              + New Client
+            </button>
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {showNewModal && (
+          <NewClientModal
+            onClose={() => setShowNewModal(false)}
+            onCreated={id => {
+              setShowNewModal(false);
+              navigateTo(`/clients/${id}`);
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function NewClientModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (id: string) => void;
+}) {
+  const [step, setStep] = useState(0);
+  const [type, setType] = useState('');
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const updateField = (key: string, val: string) =>
+    setForm(prev => ({ ...prev, [key]: val }));
+
+  const handleCreate = async () => {
+    setSaving(true);
+    try {
+      const body = {
+        client_type: type,
+        display_name: form.display_name || '',
+        ...form,
+      };
+      const res = await fetch('/api/v1/clients', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onCreated(data.id);
+      }
+    } catch {
+      /* */
+    }
+    setSaving(false);
+  };
+
+  return (
+    <motion.div className="modal-backdrop" {...glassBackdrop} onClick={onClose}>
+      <motion.div
+        className="modal-content modal-lg"
+        {...glassReveal}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h2>New Client</h2>
+          <button type="button" className="modal-close" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        {step === 0 && (
+          <div className="modal-body">
+            <p className="modal-subtitle">Choose client type</p>
+            <div className="type-cards">
+              {(['individual', 'company', 'organisation'] as const).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`type-card${type === t ? ' type-card-active' : ''}`}
+                  onClick={() => {
+                    setType(t);
+                    setStep(1);
+                  }}
+                >
+                  <span className="type-card-icon">
+                    {t === 'company'
+                      ? '🏢'
+                      : t === 'organisation'
+                        ? '🌐'
+                        : '👤'}
+                  </span>
+                  <span className="type-card-label">{t}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="modal-body">
+            <p className="modal-subtitle">Client details — {type}</p>
+            <div className="form-grid">
+              <div className="form-field">
+                <label>Display Name *</label>
+                <input
+                  type="text"
+                  value={form.display_name ?? ''}
+                  onChange={e => updateField('display_name', e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Arabic Name</label>
+                <input
+                  type="text"
+                  value={form.display_name_ar ?? ''}
+                  onChange={e => updateField('display_name_ar', e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={form.email ?? ''}
+                  onChange={e => updateField('email', e.target.value)}
+                />
+              </div>
+              <div className="form-field">
+                <label>Phone</label>
+                <input
+                  type="text"
+                  value={form.phone ?? ''}
+                  onChange={e => updateField('phone', e.target.value)}
+                />
+              </div>
+              <div className="form-field form-field-full">
+                <label>Address</label>
+                <input
+                  type="text"
+                  value={form.address ?? ''}
+                  onChange={e => updateField('address', e.target.value)}
+                />
+              </div>
+              {type === 'individual' && (
+                <>
+                  <div className="form-field">
+                    <label>National ID</label>
+                    <input
+                      type="text"
+                      value={form.national_id ?? ''}
+                      onChange={e => updateField('national_id', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>Nationality</label>
+                    <input
+                      type="text"
+                      value={form.nationality ?? ''}
+                      onChange={e => updateField('nationality', e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+              {type === 'company' && (
+                <>
+                  <div className="form-field">
+                    <label>Trade Name</label>
+                    <input
+                      type="text"
+                      value={form.trade_name ?? ''}
+                      onChange={e => updateField('trade_name', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>CR Number</label>
+                    <input
+                      type="text"
+                      value={form.cr_number ?? ''}
+                      onChange={e => updateField('cr_number', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>VAT Number</label>
+                    <input
+                      type="text"
+                      value={form.vat_number ?? ''}
+                      onChange={e => updateField('vat_number', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label>Sector</label>
+                    <input
+                      type="text"
+                      value={form.sector ?? ''}
+                      onChange={e => updateField('sector', e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+              {type === 'organisation' && (
+                <div className="form-field">
+                  <label>Organisation Type</label>
+                  <select
+                    value={form.org_type ?? ''}
+                    onChange={e => updateField('org_type', e.target.value)}
+                  >
+                    <option value="">Select...</option>
+                    <option value="government">Government</option>
+                    <option value="ngo">NGO</option>
+                    <option value="international">International</option>
+                    <option value="semi-govt">Semi-Government</option>
+                  </select>
+                </div>
+              )}
+              <div className="form-field form-field-full">
+                <label>Notes</label>
+                <textarea
+                  value={form.notes ?? ''}
+                  onChange={e => updateField('notes', e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setStep(0)}
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                className="btn btn-gold"
+                disabled={!form.display_name || saving}
+                onClick={handleCreate}
+              >
+                {saving ? 'Creating...' : 'Create Client'}
+              </button>
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}

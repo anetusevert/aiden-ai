@@ -1,6 +1,8 @@
 """SQLAlchemy models for Aiden.ai."""
 
 from src.models.audit_log import AuditLog
+from src.models.case import Case, CaseDocument, CaseEvent, CaseNote
+from src.models.client import Client
 from src.models.conversation import Conversation, Message
 from src.models.document import Document
 from src.models.document_chunk import DocumentChunk
@@ -28,6 +30,11 @@ from src.models.workspace_membership import WorkspaceMembership
 
 __all__ = [
     "AuditLog",
+    "Case",
+    "CaseDocument",
+    "CaseEvent",
+    "CaseNote",
+    "Client",
     "Conversation",
     "Document",
     "DocumentChunk",

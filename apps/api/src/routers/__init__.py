@@ -2,6 +2,8 @@
 
 from src.routers.audit import router as audit_router
 from src.routers.auth import router as auth_router
+from src.routers.cases import router as cases_router
+from src.routers.clients import router as clients_router
 from src.routers.conversations import router as conversations_router
 from src.routers.conversations import conversation_ws
 from src.routers.documents import router as documents_router
@@ -32,6 +34,8 @@ from src.routers.wopi import router as wopi_router
 __all__ = [
     "audit_router",
     "auth_router",
+    "cases_router",
+    "clients_router",
     "conversations_router",
     "conversation_ws",
     "documents_router",

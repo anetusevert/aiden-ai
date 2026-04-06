@@ -950,10 +950,18 @@ function CompletionModal({
 // Main Page Component
 // ============================================================================
 
+interface ActiveCaseInfo {
+  case_id: string;
+  case_title: string;
+  client_name: string;
+  practice_area: string;
+}
+
 export default function WorkflowExecutePage() {
   const params = useParams<{ category: string; workflowId: string }>();
   const searchParams = useSearchParams();
   const { navigateTo } = useNavigation();
+  const [activeCase, setActiveCase] = useState<ActiveCaseInfo | null>(null);
 
   const aminAvatarState = useAminAvatarState();
   const category = params.category as WorkflowCategory;
@@ -975,6 +983,40 @@ export default function WorkflowExecutePage() {
     goToStep,
     setAttachedDoc,
   } = useWorkflowSession(workflowId, steps.length);
+
+  // Fetch active case and set from URL param if present
+  useEffect(() => {
+    const caseIdParam = searchParams.get('case');
+    if (caseIdParam) {
+      fetch(`/api/v1/cases/${caseIdParam}/set-active`, {
+        method: 'POST',
+        credentials: 'include',
+      }).catch(() => {});
+    }
+    fetch('/api/v1/cases/active', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data) setActiveCase(data);
+      })
+      .catch(() => {});
+  }, [searchParams]);
+
+  // File step completion to case timeline
+  const fileStepToCase = useCallback(
+    (stepName: string) => {
+      if (!activeCase) return;
+      fetch(`/api/v1/cases/${activeCase.case_id}/notes`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: `Workflow step completed: ${stepName} in ${workflow?.name ?? workflowId}`,
+          is_amin_generated: true,
+        }),
+      }).catch(() => {});
+    },
+    [activeCase, workflow?.name, workflowId]
+  );
 
   // Hydrate docId from search params or localStorage
   useEffect(() => {
@@ -1041,6 +1083,12 @@ export default function WorkflowExecutePage() {
       ? classifyStepType(currentStepDef, workflow)
       : 'guidance';
 
+  const handleAdvance = useCallback(() => {
+    const stepName = steps[currentStep]?.name ?? `Step ${currentStep + 1}`;
+    fileStepToCase(stepName);
+    advanceStep();
+  }, [advanceStep, currentStep, steps, fileStepToCase]);
+
   const canAdvance =
     completedSteps.includes(currentStep) ||
     stepType === 'research' ||
@@ -1068,7 +1116,10 @@ export default function WorkflowExecutePage() {
     switch (stepType) {
       case 'research':
         return (
-          <ResearchStepContent step={currentStepDef} onComplete={advanceStep} />
+          <ResearchStepContent
+            step={currentStepDef}
+            onComplete={handleAdvance}
+          />
         );
       case 'document':
         return (
@@ -1086,13 +1137,16 @@ export default function WorkflowExecutePage() {
             step={currentStepDef}
             workflow={workflow}
             attachedDocId={attachedDocId}
-            onComplete={advanceStep}
+            onComplete={handleAdvance}
           />
         );
       case 'guidance':
       default:
         return (
-          <GuidanceStepContent step={currentStepDef} onComplete={advanceStep} />
+          <GuidanceStepContent
+            step={currentStepDef}
+            onComplete={handleAdvance}
+          />
         );
     }
   };
@@ -1113,7 +1167,33 @@ export default function WorkflowExecutePage() {
       />
 
       <div className="exec-workspace">
-        <div style={{ position: 'absolute', top: 12, right: 16, zIndex: 10 }}>
+        {activeCase && (
+          <div className="exec-case-banner">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <rect x="2" y="7" width="20" height="14" rx="2" />
+              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+            </svg>
+            <span>
+              Working on: <strong>{activeCase.case_title}</strong> |{' '}
+              {activeCase.client_name}
+            </span>
+          </div>
+        )}
+        <div
+          style={{
+            position: 'absolute',
+            top: activeCase ? 48 : 12,
+            right: 16,
+            zIndex: 10,
+          }}
+        >
           <AminAvatar size={40} state={aminAvatarState} showWaveform={false} />
         </div>
         <StepTopBar
@@ -1122,7 +1202,7 @@ export default function WorkflowExecutePage() {
           stepName={currentStepDef?.name ?? ''}
           canAdvance={canAdvance}
           isLastStep={isLastStep}
-          onAdvance={advanceStep}
+          onAdvance={handleAdvance}
         />
 
         <div className="exec-content">

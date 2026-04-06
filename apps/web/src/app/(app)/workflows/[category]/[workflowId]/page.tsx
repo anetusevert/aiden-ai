@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useMemo, useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
 import { getWorkflowById } from '@/lib/workflowRegistry';
@@ -21,7 +21,38 @@ import {
 
 export default function WorkflowDetailPage() {
   const params = useParams<{ category: string; workflowId: string }>();
+  const searchParams = useSearchParams();
   const { navigateTo } = useNavigation();
+  const [activeCase, setActiveCase] = useState<{
+    case_id: string;
+    case_title: string;
+    client_name: string;
+  } | null>(null);
+
+  const caseIdParam = searchParams.get('case');
+
+  useEffect(() => {
+    if (caseIdParam) {
+      fetch(`/api/v1/cases/${caseIdParam}`, { credentials: 'include' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (data)
+            setActiveCase({
+              case_id: data.id,
+              case_title: data.title,
+              client_name: data.client?.display_name ?? '',
+            });
+        })
+        .catch(() => {});
+    } else {
+      fetch('/api/v1/cases/active', { credentials: 'include' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (data) setActiveCase(data);
+        })
+        .catch(() => {});
+    }
+  }, [caseIdParam]);
 
   const workflow = useMemo(
     () => getWorkflowById(params.workflowId),
@@ -40,10 +71,35 @@ export default function WorkflowDetailPage() {
   }
 
   const accent = WORKFLOW_CATEGORY_ACCENTS[workflow.category];
-  const launchHref = getWorkflowExecuteHref(workflow);
+  const baseLaunchHref = getWorkflowExecuteHref(workflow);
+  const launchHref = activeCase
+    ? `${baseLaunchHref}${baseLaunchHref.includes('?') ? '&' : '?'}case=${activeCase.case_id}`
+    : baseLaunchHref;
 
   return (
     <motion.div className="workflow-detail-page" {...fadeUp}>
+      {activeCase && (
+        <div
+          className="exec-case-banner"
+          style={{ margin: '0 0 var(--space-2) 0' }}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+          </svg>
+          <span>
+            Case: <strong>{activeCase.case_title}</strong> |{' '}
+            {activeCase.client_name}
+          </span>
+        </div>
+      )}
       <section
         className="workflow-detail-hero"
         style={{ '--workflow-accent': accent } as React.CSSProperties}
@@ -66,7 +122,7 @@ export default function WorkflowDetailPage() {
             className="btn btn-primary"
             onClick={() => navigateTo(launchHref)}
           >
-            Start workflow
+            Start workflow{activeCase ? ` for ${activeCase.case_title}` : ''}
           </button>
           {workflow.tools.map(tool => (
             <button

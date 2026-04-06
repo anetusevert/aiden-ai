@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.conversation import Conversation, Message
 from src.models.twin import UserTwin
 from src.services.agent.context_builder import (
+    build_case_context,
     build_messages,
     build_screen_context,
     build_system_prompt,
@@ -91,13 +92,14 @@ class AminAgent:
             self.db.add(user_msg)
             await self.db.flush()
 
-            # 2. Load soul + twin
+            # 2. Load soul + twin + case context
             soul = load_soul_files()
             twin = await TwinManager.get_or_create_twin(self.db, self.user_id)
             screen_context_text = await build_screen_context(self.user_id)
+            case_context_text = await build_case_context(self.user_id, self.db)
 
             # 3. Build system prompt
-            system_prompt = build_system_prompt(soul, twin, screen_context_text)
+            system_prompt = build_system_prompt(soul, twin, screen_context_text, case_context_text)
 
             # 4. Load conversation history
             result = await self.db.execute(
