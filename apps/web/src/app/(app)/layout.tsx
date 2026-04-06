@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient, type SoulDetail } from '@/lib/apiClient';
 import { Rail1 } from '@/components/nav/Rail1';
+import { Rail2Panel } from '@/components/nav/Rail2Panel';
 import { TopBar } from '@/components/TopBar';
 import { DevModeBanner } from '@/components/DevModeBanner';
 import { StubProviderBanner } from '@/components/StubProviderBanner';
@@ -65,6 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const [showEntry, setShowEntry] = useState(false);
+  const [soul, setSoul] = useState<SoulDetail | null>(null);
 
   useEffect(() => {
     if (!sessionStorage.getItem('amin-entry-seen')) {
@@ -80,7 +82,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    apiClient.getMySoul().catch(() => {});
+    apiClient
+      .getMySoul()
+      .then(s => setSoul(s))
+      .catch(() => {});
   }, [isAuthenticated]);
 
   const handleEntryComplete = useCallback(() => {
@@ -116,6 +121,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <DevModeBanner />
                 <StubProviderBanner />
                 <Rail1 />
+                <Rail2Panel soul={soul} />
                 <main className="ha-main">
                   <TopBar />
                   <div className="app-content">{children}</div>

@@ -23,6 +23,7 @@ interface NavContextValue {
   activeSection: NavSection | null;
   panelOpen: boolean;
   collapsePanel: () => void;
+  togglePanel: () => void;
 }
 
 const ROUTE_SECTION_MAP: Array<{ prefix: string; section: NavSection }> = [
@@ -51,6 +52,7 @@ const NavigationCtx = createContext<NavContextValue>({
   activeSection: 'home',
   panelOpen: true,
   collapsePanel: () => {},
+  togglePanel: () => {},
 });
 
 export function useNav() {
@@ -68,13 +70,17 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     const detected = sectionFromPath(pathname);
     if (detected && detected !== activeSection) {
       setActiveSection(detected);
+      setPanelOpen(true);
     }
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const collapsePanel = useCallback(() => setPanelOpen(false), []);
+  const togglePanel = useCallback(() => setPanelOpen(prev => !prev), []);
 
   return (
-    <NavigationCtx.Provider value={{ activeSection, panelOpen, collapsePanel }}>
+    <NavigationCtx.Provider
+      value={{ activeSection, panelOpen, collapsePanel, togglePanel }}
+    >
       {children}
     </NavigationCtx.Provider>
   );
