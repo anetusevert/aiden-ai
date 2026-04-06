@@ -10,6 +10,7 @@ from src.models.document_version import DocumentVersion
 from src.models.legal_chunk import LegalChunk
 from src.models.legal_chunk_embedding import LegalChunkEmbedding
 from src.models.legal_instrument import LegalInstrument
+from src.models.news_item import NewsItem
 from src.models.legal_instrument_version import LegalInstrumentVersion
 from src.models.legal_text import LegalText
 from src.models.office import OfficeDocument, WopiToken
@@ -39,6 +40,7 @@ __all__ = [
     "LegalInstrumentVersion",
     "LegalText",
     "Message",
+    "NewsItem",
     "OfficeDocument",
     "Organization",
     "OrganizationMembership",

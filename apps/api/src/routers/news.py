@@ -1,34 +1,30 @@
-"""Legal news aggregation router.
+"""Legal news router — DB-backed endpoints for KSA/GCC legal intelligence.
 
-Fetches and caches legal news from multiple RSS/Atom feeds.
-Returns a unified list sorted by recency with images and source metadata.
-Workspace admins can choose which catalog sources are enabled.
+Serves persisted news items from the news_items table, populated by the
+background news_service fetch loop. Replaces the old in-memory RSS cache.
 """
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
 import logging
-import re
-import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
 
-import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.dependencies.auth import RequestContext, get_workspace_context
+from src.models.news_item import NewsItem as NewsItemModel
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/news", tags=["news"])
 
 # ---------------------------------------------------------------------------
-# Source catalog -- KSA / GCC legal feeds
+# Source catalog -- KSA / GCC legal feeds (used by news_service for RSS)
 # ---------------------------------------------------------------------------
 
 
@@ -43,11 +39,12 @@ class CatalogSource(BaseModel):
 
 
 SOURCE_CATALOG: list[CatalogSource] = [
+    # ── Curated legal analysis (kept) ────────────────────────────────────
     CatalogSource(
         id="jdsupra-ksa",
         name="JD Supra - Saudi Arabia",
         url="https://www.jdsupra.com/resources/syndication/docsRSSfeed.aspx?ftype=AllContent&premium=1",
-        category="regulatory",
+        category="analysis",
         region="KSA",
         description="Legal analysis and alerts on Saudi Arabian law from JD Supra contributors.",
         default_enabled=True,
@@ -56,7 +53,7 @@ SOURCE_CATALOG: list[CatalogSource] = [
         id="jdsupra-me",
         name="JD Supra - Middle East",
         url="https://www.jdsupra.com/resources/syndication/docsRSSfeed.aspx?ftype=CommercialLaw&premium=1",
-        category="corporate",
+        category="analysis",
         region="GCC",
         description="Commercial and corporate law updates across the Middle East.",
         default_enabled=True,
@@ -65,7 +62,7 @@ SOURCE_CATALOG: list[CatalogSource] = [
         id="mondaq-ksa",
         name="Mondaq - Saudi Arabia",
         url="https://www.mondaq.com/rss?type=area&content=article&geography=62",
-        category="regulatory",
+        category="analysis",
         region="KSA",
         description="Legal and regulatory analysis specific to the Kingdom of Saudi Arabia.",
         default_enabled=True,
@@ -74,7 +71,7 @@ SOURCE_CATALOG: list[CatalogSource] = [
         id="mondaq-uae",
         name="Mondaq - UAE",
         url="https://www.mondaq.com/rss?type=area&content=article&geography=60",
-        category="regulatory",
+        category="analysis",
         region="GCC",
         description="Legal and regulatory analysis for the United Arab Emirates.",
         default_enabled=False,
@@ -83,37 +80,10 @@ SOURCE_CATALOG: list[CatalogSource] = [
         id="tamimi",
         name="Al Tamimi & Company",
         url="https://www.tamimi.com/feed/",
-        category="corporate",
+        category="analysis",
         region="GCC",
         description="Leading GCC law firm covering Saudi, UAE, and wider Middle East legal developments.",
         default_enabled=True,
-    ),
-    CatalogSource(
-        id="arabnews",
-        name="Arab News",
-        url="https://www.arabnews.com/rss.xml",
-        category="general",
-        region="KSA",
-        description="Saudi Arabia's first English-language daily, covering legal and business news.",
-        default_enabled=True,
-    ),
-    CatalogSource(
-        id="saudigazette",
-        name="Saudi Gazette",
-        url="https://saudigazette.com.sa/rss",
-        category="general",
-        region="KSA",
-        description="Saudi Gazette English-language news including legal and regulatory updates.",
-        default_enabled=True,
-    ),
-    CatalogSource(
-        id="gulfnews",
-        name="Gulf News",
-        url="https://gulfnews.com/rss",
-        category="general",
-        region="GCC",
-        description="Major GCC publication covering business, legal, and regulatory developments.",
-        default_enabled=False,
     ),
     CatalogSource(
         id="lexology-me",
@@ -124,44 +94,80 @@ SOURCE_CATALOG: list[CatalogSource] = [
         description="Global legal analysis hub with Middle East and GCC practice coverage.",
         default_enabled=True,
     ),
+    # ── Primary government sources (new) ─────────────────────────────────
     CatalogSource(
-        id="zawya",
-        name="Zawya - MENA Legal",
-        url="https://www.zawya.com/mena/en/rss.xml",
-        category="corporate",
+        id="zatca",
+        name="ZATCA (Zakat, Tax & Customs)",
+        url="https://zatca.gov.sa/en/MediaCenter/News/Pages/rss.aspx",
+        category="tax_law",
+        region="KSA",
+        description="Zakat, Tax and Customs Authority — tax rulings, circulars, and compliance updates.",
+        default_enabled=True,
+    ),
+    CatalogSource(
+        id="sama",
+        name="SAMA (Saudi Central Bank)",
+        url="https://www.sama.gov.sa/en-US/News/Pages/rss.aspx",
+        category="financial_regulation",
+        region="KSA",
+        description="Saudi Central Bank circulars, regulatory updates, and banking supervision notices.",
+        default_enabled=True,
+    ),
+    CatalogSource(
+        id="zawya-law",
+        name="Zawya - Law & Governance",
+        url="https://www.zawya.com/en/rss/law",
+        category="analysis",
         region="GCC",
-        description="MENA business and legal intelligence from Refinitiv/Zawya.",
+        description="MENA legal and governance intelligence from Zawya.",
         default_enabled=False,
     ),
 ]
 
 _CATALOG_BY_ID: dict[str, CatalogSource] = {s.id: s for s in SOURCE_CATALOG}
 
-CACHE_TTL_SECONDS = 30 * 60  # 30 minutes
-HTTP_TIMEOUT = 20.0
 
 # ---------------------------------------------------------------------------
-# In-memory cache -- keyed by workspace id for isolation
+# Response schemas
 # ---------------------------------------------------------------------------
 
-_cache: dict[str, dict[str, Any]] = {}
 
-
-class NewsItem(BaseModel):
+class NewsItemResponse(BaseModel):
     id: str
     title: str
-    summary: str
+    title_ar: str | None = None
+    summary: str | None = None
     url: str
     image_url: str | None = None
-    source: str
+    source_name: str
+    source_category: str
+    jurisdiction: str
     published_at: str
-    category: str
+    importance: str
+    amin_summary: str | None = None
+    wiki_filed: bool = False
+    wiki_page_slug: str | None = None
+    tags: list[str] | None = None
 
 
-class NewsResponse(BaseModel):
-    items: list[NewsItem]
-    fetched_at: str
-    source_count: int
+class LegalNewsResponse(BaseModel):
+    items: list[NewsItemResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+class BreakingNewsResponse(BaseModel):
+    items: list[NewsItemResponse]
+
+
+class WikiFilingResponse(BaseModel):
+    wiki_page_slug: str
+    wiki_url: str
+
+
+class RefreshResponse(BaseModel):
+    status: str
 
 
 class SourceEntry(BaseModel):
@@ -185,227 +191,25 @@ class UpdateSourcesRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-_TAG_RE = re.compile(r"<[^>]+>")
-_WHITESPACE_RE = re.compile(r"\s+")
 
-
-def _strip_html(raw: str) -> str:
-    text = _TAG_RE.sub(" ", raw)
-    return _WHITESPACE_RE.sub(" ", text).strip()
-
-
-def _extract_image(entry: dict) -> str | None:
-    # media_content / media_thumbnail (common in RSS 2.0 + Media RSS)
-    for media in entry.get("media_content", []):
-        url = media.get("url", "")
-        if url and ("image" in media.get("type", "image")):
-            return url
-    for thumb in entry.get("media_thumbnail", []):
-        if thumb.get("url"):
-            return thumb["url"]
-
-    # enclosures
-    for enc in entry.get("enclosures", []):
-        if enc.get("type", "").startswith("image"):
-            return enc.get("href") or enc.get("url")
-
-    # look in summary/content for <img>
-    content = entry.get("summary", "") or ""
-    if not content:
-        content_list = entry.get("content", [])
-        if content_list:
-            content = content_list[0].get("value", "")
-
-    img_match = re.search(r'<img[^>]+src=["\']([^"\']+)', content)
-    if img_match:
-        return img_match.group(1)
-
-    return None
-
-
-def _parse_date(entry: dict) -> str:
-    for key in ("published_parsed", "updated_parsed"):
-        parsed = entry.get(key)
-        if parsed:
-            try:
-                dt = datetime(*parsed[:6], tzinfo=timezone.utc)
-                return dt.isoformat()
-            except Exception:
-                pass
-    for key in ("published", "updated"):
-        raw = entry.get(key)
-        if raw:
-            return raw
-    return datetime.now(timezone.utc).isoformat()
-
-
-async def _fetch_feed(
-    client: httpx.AsyncClient, source: dict[str, str]
-) -> list[NewsItem]:
-    """Parse a single RSS/Atom feed and return NewsItems."""
-    try:
-        resp = await client.get(source["url"], follow_redirects=True)
-        resp.raise_for_status()
-    except Exception as exc:
-        logger.warning("Feed fetch failed for %s: %s", source["name"], exc)
-        return []
-
-    try:
-        import xml.etree.ElementTree as ET
-
-        items: list[NewsItem] = []
-        root = ET.fromstring(resp.text)
-
-        # Detect feed type
-        ns = {"atom": "http://www.w3.org/2005/Atom"}
-        atom_entries = root.findall("atom:entry", ns) or root.findall(
-            "{http://www.w3.org/2005/Atom}entry"
-        )
-
-        if atom_entries:
-            for entry_el in atom_entries[:15]:
-                title = (
-                    entry_el.findtext("{http://www.w3.org/2005/Atom}title", "").strip()
-                )
-                if not title:
-                    continue
-                link_el = entry_el.find("{http://www.w3.org/2005/Atom}link")
-                link = link_el.get("href", "") if link_el is not None else ""
-                summary_el = entry_el.findtext(
-                    "{http://www.w3.org/2005/Atom}summary", ""
-                ) or entry_el.findtext("{http://www.w3.org/2005/Atom}content", "")
-                published = entry_el.findtext(
-                    "{http://www.w3.org/2005/Atom}published", ""
-                ) or entry_el.findtext("{http://www.w3.org/2005/Atom}updated", "")
-                if not published:
-                    published = datetime.now(timezone.utc).isoformat()
-
-                img = None
-                media_ns = "http://search.yahoo.com/mrss/"
-                media_content = entry_el.find(f"{{{media_ns}}}content")
-                if media_content is not None:
-                    img = media_content.get("url")
-                if not img:
-                    media_thumb = entry_el.find(f"{{{media_ns}}}thumbnail")
-                    if media_thumb is not None:
-                        img = media_thumb.get("url")
-                if not img:
-                    img_match = re.search(
-                        r'<img[^>]+src=["\']([^"\']+)', summary_el or ""
-                    )
-                    if img_match:
-                        img = img_match.group(1)
-
-                item_id = hashlib.md5(
-                    f"{source['name']}:{link or title}".encode()
-                ).hexdigest()
-                items.append(
-                    NewsItem(
-                        id=item_id,
-                        title=title,
-                        summary=_strip_html(summary_el or "")[:280],
-                        url=link,
-                        image_url=img,
-                        source=source["name"],
-                        published_at=published,
-                        category=source.get("category", "international"),
-                    )
-                )
-        else:
-            # RSS 2.0
-            channel = root.find("channel")
-            if channel is None:
-                channel = root
-            for item_el in channel.findall("item")[:15]:
-                title = (item_el.findtext("title") or "").strip()
-                if not title:
-                    continue
-                link = (item_el.findtext("link") or "").strip()
-                desc = item_el.findtext("description") or ""
-                pub_date = (
-                    item_el.findtext("pubDate")
-                    or item_el.findtext("dc:date")
-                    or datetime.now(timezone.utc).isoformat()
-                )
-
-                img = None
-                for child in item_el:
-                    tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
-                    if tag in ("content", "thumbnail"):
-                        img = child.get("url")
-                        if img:
-                            break
-                if not img:
-                    enc = item_el.find("enclosure")
-                    if enc is not None and enc.get("type", "").startswith("image"):
-                        img = enc.get("url")
-                if not img:
-                    img_match = re.search(r'<img[^>]+src=["\']([^"\']+)', desc)
-                    if img_match:
-                        img = img_match.group(1)
-
-                item_id = hashlib.md5(
-                    f"{source['name']}:{link or title}".encode()
-                ).hexdigest()
-                items.append(
-                    NewsItem(
-                        id=item_id,
-                        title=title,
-                        summary=_strip_html(desc)[:280],
-                        url=link,
-                        image_url=img,
-                        source=source["name"],
-                        published_at=pub_date,
-                        category=source.get("category", "international"),
-                    )
-                )
-
-        return items
-
-    except Exception as exc:
-        logger.warning("Feed parse failed for %s: %s", source["name"], exc)
-        return []
-
-
-def _get_enabled_sources(workspace_settings: dict[str, Any] | None) -> list[CatalogSource]:
-    """Resolve the active sources for a workspace."""
-    if workspace_settings:
-        enabled_ids = workspace_settings.get("news_enabled_sources")
-        if isinstance(enabled_ids, list) and enabled_ids:
-            return [s for s in SOURCE_CATALOG if s.id in enabled_ids]
-    return [s for s in SOURCE_CATALOG if s.default_enabled]
-
-
-async def _aggregate_feeds(sources: list[CatalogSource]) -> list[NewsItem]:
-    """Fetch all feeds concurrently, merge, deduplicate, sort by date."""
-    feed_dicts = [{"name": s.name, "url": s.url, "category": s.category} for s in sources]
-
-    async with httpx.AsyncClient(
-        timeout=HTTP_TIMEOUT,
-        headers={
-            "User-Agent": "HeyAmin-NewsBot/1.0 (+https://heyamin.com)",
-            "Accept": "application/rss+xml, application/xml, text/xml, */*",
-        },
-    ) as client:
-        results = await asyncio.gather(
-            *[_fetch_feed(client, src) for src in feed_dicts],
-            return_exceptions=True,
-        )
-
-    all_items: list[NewsItem] = []
-    for result in results:
-        if isinstance(result, list):
-            all_items.extend(result)
-
-    seen: set[str] = set()
-    unique: list[NewsItem] = []
-    for item in all_items:
-        if item.id not in seen:
-            seen.add(item.id)
-            unique.append(item)
-
-    unique.sort(key=lambda x: x.published_at, reverse=True)
-    return unique[:40]
+def _model_to_response(item: NewsItemModel) -> NewsItemResponse:
+    return NewsItemResponse(
+        id=str(item.id),
+        title=item.title,
+        title_ar=item.title_ar,
+        summary=item.summary,
+        url=item.url,
+        image_url=item.image_url,
+        source_name=item.source_name,
+        source_category=item.source_category,
+        jurisdiction=item.jurisdiction,
+        published_at=item.published_at.isoformat() if item.published_at else "",
+        importance=item.importance,
+        amin_summary=item.amin_summary,
+        wiki_filed=item.wiki_filed,
+        wiki_page_slug=item.wiki_page_slug,
+        tags=item.tags,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -413,37 +217,158 @@ async def _aggregate_feeds(sources: list[CatalogSource]) -> list[NewsItem]:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/legal", response_model=NewsResponse)
+@router.get("/legal", response_model=LegalNewsResponse)
 async def get_legal_news(
     ctx: Annotated[RequestContext, Depends(get_workspace_context)],
-) -> NewsResponse:
-    """Aggregated legal news filtered by workspace-enabled sources.
+    db: Annotated[AsyncSession, Depends(get_db)],
+    category: Annotated[str | None, Query(description="Filter by source_category")] = None,
+    jurisdiction: Annotated[str | None, Query(description="Filter by jurisdiction (KSA, UAE, Qatar, GCC)")] = None,
+    importance: Annotated[str | None, Query(description="Filter by importance (breaking, high, normal)")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 40,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> LegalNewsResponse:
+    """Persisted legal news feed with optional filters."""
+    stmt = select(NewsItemModel)
 
-    Cached in-memory per workspace for 30 minutes.
-    """
-    ws_id = str(ctx.workspace.id) if ctx.workspace else "__default__"
-    ws_settings = (ctx.workspace.settings if ctx.workspace and hasattr(ctx.workspace, "settings") else None) or {}
+    if category:
+        stmt = stmt.where(NewsItemModel.source_category == category)
+    if jurisdiction:
+        stmt = stmt.where(NewsItemModel.jurisdiction == jurisdiction)
+    if importance:
+        stmt = stmt.where(NewsItemModel.importance == importance)
 
-    now = time.time()
-    ws_cache = _cache.get(ws_id)
-    if ws_cache and ws_cache["items"] and (now - float(ws_cache["fetched_at"])) < CACHE_TTL_SECONDS:
-        return NewsResponse(
-            items=ws_cache["items"],
-            fetched_at=datetime.fromtimestamp(
-                float(ws_cache["fetched_at"]), tz=timezone.utc
-            ).isoformat(),
-            source_count=len(_get_enabled_sources(ws_settings)),
+    stmt = stmt.order_by(NewsItemModel.published_at.desc())
+
+    # Total count (before pagination)
+    from sqlalchemy import func as sa_func
+
+    count_stmt = select(sa_func.count()).select_from(stmt.subquery())
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    stmt = stmt.offset(offset).limit(limit)
+    result = await db.execute(stmt)
+    items = list(result.scalars().all())
+
+    return LegalNewsResponse(
+        items=[_model_to_response(i) for i in items],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/breaking", response_model=BreakingNewsResponse)
+async def get_breaking_news(
+    ctx: Annotated[RequestContext, Depends(get_workspace_context)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BreakingNewsResponse:
+    """Last 5 high-importance items published in the last 24 hours."""
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    stmt = (
+        select(NewsItemModel)
+        .where(NewsItemModel.importance == "high")
+        .where(NewsItemModel.published_at >= cutoff)
+        .order_by(NewsItemModel.published_at.desc())
+        .limit(5)
+    )
+    result = await db.execute(stmt)
+    items = list(result.scalars().all())
+
+    return BreakingNewsResponse(
+        items=[_model_to_response(i) for i in items],
+    )
+
+
+@router.post("/{item_id}/file-to-wiki", response_model=WikiFilingResponse)
+async def file_to_wiki(
+    item_id: str,
+    ctx: Annotated[RequestContext, Depends(get_workspace_context)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> WikiFilingResponse:
+    """EDITOR+: manually trigger wiki filing for a news item."""
+    if not ctx.has_role("EDITOR"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="EDITOR role or higher required.",
         )
 
-    sources = _get_enabled_sources(ws_settings)
-    items = await _aggregate_feeds(sources)
-    _cache[ws_id] = {"items": items, "fetched_at": now}
-
-    return NewsResponse(
-        items=items,
-        fetched_at=datetime.now(timezone.utc).isoformat(),
-        source_count=len(sources),
+    result = await db.execute(
+        select(NewsItemModel).where(NewsItemModel.id == item_id)
     )
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="News item not found.")
+
+    from src.services.wiki_service import WikiService
+
+    wiki = WikiService(db=db)
+    source_text = (
+        f"# {item.title}\n\n"
+        f"{item.summary or ''}\n\n"
+        f"Source: {item.source_name}\n"
+        f"URL: {item.url}"
+    )
+    source_type = "scraped_law" if item.source_category == "legislation" else "news_item"
+
+    wiki_result = await wiki.ingest_source(
+        source_text=source_text,
+        source_title=item.title,
+        source_type=source_type,
+        org_id=None,
+        user_id=str(ctx.user.id),
+        metadata={
+            "jurisdiction": item.jurisdiction,
+            "url": item.url,
+            "source": item.source_name,
+            "published_at": item.published_at.isoformat(),
+            "category": item.source_category,
+        },
+    )
+
+    item.wiki_filed = True
+    item.wiki_page_slug = wiki_result.primary_page.slug
+    await db.commit()
+
+    return WikiFilingResponse(
+        wiki_page_slug=wiki_result.primary_page.slug,
+        wiki_url=f"/wiki/{wiki_result.primary_page.slug}",
+    )
+
+
+@router.post("/refresh", response_model=RefreshResponse)
+async def refresh_news(
+    ctx: Annotated[RequestContext, Depends(get_workspace_context)],
+) -> RefreshResponse:
+    """Trigger an immediate news fetch as a background task."""
+    if not ctx.has_role("EDITOR"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="EDITOR role or higher required.",
+        )
+
+    import asyncio
+
+    from src.database import async_session_maker
+    from src.services import news_service
+
+    async def _run_refresh() -> None:
+        async with async_session_maker() as fresh_db:
+            try:
+                new_count = await news_service.fetch_and_persist_news(fresh_db)
+                if new_count > 0:
+                    filed = await news_service.file_high_importance_to_wiki(fresh_db)
+                    logger.info("Manual refresh: %d new items, %d filed to wiki", new_count, filed)
+            except Exception as e:
+                logger.error("Manual news refresh failed: %s", e, exc_info=True)
+
+    asyncio.create_task(_run_refresh())
+    return RefreshResponse(status="refresh started")
+
+
+# ---------------------------------------------------------------------------
+# Source catalog management (preserved from original)
+# ---------------------------------------------------------------------------
 
 
 @router.get("/sources", response_model=SourcesResponse)
@@ -497,8 +422,5 @@ async def update_news_sources(
     settings["news_enabled_sources"] = body.enabled_source_ids
     workspace.settings = settings  # type: ignore[assignment]
     await db.commit()
-
-    # Invalidate cache for this workspace so next fetch uses new sources
-    _cache.pop(str(workspace.id), None)
 
     return await get_news_sources(ctx)

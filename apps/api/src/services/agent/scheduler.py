@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 DREAM_CYCLE_INTERVAL_SECONDS = 1800  # 30 minutes
 SCRAPING_CHECK_INTERVAL_SECONDS = 300  # 5 minutes
+NEWS_FETCH_INTERVAL_SECONDS = 3600  # 60 minutes
 
 
 class AminScheduler:
@@ -23,6 +24,7 @@ class AminScheduler:
     def __init__(self) -> None:
         self._task: asyncio.Task[None] | None = None
         self._scraping_task: asyncio.Task[None] | None = None
+        self._news_task: asyncio.Task[None] | None = None
         self._running = False
 
     async def start(self) -> None:
@@ -32,16 +34,18 @@ class AminScheduler:
         self._running = True
         self._task = asyncio.create_task(self._run_loop())
         self._scraping_task = asyncio.create_task(self._scraping_loop())
+        self._news_task = asyncio.create_task(self._news_fetch_loop())
         logger.info(
-            "AminScheduler started (dream=%ds, scraping=%ds)",
+            "AminScheduler started (dream=%ds, scraping=%ds, news=%ds)",
             DREAM_CYCLE_INTERVAL_SECONDS,
             SCRAPING_CHECK_INTERVAL_SECONDS,
+            NEWS_FETCH_INTERVAL_SECONDS,
         )
 
     async def stop(self) -> None:
         """Stop the background scheduler."""
         self._running = False
-        for task in (self._task, self._scraping_task):
+        for task in (self._task, self._scraping_task, self._news_task):
             if task:
                 task.cancel()
                 try:
@@ -50,6 +54,7 @@ class AminScheduler:
                     pass
         self._task = None
         self._scraping_task = None
+        self._news_task = None
         logger.info("AminScheduler stopped")
 
     async def _run_loop(self) -> None:
@@ -184,3 +189,32 @@ class AminScheduler:
                     "Scraping schedule error for source %s: %s",
                     source.connector_name, e, exc_info=True,
                 )
+
+    # --------------------------------------------------------------------- #
+    # News fetch loop
+    # --------------------------------------------------------------------- #
+
+    async def _news_fetch_loop(self) -> None:
+        """Periodically fetch legal news and file to wiki."""
+        await asyncio.sleep(30)  # startup delay
+
+        while self._running:
+            try:
+                from src.database import async_session_maker
+                from src.services import news_service
+
+                async with async_session_maker() as db:
+                    new_count = await news_service.fetch_and_persist_news(db)
+                    if new_count > 0:
+                        filed = await news_service.file_high_importance_to_wiki(db)
+                        logger.info(
+                            "News: %d new items, %d filed to wiki",
+                            new_count, filed,
+                        )
+            except Exception as e:
+                logger.error("News fetch loop error: %s", e, exc_info=True)
+
+            try:
+                await asyncio.sleep(NEWS_FETCH_INTERVAL_SECONDS)
+            except asyncio.CancelledError:
+                break

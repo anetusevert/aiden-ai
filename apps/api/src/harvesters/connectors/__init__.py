@@ -43,13 +43,23 @@ def list_connectors() -> list[str]:
 
 
 from src.harvesters.connectors.ksa_boe import KsaBoeConnector
+from src.harvesters.connectors.ksa_istitlaa import KsaIstitlaaConnector
+from src.harvesters.connectors.ksa_misa import KsaMisaConnector
 from src.harvesters.connectors.ksa_moj import KsaMojConnector
+from src.harvesters.connectors.ksa_sba import KsaSbaConnector
+from src.harvesters.connectors.ksa_sjp import KsaSjpConnector
+from src.harvesters.connectors.ksa_spa import KsaSpaConnector
 from src.harvesters.connectors.ksa_uaq import KsaUaqConnector
 from src.harvesters.connectors.qatar_almeezan import QatarAlmeezanConnector
 from src.harvesters.connectors.uae_moj import UaeMojConnector
 
 register(KsaBoeConnector)
+register(KsaIstitlaaConnector)
+register(KsaMisaConnector)
 register(KsaMojConnector)
+register(KsaSbaConnector)
+register(KsaSjpConnector)
+register(KsaSpaConnector)
 register(KsaUaqConnector)
 register(UaeMojConnector)
 register(QatarAlmeezanConnector)
@@ -58,7 +68,12 @@ __all__ = [
     "Connector",
     "BaseConnector",
     "KsaBoeConnector",
+    "KsaIstitlaaConnector",
+    "KsaMisaConnector",
     "KsaMojConnector",
+    "KsaSbaConnector",
+    "KsaSjpConnector",
+    "KsaSpaConnector",
     "KsaUaqConnector",
     "UaeMojConnector",
     "QatarAlmeezanConnector",

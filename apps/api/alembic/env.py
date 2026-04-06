@@ -14,6 +14,7 @@ from src.models import (  # noqa: F401
     Document,
     DocumentVersion,
     Message,
+    NewsItem,
     OfficeDocument,
     Organization,
     OrganizationMembership,
