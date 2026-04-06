@@ -675,6 +675,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  color: var(--text-primary, #f0f0f3);
 }
 
 .ha-footer-wordmark {
@@ -756,22 +757,10 @@
 }
 
 .ha-login-brand {
-  text-align: center;
+  display: flex;
+  justify-content: center;
   margin-bottom: 2rem;
-}
-
-.ha-login-wordmark {
-  font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
-  font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
   color: var(--text-primary, #f0f0f3);
-  display: block;
-  margin-bottom: 0.25rem;
-}
-
-.ha-login-wordmark-accent {
-  color: var(--amin-accent, #d4a017);
 }
 
 .ha-login-title {

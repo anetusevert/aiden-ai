@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 
 export function MarketingFooter() {
   const currentYear = new Date().getFullYear();
@@ -7,7 +8,13 @@ export function MarketingFooter() {
     <footer className="mkt-footer">
       <div className="mkt-footer-inner">
         <div className="mkt-footer-brand">
-          <span className="mkt-footer-logo">HeyAmin</span>
+          <div
+            className="mkt-footer-logo"
+            style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <HeyAminLogo variant="mark" size={28} />
+            <span>HeyAmin</span>
+          </div>
           <p className="mkt-footer-tagline">
             Professional-grade AI for legal work.
           </p>

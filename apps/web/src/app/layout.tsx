@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   description:
     'HeyAmin — grounded legal workflows, workspace controls, and evidence-backed outputs.',
   icons: {
-    icon: '/favicon.png',
+    icon: '/favicon.svg',
   },
 };
 

@@ -7963,6 +7963,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: center;
   background: var(--bg-primary, #0e0f11);
+  color: #fff;
 }
 
 .entry-sequence-content {
@@ -8097,6 +8098,7 @@ textarea:focus-visible {
   inset: 0;
   z-index: 9999;
   background: var(--bg-app, #0a0a0b);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10557,6 +10559,7 @@ textarea:focus-visible {
   border: none;
   cursor: pointer;
   padding: 0;
+  color: #fff;
   border-radius: var(--radius-md);
   transition: filter 0.2s ease;
 }

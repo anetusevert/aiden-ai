@@ -382,7 +382,7 @@ export default function MarketingHomePage() {
       <footer className="ha-footer ha-footer-full">
         <div className="ha-footer-inner">
           <div className="ha-footer-brand">
-            <HeyAminLogo variant="full" size={100} />
+            <HeyAminLogo variant="mark" size={48} />
             <p className="ha-footer-tagline">
               Professional legal intelligence.
             </p>

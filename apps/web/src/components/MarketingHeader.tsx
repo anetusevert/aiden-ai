@@ -14,7 +14,7 @@ export function MarketingHeader() {
         className="ha-logo"
         style={{ display: 'inline-flex', alignItems: 'center' }}
       >
-        <HeyAminLogo variant="full" size={120} />
+        <HeyAminLogo variant="mark" size={48} />
       </Link>
       <nav>
         {isAuthenticated ? (

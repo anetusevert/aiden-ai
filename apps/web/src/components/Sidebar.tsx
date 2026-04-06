@@ -10,6 +10,7 @@ import { useSidebarWorkflows } from '@/hooks/useSidebarWorkflows';
 import { useNavigation } from '@/components/NavigationLoader';
 import { navRailContainer, navRailItem } from '@/lib/motion';
 import { officeApi } from '@/lib/officeApi';
+import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 import type { SoulDetail } from '@/lib/apiClient';
 import {
   getWorkflowCategoryHref,
@@ -666,17 +667,7 @@ export function Sidebar({
               navigateTo('/home');
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/ha-logo-mark.png"
-              alt="HeyAmin"
-              style={{
-                width: collapsed ? 28 : 36,
-                height: collapsed ? 28 : 36,
-                objectFit: 'contain',
-                display: 'block',
-              }}
-            />
+            <HeyAminLogo variant="mark" size={collapsed ? 28 : 36} />
           </Link>
         </div>
 

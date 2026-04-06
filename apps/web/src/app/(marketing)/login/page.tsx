@@ -8,6 +8,7 @@ import { apiClient } from '@/lib/apiClient';
 import { useAuth } from '@/lib/AuthContext';
 import { getClientApiBaseUrl } from '@/lib/api';
 import { motionTokens } from '@/lib/motion';
+import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 import { useTranslations } from 'next-intl';
 
 type ConnectionStatus = 'checking' | 'online' | 'offline';
@@ -141,9 +142,7 @@ function LoginPageInner() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="ha-login-brand">
-          <span className="ha-login-wordmark">
-            Hey<span className="ha-login-wordmark-accent">Amin</span>
-          </span>
+          <HeyAminLogo variant="mark" size={64} />
         </div>
 
         <h1 className="ha-login-title">{t('welcomeBack')}</h1>
