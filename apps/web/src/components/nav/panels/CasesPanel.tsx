@@ -127,7 +127,26 @@ export function CasesPanel() {
       </div>
 
       <div className="r2-link-list r2-scrollable">
-        {loading && <div className="r2-loading">Loading...</div>}
+        {loading &&
+          [...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="skeleton-row"
+              style={{ padding: '8px 16px', animationDelay: `${i * 60}ms` }}
+            >
+              <div className="skeleton-dot" />
+              <div className="skeleton-group">
+                <div
+                  className="skeleton-line"
+                  style={{ width: `${70 - i * 10}%` }}
+                />
+                <div
+                  className="skeleton-line skeleton-line-sm"
+                  style={{ width: '30%' }}
+                />
+              </div>
+            </div>
+          ))}
         {!loading && cases.length === 0 && (
           <div className="r2-empty">No cases found</div>
         )}

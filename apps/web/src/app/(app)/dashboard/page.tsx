@@ -303,10 +303,43 @@ export default function DashboardPage() {
             style={{ flex: 1, overflow: 'auto' }}
           >
             {loading && (
-              <div className="dashboard-loading">Loading cases...</div>
+              <div>
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="skeleton-row"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                  >
+                    <div className="skeleton-dot" />
+                    <div className="skeleton-group">
+                      <div
+                        className="skeleton-line"
+                        style={{ width: `${70 - i * 8}%` }}
+                      />
+                      <div
+                        className="skeleton-line skeleton-line-sm"
+                        style={{ width: '25%' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
             {!loading && uniqueCases.length === 0 && (
               <div className="dashboard-empty">
+                <div className="page-empty-icon">
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <rect x="2" y="7" width="20" height="14" rx="2" />
+                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                  </svg>
+                </div>
                 <h3>No active cases</h3>
                 <p>Create your first case to get started</p>
                 <button

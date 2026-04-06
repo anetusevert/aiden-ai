@@ -1,13 +1,16 @@
 """Clients router — CRUD for legal practice clients."""
 
+import logging
 from datetime import datetime
 from typing import Annotated, Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from src.database import get_db
 from src.dependencies.auth import RequestContext, require_admin, require_editor, require_viewer
@@ -124,6 +127,111 @@ async def _get_org_id_from_user(ctx: RequestContext, db: AsyncSession) -> str:
     if not org_id:
         raise HTTPException(status_code=400, detail="User is not a member of any organization")
     return org_id
+
+
+# ── Smart Onboarding ──────────────────────────────────────────────
+
+class ExtractedClientData(BaseModel):
+    client_type: str = "individual"
+    display_name: str = ""
+    display_name_ar: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    national_id: str | None = None
+    nationality: str | None = None
+    cr_number: str | None = None
+    vat_number: str | None = None
+    trade_name: str | None = None
+    sector: str | None = None
+    org_type: str | None = None
+    notes: str | None = None
+    confidence: float = 0.0
+
+
+@router.post("/extract-from-document", response_model=ExtractedClientData)
+async def extract_client_from_document(
+    file: UploadFile,
+    ctx: Annotated[RequestContext, Depends(require_editor())],
+) -> ExtractedClientData:
+    """Upload a document (PDF, DOCX, image) and use AI to extract client information."""
+    if not file.filename:
+        raise HTTPException(status_code=422, detail="No file provided")
+
+    allowed = {".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg", ".tif", ".tiff"}
+    ext = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in allowed:
+        raise HTTPException(status_code=422, detail=f"Unsupported file type: {ext}")
+
+    content = await file.read()
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=422, detail="File too large (max 20MB)")
+
+    text = ""
+    try:
+        if ext == ".pdf":
+            import fitz
+            doc = fitz.open(stream=content, filetype="pdf")
+            text = "\n".join(page.get_text() for page in doc)
+            doc.close()
+        elif ext in (".docx", ".doc"):
+            import io
+            from docx import Document as DocxDoc
+            doc = DocxDoc(io.BytesIO(content))
+            text = "\n".join(p.text for p in doc.paragraphs)
+        else:
+            text = f"[Image file: {file.filename} — text extraction not available for images in this version]"
+    except Exception as e:
+        logger.warning("Text extraction failed for %s: %s", file.filename, e)
+        text = f"[Extraction failed for {file.filename}]"
+
+    if not text.strip() or len(text.strip()) < 10:
+        raise HTTPException(status_code=422, detail="Could not extract text from document")
+
+    try:
+        from src.llm.providers import get_llm_provider
+        provider = get_llm_provider()
+
+        prompt = (
+            "You are a legal AI assistant. Extract client information from this document.\n\n"
+            "DOCUMENT TEXT:\n" + text[:8000] + "\n\n"
+            "Extract and return a JSON object with these fields:\n"
+            '- "client_type": one of "individual", "company", or "organisation"\n'
+            '- "display_name": the full name of the person or entity\n'
+            '- "display_name_ar": Arabic name if present\n'
+            '- "email": email address if found\n'
+            '- "phone": phone number if found\n'
+            '- "address": address if found\n'
+            '- "national_id": national ID / Iqama number for individuals\n'
+            '- "nationality": nationality for individuals\n'
+            '- "cr_number": Commercial Registration number for companies\n'
+            '- "vat_number": VAT number if found\n'
+            '- "trade_name": trade/brand name for companies\n'
+            '- "sector": industry/sector for companies\n'
+            '- "org_type": type for organisations (government, ngo, international, semi-govt)\n'
+            '- "notes": any other relevant information\n'
+            '- "confidence": your confidence level 0.0-1.0\n\n'
+            "Return ONLY valid JSON, no markdown or explanation."
+        )
+
+        messages = [
+            {"role": "system", "content": "You are a data extraction assistant. Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ]
+        response = await provider.chat_completion(messages=messages, max_tokens=800)
+        raw = response.get("content", "") if isinstance(response, dict) else str(response)
+
+        import json
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+            raw = raw.rsplit("```", 1)[0]
+
+        data = json.loads(raw)
+        return ExtractedClientData(**{k: v for k, v in data.items() if k in ExtractedClientData.model_fields})
+    except Exception as e:
+        logger.warning("AI extraction failed: %s", e)
+        raise HTTPException(status_code=500, detail="AI extraction failed. Please fill in the form manually.")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────

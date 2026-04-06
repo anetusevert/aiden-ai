@@ -71,6 +71,23 @@ export function HomePanel({ soul }: HomePanelProps) {
         {getGreeting()}, {firstName}
       </div>
 
+      {!dashboard && (
+        <div className="r2-stat-row">
+          <div
+            className="skeleton-line"
+            style={{ width: '60%', height: 18, borderRadius: 12 }}
+          />
+          <div
+            className="skeleton-line"
+            style={{
+              width: '50%',
+              height: 18,
+              borderRadius: 12,
+              animationDelay: '80ms',
+            }}
+          />
+        </div>
+      )}
       {dashboard && (
         <div className="r2-stat-row">
           <span className="r2-stat-chip">

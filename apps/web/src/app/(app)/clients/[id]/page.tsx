@@ -53,10 +53,81 @@ export default function ClientDetailPage() {
     navigateTo(`/cases/${caseItem.id}`);
   };
 
-  if (loading) return <div className="page-loading">Loading client...</div>;
+  if (loading)
+    return (
+      <div
+        className="page-container"
+        style={{
+          height: '100%',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div className="client-detail-header">
+          <div className="skeleton-group" style={{ gap: 8 }}>
+            <div
+              className="skeleton-line skeleton-line-xl"
+              style={{ width: '40%' }}
+            />
+            <div className="skeleton-line" style={{ width: '20%' }} />
+          </div>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            gap: 'var(--space-6)',
+            padding: 'var(--space-4)',
+          }}
+        >
+          <div
+            style={{
+              width: '35%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-4)',
+            }}
+          >
+            <div className="skeleton-card" style={{ height: 160 }} />
+            <div className="skeleton-card" style={{ height: 200 }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="skeleton-row">
+                <div className="skeleton-dot" />
+                <div className="skeleton-group">
+                  <div
+                    className="skeleton-line"
+                    style={{ width: `${70 - i * 10}%` }}
+                  />
+                  <div
+                    className="skeleton-line skeleton-line-sm"
+                    style={{ width: '30%' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   if (!client)
     return (
       <div className="page-empty">
+        <div className="page-empty-icon">
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </div>
         <h3>Client not found</h3>
       </div>
     );

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
 import { reportScreenContext } from '@/lib/screenContext';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
+import { officeApi } from '@/lib/officeApi';
 
 type TabId = 'documents' | 'notes' | 'timeline' | 'workflows';
 
@@ -38,6 +39,30 @@ export default function CaseDetailPage() {
   const [timeline, setTimeline] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  const [creatingDoc, setCreatingDoc] = useState(false);
+
+  const handleCreateDoc = async () => {
+    if (!caseData) return;
+    setCreatingDoc(true);
+    try {
+      const doc = await officeApi.createDocument({
+        title: `${caseData.title} — Document`,
+        doc_type: 'docx',
+        template: 'legal_memo',
+      });
+      await fetch(`/api/v1/cases/${params.id}/documents`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_id: doc.id, document_role: 'draft' }),
+      });
+      loadDocuments();
+      navigateTo(`/documents/${doc.id}`);
+    } catch {
+      /* */
+    }
+    setCreatingDoc(false);
+  };
 
   useEffect(() => {
     fetch(`/api/v1/cases/${params.id}/set-active`, {
@@ -122,10 +147,92 @@ export default function CaseDetailPage() {
     loadDocuments();
   };
 
-  if (loading) return <div className="page-loading">Loading case...</div>;
+  if (loading)
+    return (
+      <div
+        className="page-container"
+        style={{
+          height: '100%',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div className="case-topbar">
+          <div className="skeleton-group" style={{ gap: 8 }}>
+            <div
+              className="skeleton-line skeleton-line-xl"
+              style={{ width: '35%' }}
+            />
+            <div className="skeleton-line" style={{ width: '15%' }} />
+          </div>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            gap: 'var(--space-4)',
+            padding: 'var(--space-4)',
+          }}
+        >
+          <div
+            style={{
+              width: '30%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-4)',
+            }}
+          >
+            <div className="skeleton-card" style={{ height: 100 }} />
+            <div className="skeleton-card" style={{ height: 220 }} />
+            <div className="skeleton-card" style={{ height: 100 }} />
+          </div>
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-3)',
+            }}
+          >
+            <div
+              className="skeleton-line"
+              style={{ width: '50%', height: 36 }}
+            />
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="skeleton-row">
+                <div className="skeleton-group">
+                  <div
+                    className="skeleton-line"
+                    style={{ width: `${65 - i * 10}%` }}
+                  />
+                  <div
+                    className="skeleton-line skeleton-line-sm"
+                    style={{ width: '20%' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   if (!caseData)
     return (
       <div className="page-empty">
+        <div className="page-empty-icon">
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+          </svg>
+        </div>
         <h3>Case not found</h3>
       </div>
     );
@@ -353,9 +460,41 @@ export default function CaseDetailPage() {
           >
             {activeTab === 'documents' && (
               <div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 'var(--space-2)',
+                    marginBottom: 'var(--space-4)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-gold"
+                    onClick={handleCreateDoc}
+                    disabled={creatingDoc}
+                  >
+                    {creatingDoc ? 'Creating...' : '+ New Document'}
+                  </button>
+                </div>
                 {documents.length === 0 && (
                   <div className="tab-empty">
-                    No documents attached. Create or attach a document.
+                    <div
+                      className="page-empty-icon"
+                      style={{ margin: '0 auto var(--space-3)' }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M7 3h8l4 4v11a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" />
+                        <path d="M15 3v5h5" />
+                      </svg>
+                    </div>
+                    No documents attached yet.
                   </div>
                 )}
                 {documents.map(d => (

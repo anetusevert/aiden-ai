@@ -128,7 +128,17 @@ export default function ClientsPage() {
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: 'var(--space-4)' }}>
-        {loading && <div className="page-loading">Loading clients...</div>}
+        {loading && (
+          <div className="client-grid">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="skeleton-card"
+                style={{ height: 180, animationDelay: `${i * 80}ms` }}
+              />
+            ))}
+          </div>
+        )}
         <motion.div
           className="client-grid"
           variants={staggerContainer}
@@ -181,6 +191,19 @@ export default function ClientsPage() {
         </motion.div>
         {!loading && clients.length === 0 && (
           <div className="page-empty">
+            <div className="page-empty-icon">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
             <h3>No clients yet</h3>
             <p>Create your first client to get started</p>
             <button
@@ -220,6 +243,56 @@ function NewClientModal({
   const [type, setType] = useState('');
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFileUpload = async (file: File) => {
+    setUploading(true);
+    setUploadProgress(10);
+    const interval = setInterval(
+      () => setUploadProgress(p => Math.min(p + 15, 85)),
+      400
+    );
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/v1/clients/extract-from-document', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      });
+      clearInterval(interval);
+      setUploadProgress(100);
+      if (res.ok) {
+        const data = await res.json();
+        const newForm: Record<string, string> = {};
+        for (const [k, v] of Object.entries(data)) {
+          if (v && typeof v === 'string') newForm[k] = v;
+        }
+        if (data.client_type) setType(data.client_type);
+        setForm(newForm);
+        setTimeout(() => {
+          setUploading(false);
+          setStep(1);
+        }, 500);
+      } else {
+        setUploading(false);
+        setUploadProgress(0);
+      }
+    } catch {
+      clearInterval(interval);
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileUpload(file);
+  };
 
   const updateField = (key: string, val: string) =>
     setForm(prev => ({ ...prev, [key]: val }));
@@ -264,26 +337,114 @@ function NewClientModal({
 
         {step === 0 && (
           <div className="modal-body">
-            <p className="modal-subtitle">Choose client type</p>
+            {!uploading && (
+              <div
+                className={`upload-zone${dragOver ? ' upload-zone-active' : ''}`}
+                onDragOver={e => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.pdf,.docx,.doc,.png,.jpg,.jpeg';
+                  input.onchange = e => {
+                    const f = (e.target as HTMLInputElement).files?.[0];
+                    if (f) handleFileUpload(f);
+                  };
+                  input.click();
+                }}
+              >
+                <div className="upload-zone-icon">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <div className="upload-zone-title">
+                  Upload a client document
+                </div>
+                <div className="upload-zone-subtitle">
+                  CR certificate, Wakala, national ID, or any document — Amin
+                  will extract client details
+                </div>
+              </div>
+            )}
+            {uploading && (
+              <div className="upload-zone upload-zone-processing">
+                <div className="upload-progress">
+                  <div className="upload-progress-bar">
+                    <div
+                      className="upload-progress-fill"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <div className="upload-progress-text">
+                    Amin is extracting client information...
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div
+              style={{
+                textAlign: 'center',
+                padding: 'var(--space-3) 0',
+                color: 'var(--text-muted)',
+                fontSize: '0.75rem',
+              }}
+            >
+              or choose type manually
+            </div>
+
             <div className="type-cards">
-              {(['individual', 'company', 'organisation'] as const).map(t => (
+              {[
+                {
+                  key: 'individual' as const,
+                  icon: '👤',
+                  desc: 'Natural person, national ID',
+                },
+                {
+                  key: 'company' as const,
+                  icon: '🏢',
+                  desc: 'Commercial entity, CR number',
+                },
+                {
+                  key: 'organisation' as const,
+                  icon: '🌐',
+                  desc: 'Government, NGO, international',
+                },
+              ].map(t => (
                 <button
-                  key={t}
+                  key={t.key}
                   type="button"
-                  className={`type-card${type === t ? ' type-card-active' : ''}`}
+                  className={`type-card${type === t.key ? ' type-card-active' : ''}`}
                   onClick={() => {
-                    setType(t);
+                    setType(t.key);
                     setStep(1);
                   }}
                 >
-                  <span className="type-card-icon">
-                    {t === 'company'
-                      ? '🏢'
-                      : t === 'organisation'
-                        ? '🌐'
-                        : '👤'}
+                  <span className="type-card-icon">{t.icon}</span>
+                  <span className="type-card-label">{t.key}</span>
+                  <span
+                    style={{
+                      fontSize: '0.6875rem',
+                      color: 'var(--text-muted)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {t.desc}
                   </span>
-                  <span className="type-card-label">{t}</span>
                 </button>
               ))}
             </div>

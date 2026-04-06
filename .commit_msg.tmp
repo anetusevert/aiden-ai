@@ -1,38 +1,20 @@
-feat: add case-centric legal practice management system
+feat: cinematic UI overhaul with glassmorphic styling and smart onboarding
 
-Transform HeyAmin from a tool-centric app into a case-centric platform
-where every feature serves a lawyer's daily work managing clients and cases.
+Add 1800+ lines of glassmorphic CSS using existing design tokens for all
+case-centric components: pages, modals, panels, cards, tables, badges,
+forms, skeleton loaders, timelines, and upload zones.
 
-Phase 1 - Database models and migration:
-- Client, Case, CaseDocument, CaseNote, CaseEvent SQLAlchemy models
-- Alembic migration for all five tables with indexes and FK cascades
-
-Phase 2 - API routes:
-- /api/v1/clients CRUD with search, filters, pagination
-- /api/v1/cases CRUD with dashboard stats, documents, notes, timeline
-- Active case tracking via Redis, background Amin briefing generation
-
-Phase 3 - Amin context integration:
-- build_case_context() injects active case into every Amin conversation
-- Three new tools: file_to_case, get_case_context, set_case_deadline
-- Workflow execution canvas shows case banner and logs step completions
-
-Phase 4 - Navigation overhaul:
-- Redesigned Rail1 icons (Home, Clients, Cases, Workflows, Documents, Intelligence)
-- New ClientsPanel and CasesPanel for Rail2
-- Updated HomePanel with case-centric dashboard (due soon, stats, quick actions)
-- Restructured AdminPanel and IntelligencePanel
-
-Phase 5 - New pages:
-- /dashboard with case stats, Amin briefing, active cases table
-- /clients listing with search/filters and NewClientModal
-- /clients/[id] detail with metadata and associated cases
-- /cases listing with priority/status filters and NewCaseModal
-- /cases/[id] detail with documents, notes, timeline, workflows tabs
-
-Phase 6 - Integration connections:
-- Screen context auto-enriched with active case data globally
-- Layout fetches active case on auth for cross-page availability
-- Document detail page: Attach to Case button
-- Research page: case banner and jurisdiction pre-fill
-- Workflow launch page: case banner and case-aware start button
+- Glass-styled pages: dashboard stat cards with breathing glow, case
+  tables with priority dot pulse, client grid cards with hover shadows
+- Skeleton loaders: shimmer animations replace all "Loading..." text
+  across dashboard, clients, cases, detail pages, and Rail2 panels
+- Modal polish: glass backdrop blur, styled form fields with focus glow,
+  type selector cards with descriptions, client suggestion dropdown
+- Empty states: SVG icon containers with gold CTA buttons
+- Smart client onboarding: POST /api/v1/clients/extract-from-document
+  endpoint uses text extraction + LLM to auto-fill client forms from
+  uploaded CR certificates, Wakala, national IDs, or any document
+- Upload zone in NewClientModal with drag-and-drop, progress bar,
+  and automatic form pre-fill from AI extraction
+- Case detail: Create Document button that creates office doc via
+  Collabora and auto-attaches it to the case
