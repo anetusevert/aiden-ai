@@ -175,21 +175,21 @@ class Settings(BaseSettings):
     cookie_secure: bool | None = None  # Auto-derived from environment if None
 
     # SameSite policy for auth cookies.
-    # "lax"  — default, safe for same-site deployments
-    # "none" — required when frontend and API are on different sites
-    #          (e.g. separate Railway *.up.railway.app subdomains)
-    #          Requires Secure=true (auto-set in non-dev environments)
-    cookie_samesite: Literal["lax", "none", "strict"] = "lax"
+    # Default "none" works for both local dev (browsers exempt localhost
+    # from the Secure requirement) and cross-origin production deployments
+    # (e.g. separate Railway *.up.railway.app subdomains).
+    # Override with COOKIE_SAMESITE=lax if frontend and API share the same origin.
+    cookie_samesite: Literal["lax", "none", "strict"] = "none"
 
     @property
     def cookie_secure_flag(self) -> bool:
         """Get the Secure flag for cookies based on environment."""
         if self.cookie_secure is not None:
             return self.cookie_secure
-        # SameSite=none requires Secure=true regardless of environment
+        # SameSite=none requires Secure=true (browsers enforce this;
+        # localhost is exempt as a secure context)
         if self.cookie_samesite == "none":
             return True
-        # Auto-derive: Secure=false only in dev
         return self.environment != "dev"
 
     # Dev Login (passwordless auth for development)
