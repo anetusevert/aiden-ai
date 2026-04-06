@@ -6,6 +6,7 @@ import { AminWaveform } from './AminWaveform';
 import { AminThinkingDots } from './AminThinkingDots';
 import { AminSleepIndicator } from './AminSleepIndicator';
 import { AminEyes } from './AminEyes';
+import { AminAnimatedAvatar } from './AminAnimatedAvatar';
 
 export type AminAvatarState =
   | 'idle'
@@ -183,16 +184,20 @@ export function AminAvatar({
         transition={ringTransition}
         style={{ borderColor: RING_COLORS[s] }}
       >
-        <motion.img
-          src="/brand/amin-avatar.png"
-          className="amin-avatar-img"
-          alt="Amin"
-          draggable={false}
-          animate={imgAnimate}
-          transition={imgTransition}
-        />
-        {/* Eye blink overlay */}
-        <AminEyes state={s} size={size} />
+        {size >= 44 ? (
+          <AminAnimatedAvatar size={size} state={s} />
+        ) : (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/amin-avatar.png"
+              className="amin-avatar-img"
+              alt="Amin"
+              draggable={false}
+            />
+            <AminEyes state={s} size={size} />
+          </>
+        )}
       </motion.div>
 
       {/* Sleep ZZZ indicator */}

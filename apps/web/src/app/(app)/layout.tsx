@@ -3,13 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
-import { apiClient, type SoulDetail } from '@/lib/apiClient';
+import { apiClient } from '@/lib/apiClient';
 import { Rail1 } from '@/components/nav/Rail1';
-import { Rail2Panel } from '@/components/nav/Rail2Panel';
 import { TopBar } from '@/components/TopBar';
 import { DevModeBanner } from '@/components/DevModeBanner';
 import { StubProviderBanner } from '@/components/StubProviderBanner';
-import { AminPanel } from '@/components/amin/AminPanel';
+import { AminInfoPanel } from '@/components/amin/AminInfoPanel';
 import { AminMinimized } from '@/components/amin/AminMinimized';
 import { AminProvider, useAminContext } from '@/components/amin/AminProvider';
 import EntrySequence from '@/components/shell/EntrySequence';
@@ -56,7 +55,7 @@ function AppShellInner() {
 
   return (
     <>
-      <AnimatePresence>{aminOpen && <AminPanel />}</AnimatePresence>
+      <AnimatePresence>{aminOpen && <AminInfoPanel />}</AnimatePresence>
       <AminMinimized />
     </>
   );
@@ -65,7 +64,6 @@ function AppShellInner() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const [soul, setSoul] = useState<SoulDetail | null>(null);
   const [showEntry, setShowEntry] = useState(false);
 
   useEffect(() => {
@@ -82,10 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    apiClient
-      .getMySoul()
-      .then(setSoul)
-      .catch(() => {});
+    apiClient.getMySoul().catch(() => {});
   }, [isAuthenticated]);
 
   const handleEntryComplete = useCallback(() => {
@@ -121,7 +116,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <DevModeBanner />
                 <StubProviderBanner />
                 <Rail1 />
-                <Rail2Panel soul={soul} />
                 <main className="ha-main">
                   <TopBar />
                   <div className="app-content">{children}</div>

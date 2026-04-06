@@ -6,11 +6,12 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { clearSession } from '@/lib/apiClient';
 import { useNavigation } from '@/components/NavigationLoader';
-import { useNav, type NavSection } from '@/context/NavigationContext';
+import { type NavSection } from '@/context/NavigationContext';
 import { UserAvatar } from '@/components/UserAvatar';
 import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 import { AminAvatar } from '@/components/amin/AminAvatar';
 import { useAminAvatarState } from '@/hooks/useAminAvatarState';
+import { useAminContext } from '@/components/amin/AminProvider';
 import { useTranslations } from 'next-intl';
 import {
   DropdownMenu,
@@ -176,13 +177,23 @@ export function Rail1() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { navigateTo } = useNavigation();
-  const { activeSection, panelOpen, selectSection } = useNav();
   const tNav = useTranslations('nav');
   const tCommon = useTranslations('common');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const aminAvatarState = useAminAvatarState();
+  const { toggleAminPanel } = useAminContext();
   const isAdmin = user?.role === 'ADMIN';
+
+  const SECTION_ROUTES: Record<NavSection, string> = {
+    home: '/home',
+    workflows: '/workflows/litigation',
+    documents: '/documents',
+    intelligence: '/news',
+    wiki: '/wiki',
+    knowledge: '/operator/knowledge-base',
+    admin: '/members',
+  };
 
   const handleLogout = async () => {
     setUserMenuOpen(false);
@@ -206,36 +217,28 @@ export function Rail1() {
 
   const handleIconClick = useCallback(
     (def: NavIconDef) => {
-      if (def.directRoute) {
-        navigateTo(def.directRoute);
-        return;
-      }
-      if (def.id === 'home' && activeSection === 'home' && panelOpen) {
-        navigateTo('/home');
-        return;
-      }
-      selectSection(def.id);
+      const route = def.directRoute ?? SECTION_ROUTES[def.id] ?? '/home';
+      navigateTo(route);
     },
-    [activeSection, panelOpen, selectSection, navigateTo]
+    [navigateTo] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  const SECTION_ROUTE_GROUPS: Record<NavSection, string[]> = {
+    home: ['/home'],
+    workflows: ['/workflows'],
+    documents: ['/documents'],
+    intelligence: ['/news', '/global-legal'],
+    wiki: ['/wiki'],
+    knowledge: ['/operator/knowledge-base'],
+    admin: ['/operator', '/members', '/audit'],
+  };
+
   const isIconActive = (id: NavSection) => {
-    if (panelOpen && activeSection === id) return true;
-    if (!panelOpen) {
-      const sectionRoutes: Record<NavSection, string[]> = {
-        home: ['/home'],
-        workflows: ['/workflows'],
-        documents: ['/documents'],
-        intelligence: ['/news', '/global-legal'],
-        wiki: ['/wiki'],
-        knowledge: ['/operator/knowledge-base'],
-        admin: ['/operator', '/members', '/audit'],
-      };
-      return sectionRoutes[id]?.some(
+    return (
+      SECTION_ROUTE_GROUPS[id]?.some(
         r => pathname === r || pathname.startsWith(r + '/')
-      );
-    }
-    return false;
+      ) ?? false
+    );
   };
 
   return (
@@ -271,9 +274,14 @@ export function Rail1() {
 
       {/* Bottom pinned */}
       <div className="rail1-bottom">
-        <div style={{ padding: '4px 0' }}>
+        <button
+          className="rail1-icon rail1-amin-btn"
+          onClick={toggleAminPanel}
+          type="button"
+          title="Talk to Amin"
+        >
           <AminAvatar size={32} state={aminAvatarState} showWaveform={false} />
-        </div>
+        </button>
 
         {user && (
           <DropdownMenu

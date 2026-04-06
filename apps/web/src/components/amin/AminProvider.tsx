@@ -10,6 +10,7 @@ import {
 import { useAmin, type AminStatus } from './useAmin';
 
 export type VoiceMode = 'off' | 'active' | 'passive';
+export type PanelSize = 'collapsed' | 'expanded' | 'fullscreen';
 
 interface AminContextValue extends ReturnType<typeof useAmin> {
   aminOpen: boolean;
@@ -18,6 +19,8 @@ interface AminContextValue extends ReturnType<typeof useAmin> {
   toggleAminPanel: () => void;
   voiceMode: VoiceMode;
   setVoiceMode: (mode: VoiceMode) => void;
+  panelSize: PanelSize;
+  setPanelSize: (size: PanelSize) => void;
 }
 
 const AminContext = createContext<AminContextValue | null>(null);
@@ -26,10 +29,22 @@ export function AminProvider({ children }: { children: ReactNode }) {
   const amin = useAmin();
   const [aminOpen, setAminOpen] = useState(false);
   const [voiceMode, setVoiceMode] = useState<VoiceMode>('off');
+  const [panelSize, setPanelSize] = useState<PanelSize>('expanded');
 
-  const openPanel = useCallback(() => setAminOpen(true), []);
-  const closePanel = useCallback(() => setAminOpen(false), []);
-  const toggleAminPanel = useCallback(() => setAminOpen(prev => !prev), []);
+  const openPanel = useCallback(() => {
+    setAminOpen(true);
+    setPanelSize('expanded');
+  }, []);
+  const closePanel = useCallback(() => {
+    setAminOpen(false);
+    setPanelSize('collapsed');
+  }, []);
+  const toggleAminPanel = useCallback(() => {
+    setAminOpen(prev => {
+      if (!prev) setPanelSize('expanded');
+      return !prev;
+    });
+  }, []);
 
   return (
     <AminContext.Provider
@@ -41,6 +56,8 @@ export function AminProvider({ children }: { children: ReactNode }) {
         toggleAminPanel,
         voiceMode,
         setVoiceMode,
+        panelSize,
+        setPanelSize,
       }}
     >
       {children}

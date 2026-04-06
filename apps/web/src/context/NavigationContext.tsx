@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useState,
-  useCallback,
   useEffect,
   type ReactNode,
 } from 'react';
@@ -19,47 +18,8 @@ export type NavSection =
   | 'knowledge'
   | 'admin';
 
-export type SidebarState = 'full' | 'compact' | 'immersive';
-
-interface NavState {
+interface NavContextValue {
   activeSection: NavSection | null;
-  panelOpen: boolean;
-  sidebarState: SidebarState;
-}
-
-interface NavContextValue extends NavState {
-  selectSection: (section: NavSection) => void;
-  collapsePanel: () => void;
-  openPanel: () => void;
-  setSidebarState: (state: SidebarState) => void;
-}
-
-const STORAGE_KEY = 'ha_nav_state';
-
-function persistState(
-  state: Pick<NavState, 'activeSection' | 'panelOpen' | 'sidebarState'>
-) {
-  try {
-    if (state.sidebarState === 'immersive') return;
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        activeSection: state.activeSection,
-        panelOpen: state.panelOpen,
-        sidebarState: state.sidebarState,
-      })
-    );
-  } catch {}
-}
-
-function loadPersistedState(): Partial<NavState> | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
 }
 
 const ROUTE_SECTION_MAP: Array<{ prefix: string; section: NavSection }> = [
@@ -86,12 +46,6 @@ function sectionFromPath(pathname: string): NavSection | null {
 
 const NavigationCtx = createContext<NavContextValue>({
   activeSection: 'home',
-  panelOpen: true,
-  sidebarState: 'full',
-  selectSection: () => {},
-  collapsePanel: () => {},
-  openPanel: () => {},
-  setSidebarState: () => {},
 });
 
 export function useNav() {
@@ -100,108 +54,19 @@ export function useNav() {
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [activeSection, setActiveSection] = useState<NavSection | null>(
+    () => sectionFromPath(pathname) ?? 'home'
+  );
 
-  const [state, setState] = useState<NavState>(() => {
-    const persisted =
-      typeof window !== 'undefined' ? loadPersistedState() : null;
-    const isCompact = typeof window !== 'undefined' && window.innerWidth < 1024;
-
-    return {
-      activeSection: persisted?.activeSection ?? 'home',
-      panelOpen: isCompact ? false : (persisted?.panelOpen ?? true),
-      sidebarState: isCompact ? 'compact' : (persisted?.sidebarState ?? 'full'),
-    };
-  });
-
-  // Responsive: collapse on narrow viewports
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 1023px)');
-    const handler = (e: MediaQueryListEvent) => {
-      if (e.matches) {
-        setState(prev => {
-          const next = {
-            ...prev,
-            panelOpen: false,
-            sidebarState: 'compact' as const,
-          };
-          persistState(next);
-          return next;
-        });
-      }
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
-  // Sync active section with current route
   useEffect(() => {
     const detected = sectionFromPath(pathname);
-    if (detected && detected !== state.activeSection) {
-      setState(prev => ({ ...prev, activeSection: detected }));
+    if (detected && detected !== activeSection) {
+      setActiveSection(detected);
     }
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectSection = useCallback((section: NavSection) => {
-    setState(prev => {
-      if (prev.activeSection === section && prev.panelOpen) {
-        const next = {
-          ...prev,
-          panelOpen: false,
-          sidebarState: 'compact' as const,
-        };
-        persistState(next);
-        return next;
-      }
-      const next = {
-        ...prev,
-        activeSection: section,
-        panelOpen: true,
-        sidebarState: 'full' as const,
-      };
-      persistState(next);
-      return next;
-    });
-  }, []);
-
-  const collapsePanel = useCallback(() => {
-    setState(prev => {
-      const next = {
-        ...prev,
-        panelOpen: false,
-        sidebarState: 'compact' as const,
-      };
-      persistState(next);
-      return next;
-    });
-  }, []);
-
-  const openPanel = useCallback(() => {
-    setState(prev => {
-      const next = { ...prev, panelOpen: true, sidebarState: 'full' as const };
-      persistState(next);
-      return next;
-    });
-  }, []);
-
-  const setSidebarState = useCallback((s: SidebarState) => {
-    setState(prev => {
-      const panelOpen = s === 'full';
-      const next = { ...prev, sidebarState: s, panelOpen };
-      persistState(next);
-      return next;
-    });
-  }, []);
-
   return (
-    <NavigationCtx.Provider
-      value={{
-        ...state,
-        selectSection,
-        collapsePanel,
-        openPanel,
-        setSidebarState,
-      }}
-    >
+    <NavigationCtx.Provider value={{ activeSection }}>
       {children}
     </NavigationCtx.Provider>
   );

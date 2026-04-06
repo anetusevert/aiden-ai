@@ -10565,6 +10565,496 @@ textarea:focus-visible {
   filter: drop-shadow(0 0 6px rgba(212, 160, 23, 0.5));
 }
 
+.rail1-amin-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================================
+   Amin Info Panel & Cards
+   ============================================================================ */
+
+/* Backdrop */
+.amin-info-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 900;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Panel shell */
+.amin-info-panel {
+  position: fixed;
+  z-index: 910;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-primary, #0c111a);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-xl, 16px);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.5),
+    0 0 1px rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  transition:
+    width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    top 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    left 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    right 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    bottom 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Expanded (default) — right-side overlay */
+.amin-info-panel-expanded {
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  width: 420px;
+  max-width: calc(100vw - 88px);
+}
+
+/* Fullscreen */
+.amin-info-panel-fullscreen {
+  top: 16px;
+  left: 80px;
+  right: 16px;
+  bottom: 16px;
+}
+
+/* Header */
+.amin-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+}
+
+.amin-info-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.amin-info-header-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.amin-info-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-base, 16px);
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+}
+
+.amin-info-status {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary, #6b7280);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.amin-info-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-success, #34d399);
+  flex-shrink: 0;
+}
+
+.amin-info-dot[data-status='thinking'] {
+  background: #6b3fa0;
+  animation: infoDotPulse 1s ease-in-out infinite;
+}
+
+.amin-info-dot[data-status='speaking'] {
+  background: var(--amin-accent, #d4a017);
+}
+
+.amin-info-dot[data-status='error'] {
+  background: var(--status-danger, #f87171);
+}
+
+@keyframes infoDotPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.amin-info-header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.amin-info-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md, 8px);
+  background: none;
+  border: none;
+  color: var(--text-secondary, #9ca3af);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.amin-info-btn:hover {
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--text-primary, #e5e7eb);
+}
+
+/* Document context banner */
+.amin-info-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: rgba(212, 160, 23, 0.06);
+  border-bottom: 1px solid rgba(212, 160, 23, 0.12);
+  flex-shrink: 0;
+}
+
+.amin-info-context-title {
+  font-size: var(--text-sm, 14px);
+  font-weight: 500;
+  color: var(--text-primary, #e5e7eb);
+}
+
+.amin-info-context-badge {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary, #6b7280);
+  margin-top: 2px;
+}
+
+/* Cards area (scrollable) */
+.amin-info-cards {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Empty state */
+.amin-info-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  flex: 1;
+}
+
+.amin-info-greeting {
+  font-size: var(--text-lg, 18px);
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+  margin: 0;
+}
+
+.amin-info-subtitle {
+  font-size: var(--text-sm, 14px);
+  color: var(--text-tertiary, #6b7280);
+  margin: 0;
+}
+
+/* ─── Info Cards ──────────────────────────────────────────────────── */
+
+.info-card {
+  border-radius: var(--radius-lg, 12px);
+  padding: 14px 16px;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+  text-align: left;
+  width: 100%;
+  cursor: default;
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.info-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary, #9ca3af);
+  flex-shrink: 0;
+}
+
+.info-card-title {
+  font-size: var(--text-sm, 14px);
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+}
+
+.info-card-body {
+  font-size: var(--text-sm, 14px);
+  line-height: 1.6;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.info-card-body p {
+  margin: 0 0 6px;
+}
+
+.info-card-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Message card */
+.info-card-message {
+  border-left: 3px solid var(--amin-accent, #d4a017);
+}
+
+.info-card-message .info-card-body {
+  color: var(--text-primary, #e5e7eb);
+}
+
+/* User query card */
+.info-card-user {
+  align-self: flex-end;
+  max-width: 85%;
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.info-card-user .info-card-body {
+  color: var(--text-primary, #e5e7eb);
+  font-size: var(--text-sm, 14px);
+}
+
+/* Status card */
+.info-card-status {
+  border-left: 3px solid var(--text-tertiary, #6b7280);
+}
+
+.info-card-status-running {
+  border-left-color: #6366f1;
+}
+
+.info-card-status-complete {
+  border-left-color: var(--status-success, #34d399);
+}
+
+.info-card-status-error {
+  border-left-color: var(--status-danger, #f87171);
+}
+
+.info-card-summary {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary, #6b7280);
+  margin: 4px 0 0;
+}
+
+.info-card-progress {
+  height: 2px;
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.info-card-progress-bar {
+  height: 100%;
+  width: 40%;
+  background: #6366f1;
+  border-radius: 1px;
+  animation: infoProgress 1.2s ease-in-out infinite;
+}
+
+@keyframes infoProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+/* Link card */
+.info-card-link {
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.info-card-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.info-card-description {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary, #6b7280);
+  margin: 0 0 8px;
+}
+
+.info-card-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs, 12px);
+  color: var(--amin-accent, #d4a017);
+  font-weight: 500;
+}
+
+/* Research card */
+.info-card-research {
+  border-left: 3px solid #06b6d4;
+}
+
+.info-card-excerpt {
+  font-size: var(--text-sm, 14px);
+  color: var(--text-secondary, #9ca3af);
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
+.info-card-source {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-tertiary, #6b7280);
+  font-style: italic;
+}
+
+/* Action card */
+.info-card-action {
+  border-left: 3px solid var(--status-warning, #fbbf24);
+}
+
+.info-card-action-high {
+  border-left-color: var(--status-danger, #f87171);
+  background: rgba(248, 113, 113, 0.04);
+}
+
+.info-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.info-card-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-md, 8px);
+  font-size: var(--text-xs, 12px);
+  font-weight: 500;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.info-card-btn-confirm {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--status-success, #34d399);
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+.info-card-btn-confirm:hover {
+  background: rgba(52, 211, 153, 0.2);
+}
+
+.info-card-btn-deny {
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--status-danger, #f87171);
+  border-color: rgba(248, 113, 113, 0.2);
+}
+
+.info-card-btn-deny:hover {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+/* Streaming card */
+.info-card-streaming {
+  border-left: 3px solid var(--amin-accent, #d4a017);
+  animation: streamingGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes streamingGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(212, 160, 23, 0.12);
+  }
+}
+
+.info-card-cursor {
+  color: var(--amin-accent, #d4a017);
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Spinner icon rotation */
+.info-icon-spin {
+  animation: spinIcon 1s linear infinite;
+}
+
+@keyframes spinIcon {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .amin-info-panel-expanded,
+  .amin-info-panel-fullscreen {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    max-width: none;
+    border-radius: var(--radius-lg, 12px);
+  }
+}
+
 /* ============================================================================
    Wiki
    ============================================================================ */
