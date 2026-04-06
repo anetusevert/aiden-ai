@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { clearSession } from '@/lib/apiClient';
 import { useNavigation } from '@/components/NavigationLoader';
@@ -256,15 +255,27 @@ export function Rail1() {
   return (
     <div className="rail1">
       <div className="rail1-top">
-        <motion.button
+        <button
           className="rail1-logo-heyamin"
           onClick={() => navigateTo('/dashboard')}
           type="button"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
+          style={{
+            opacity: 0.7,
+            transition: 'opacity 150ms ease',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.opacity = '1';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.opacity = '0.7';
+          }}
         >
-          <HeyAminLogo variant="mark" size={44} />
-        </motion.button>
+          <HeyAminLogo variant="mark" size={28} />
+        </button>
         <div className="rail1-logo-divider" />
       </div>
 

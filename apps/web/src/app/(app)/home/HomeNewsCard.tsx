@@ -30,20 +30,19 @@ function timeAgo(dateStr: string): string {
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  'JD Supra': '#638cff',
-  'JD Supra Commercial': '#34d399',
-  Jurist: '#ff8c00',
-  SCOTUSblog: '#a78bfa',
-  'Volokh Conspiracy': '#f472b6',
-  'Law.com': '#fbbf24',
-  'ABA Journal': '#63b4ff',
+  'JD Supra': 'rgba(255,255,255,0.9)',
+  'JD Supra Commercial': 'rgba(255,255,255,0.88)',
+  Jurist: 'rgba(255,255,255,0.86)',
+  SCOTUSblog: 'rgba(255,255,255,0.84)',
+  'Volokh Conspiracy': 'rgba(255,255,255,0.82)',
+  'Law.com': 'rgba(255,255,255,0.8)',
+  'ABA Journal': 'rgba(255,255,255,0.78)',
 };
 
 export function HomeNewsCard({ item, index }: HomeNewsCardProps) {
   const [imgError, setImgError] = useState(false);
   const sourceName = item.source_name ?? item.source ?? '';
-  const accentColor =
-    SOURCE_COLORS[sourceName] || 'var(--amin-accent, #d4a017)';
+  const accentColor = SOURCE_COLORS[sourceName] || 'rgba(255,255,255,0.9)';
 
   return (
     <motion.a

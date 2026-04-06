@@ -126,9 +126,9 @@ export default function MemberDetailPage() {
                 borderRadius: 12,
                 fontSize: 12,
                 fontWeight: 600,
-                background: 'rgba(212,160,23,0.12)',
-                border: '1px solid rgba(212,160,23,0.25)',
-                color: 'rgba(212,160,23,0.9)',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                color: 'rgba(255,255,255,0.9)',
                 textTransform: 'capitalize',
               }}
             >
@@ -162,7 +162,7 @@ export default function MemberDetailPage() {
               borderRadius: '6px 6px 0 0',
               borderBottom:
                 activeTab === tab
-                  ? '2px solid var(--amin-accent, #d4a017)'
+                  ? '2px solid rgba(255,255,255,0.9)'
                   : '2px solid transparent',
               background:
                 activeTab === tab ? 'rgba(255,255,255,0.03)' : 'transparent',

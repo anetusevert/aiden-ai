@@ -20,9 +20,9 @@ const CATEGORY_RINGS: Record<string, number> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  identity: '#d4a017',
-  style: '#63b4ff',
-  expertise: '#6b3fa0',
+  identity: 'rgba(255,255,255,0.92)',
+  style: 'rgba(255,255,255,0.75)',
+  expertise: 'rgba(255,255,255,0.6)',
 };
 
 const MATURITY_PARTICLES: Record<string, number> = {
@@ -74,7 +74,7 @@ export function SoulConstellation({
         x: cx + Math.cos(angle) * r,
         y: cy + Math.sin(angle) * r,
         radius: 3 + d.confidence * 5,
-        color: CATEGORY_COLORS[cat] ?? '#63b4ff',
+        color: CATEGORY_COLORS[cat] ?? 'rgba(255,255,255,0.75)',
       };
     });
   }, [dimensions, cx, cy, maxR]);
@@ -115,7 +115,7 @@ export function SoulConstellation({
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <defs>
           <radialGradient id="soul-center-glow">
-            <stop offset="0%" stopColor="rgba(212,160,23,0.3)" />
+            <stop offset="0%" stopColor="rgba(255,255,255,0.25)" />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
         </defs>
@@ -154,8 +154,8 @@ export function SoulConstellation({
           cx={cx}
           cy={cy}
           r={8}
-          fill="rgba(212,160,23,0.2)"
-          stroke="rgba(212,160,23,0.4)"
+          fill="rgba(255,255,255,0.12)"
+          stroke="rgba(255,255,255,0.35)"
           strokeWidth="1"
         />
         <text
@@ -164,7 +164,7 @@ export function SoulConstellation({
           textAnchor="middle"
           fontSize="9"
           fontWeight="700"
-          fill="rgba(212,160,23,0.9)"
+          fill="rgba(255,255,255,0.9)"
         >
           A
         </text>
@@ -217,7 +217,7 @@ export function SoulConstellation({
               cx={cx + Math.cos(angle) * r}
               cy={cy + Math.sin(angle) * r}
               r={1}
-              fill="rgba(212,160,23,0.3)"
+              fill="rgba(255,255,255,0.28)"
               animate={{
                 cx: cx + Math.cos(angle + 0.2) * r,
                 cy: cy + Math.sin(angle + 0.2) * r,
@@ -326,9 +326,9 @@ export function SoulConstellation({
           style={{
             padding: '2px 8px',
             borderRadius: 10,
-            background: 'rgba(212,160,23,0.1)',
-            border: '1px solid rgba(212,160,23,0.2)',
-            color: 'rgba(212,160,23,0.8)',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            color: 'rgba(255,255,255,0.85)',
             textTransform: 'capitalize',
           }}
         >

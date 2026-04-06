@@ -11,8 +11,8 @@ export type VoiceMode = 'off' | 'active' | 'passive';
 
 const RING_COLORS: Record<VoiceMode, string> = {
   off: 'transparent',
-  active: 'var(--status-success, #34d399)',
-  passive: 'var(--status-info, #63b4ff)',
+  active: '#ffffff',
+  passive: 'rgba(255,255,255,0.5)',
 };
 
 export function AminVoiceToggle() {

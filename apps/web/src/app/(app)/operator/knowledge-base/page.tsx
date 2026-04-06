@@ -248,7 +248,7 @@ function SourceStatusDot({
   lastJobFailed: boolean;
 }) {
   let cls = 'kb-source-dot kb-source-dot-grey';
-  if (enabled && lastJobFailed) cls = 'kb-source-dot kb-source-dot-amber';
+  if (enabled && lastJobFailed) cls = 'kb-source-dot kb-source-dot-warn';
   else if (enabled && !lastJobFailed) cls = 'kb-source-dot kb-source-dot-green';
   return <span className={cls} title={enabled ? 'Enabled' : 'Disabled'} />;
 }
@@ -1495,7 +1495,7 @@ export default function KnowledgeBasePage() {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #f59e0b;
+          background: rgba(255, 255, 255, 0.85);
           display: inline-block;
         }
 
@@ -1552,7 +1552,7 @@ export default function KnowledgeBasePage() {
         .kb-jurisdiction-fill {
           height: 100%;
           border-radius: 4px;
-          background: var(--accent, var(--amin-accent, #d4a017));
+          background: rgba(255, 255, 255, 0.85);
         }
 
         .kb-jurisdiction-count {
@@ -1575,7 +1575,7 @@ export default function KnowledgeBasePage() {
         .kb-job-progress-fill {
           height: 100%;
           border-radius: 2px;
-          background: var(--accent, var(--amin-accent, #d4a017));
+          background: rgba(255, 255, 255, 0.85);
         }
 
         /* ── Source last-job inline stats ────────────────── */
@@ -1752,9 +1752,9 @@ export default function KnowledgeBasePage() {
           box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
         }
 
-        .kb-source-dot-amber {
-          background: #f59e0b;
-          box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+        .kb-source-dot-warn {
+          background: rgba(255, 255, 255, 0.85);
+          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
         }
 
         .kb-source-dot-grey {
@@ -1805,7 +1805,7 @@ export default function KnowledgeBasePage() {
 
         @keyframes kbJobFlash {
           0% {
-            background-color: var(--amin-accent, #d4a017);
+            background-color: rgba(255, 255, 255, 0.12);
           }
           100% {
             background-color: transparent;
@@ -1829,7 +1829,7 @@ export default function KnowledgeBasePage() {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #f59e0b;
+          background: rgba(255, 255, 255, 0.85);
           display: inline-block;
         }
 

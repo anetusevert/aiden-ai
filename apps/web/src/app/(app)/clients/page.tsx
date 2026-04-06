@@ -27,9 +27,9 @@ interface ClientItem {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  individual: '#38bdf8',
-  company: '#34d399',
-  organisation: '#a78bfa',
+  individual: 'rgba(255,255,255,0.9)',
+  company: 'rgba(255,255,255,0.85)',
+  organisation: 'rgba(255,255,255,0.8)',
 };
 
 export default function ClientsPage() {
@@ -98,7 +98,7 @@ export default function ClientsPage() {
         <h1 className="page-title">Clients</h1>
         <button
           type="button"
-          className="btn btn-gold"
+          className="btn btn-primary"
           onClick={() => setShowNewModal(true)}
         >
           + New Client
@@ -208,7 +208,7 @@ export default function ClientsPage() {
             <p>Create your first client to get started</p>
             <button
               type="button"
-              className="btn btn-gold"
+              className="btn btn-primary"
               onClick={() => setShowNewModal(true)}
             >
               + New Client
@@ -585,7 +585,7 @@ function NewClientModal({
               </button>
               <button
                 type="button"
-                className="btn btn-gold"
+                className="btn btn-primary"
                 disabled={!form.display_name || saving}
                 onClick={handleCreate}
               >

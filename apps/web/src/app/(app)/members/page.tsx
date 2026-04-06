@@ -432,14 +432,14 @@ export default function MembersPage() {
                         width: 36,
                         height: 36,
                         borderRadius: 8,
-                        background: 'rgba(212,160,23,0.1)',
-                        border: '1px solid rgba(212,160,23,0.2)',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.12)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: 14,
                         fontWeight: 700,
-                        color: 'rgba(212,160,23,0.9)',
+                        color: 'rgba(255,255,255,0.9)',
                       }}
                     >
                       {org.name.charAt(0).toUpperCase()}
@@ -666,8 +666,8 @@ export default function MembersPage() {
                             <button
                               className="btn btn-sm"
                               style={{
-                                color: 'var(--amin-accent, #d4a017)',
-                                border: '1px solid var(--amin-accent, #d4a017)',
+                                color: 'rgba(255,255,255,0.95)',
+                                border: '1px solid rgba(255,255,255,0.45)',
                                 background: 'transparent',
                                 fontSize: '0.75rem',
                               }}

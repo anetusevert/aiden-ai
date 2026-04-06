@@ -1,18 +1,32 @@
 /* ==========================================================================
-   HeyAmin Design Tokens — Dark Graphite Glassmorphic Theme
-   Adapted from Consultant OS token system for legal-grade UI
+   HeyAmin Design Tokens — Cold-Prestige Enterprise Theme
+   Pure black. Pure white. One premium typeface.
    ========================================================================== */
 
 :root {
-  /* -- Surfaces -- graphite/charcoal foundation */
-  --bg-primary: #0e0f11;
-  --bg-secondary: #151618;
-  --bg-tertiary: #1a1b1e;
-  --bg-elevated: #1f2023;
-  --bg-hover: #252629;
-  --bg-active: #2a2b2f;
+  /* -- Backgrounds -- true black foundation */
+  --bg-base: #000000;
+  --bg-surface: #0d0d0d;
+  --bg-elevated: #141414;
+  --bg-overlay: #1a1a1a;
+  --bg-input: #111111;
 
-  /* -- Glass -- refined translucency */
+  /* Legacy aliases (mapped to new tokens) */
+  --bg-primary: #000000;
+  --bg-secondary: #0d0d0d;
+  --bg-tertiary: #141414;
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-active: rgba(255, 255, 255, 0.08);
+
+  /* -- Borders -- */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-active: rgba(255, 255, 255, 0.6);
+  --border-prominent: rgba(255, 255, 255, 0.12);
+  --border-accent: rgba(255, 255, 255, 0.3);
+
+  /* -- Glass -- refined translucency (mapped to monochrome) */
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-bg-hover: rgba(255, 255, 255, 0.05);
   --glass-bg-active: rgba(255, 255, 255, 0.07);
@@ -23,74 +37,71 @@
   --glass-blur: 20px;
   --glass-blur-heavy: 32px;
 
-  /* -- Borders -- */
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-prominent: rgba(255, 255, 255, 0.12);
-  --border-accent: rgba(212, 160, 23, 0.3);
-
   /* -- Text -- */
-  --text-primary: #f0f0f3;
-  --text-secondary: #9a9ba2;
-  --text-muted: #636470;
-  --text-faint: #45464f;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+  --text-disabled: #27272a;
+  --text-faint: #3f3f46;
 
-  /* -- Amin Accent -- gold/amber identity */
-  --amin-accent: #d4a017;
-  --amin-accent-hover: #e0b332;
-  --amin-accent-soft: rgba(212, 160, 23, 0.12);
-  --amin-accent-medium: rgba(212, 160, 23, 0.22);
-  --amin-accent-gradient: linear-gradient(
-    135deg,
-    #b8860b 0%,
-    #d4a017 50%,
-    #e0b332 100%
-  );
+  /* -- Interactive -- */
+  --interactive-hover: rgba(255, 255, 255, 0.04);
+  --interactive-active: rgba(255, 255, 255, 0.08);
+  --interactive-focus: rgba(255, 255, 255, 0.12);
 
-  /* -- Amin Navy -- secondary brand color */
-  --amin-navy: #1e3a5f;
-  --amin-navy-light: #2d4a73;
-  --amin-navy-soft: rgba(30, 58, 95, 0.2);
+  /* -- Accent — white-on-black, monochrome only -- */
+  --accent: #ffffff;
+  --accent-inverse: #000000;
 
-  /* -- Amin Glow States — red=off, green=on -- */
-  --amin-glow-idle: rgba(239, 68, 68, 0.25);
-  --amin-glow-thinking: rgba(34, 197, 94, 0.35);
-  --amin-glow-speaking: rgba(52, 211, 153, 0.35);
-  --amin-glow-listening: rgba(52, 211, 153, 0.35);
-  --amin-glow-error: rgba(239, 68, 68, 0.4);
-  --amin-ring-idle: rgba(239, 68, 68, 0.2);
-  --amin-ring-thinking: rgba(34, 197, 94, 0.25);
-  --amin-ring-speaking: rgba(52, 211, 153, 0.25);
-  --amin-ring-listening: rgba(52, 211, 153, 0.25);
-  --amin-pulse-idle: rgba(239, 68, 68, 0.08);
-  --amin-pulse-thinking: rgba(34, 197, 94, 0.08);
-  --amin-pulse-speaking: rgba(52, 211, 153, 0.08);
+  /* Legacy amin-accent aliases (now white spectrum) */
+  --amin-accent: #ffffff;
+  --amin-accent-hover: rgba(255, 255, 255, 0.88);
+  --amin-accent-soft: rgba(255, 255, 255, 0.06);
+  --amin-accent-medium: rgba(255, 255, 255, 0.12);
+  --amin-accent-gradient: none;
 
-  /* -- Status -- dark-appropriate */
-  --status-success: #34d399;
-  --status-success-soft: rgba(52, 211, 153, 0.12);
-  --status-success-border: rgba(52, 211, 153, 0.25);
-  --status-warning: #fbbf24;
-  --status-warning-soft: rgba(251, 191, 36, 0.12);
-  --status-warning-border: rgba(251, 191, 36, 0.25);
-  --status-danger: #f87171;
-  --status-danger-soft: rgba(248, 113, 113, 0.12);
-  --status-danger-border: rgba(248, 113, 113, 0.25);
-  --status-info: #63b4ff;
-  --status-info-soft: rgba(99, 180, 255, 0.12);
-  --status-info-border: rgba(99, 180, 255, 0.25);
+  /* Legacy amin-navy (eliminated) */
+  --amin-navy: #141414;
+  --amin-navy-light: #1a1a1a;
+  --amin-navy-soft: rgba(255, 255, 255, 0.06);
 
-  /* -- Shadows -- depth without luminance */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.6);
-  --shadow-glass:
-    0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  --shadow-amin-idle:
-    0 0 20px rgba(30, 58, 95, 0.12), 0 8px 32px rgba(0, 0, 0, 0.4);
-  --shadow-amin-active:
-    0 0 20px rgba(212, 160, 23, 0.15), 0 8px 32px rgba(0, 0, 0, 0.4);
+  /* -- Amin Glow States — white spectrum only -- */
+  --amin-glow-idle: rgba(255, 255, 255, 0.08);
+  --amin-glow-thinking: rgba(255, 255, 255, 0.2);
+  --amin-glow-speaking: rgba(255, 255, 255, 0.25);
+  --amin-glow-listening: rgba(255, 255, 255, 0.2);
+  --amin-glow-error: rgba(239, 68, 68, 0.25);
+  --amin-ring-idle: rgba(255, 255, 255, 0.25);
+  --amin-ring-thinking: rgba(255, 255, 255, 0.6);
+  --amin-ring-speaking: rgba(255, 255, 255, 1);
+  --amin-ring-listening: rgba(255, 255, 255, 0.5);
+  --amin-pulse-idle: rgba(255, 255, 255, 0.04);
+  --amin-pulse-thinking: rgba(255, 255, 255, 0.06);
+  --amin-pulse-speaking: rgba(255, 255, 255, 0.08);
+
+  /* -- Status -- semantic only */
+  --status-error: #ef4444;
+  --status-warning: #f59e0b;
+  --status-success: #22c55e;
+  --status-info: #3b82f6;
+  --status-success-soft: rgba(34, 197, 94, 0.1);
+  --status-success-border: rgba(34, 197, 94, 0.2);
+  --status-warning-soft: rgba(245, 158, 11, 0.1);
+  --status-warning-border: rgba(245, 158, 11, 0.2);
+  --status-danger: #ef4444;
+  --status-danger-soft: rgba(239, 68, 68, 0.1);
+  --status-danger-border: rgba(239, 68, 68, 0.2);
+  --status-info-soft: rgba(59, 130, 246, 0.1);
+  --status-info-border: rgba(59, 130, 246, 0.2);
+
+  /* -- Shadows -- none for prestige, depth via border brightness */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-glass: none;
+  --shadow-amin-idle: none;
+  --shadow-amin-active: none;
 
   /* -- Transitions -- */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -110,12 +121,6 @@
   /* -- Two-Rail Nav -- */
   --rail1-width: 52px;
   --rail2-width: 220px;
-  --rail1-bg: #0a0a0f;
-  --rail2-bg: var(--bg-secondary);
-
-  /* -- Two-Rail Navigation -- */
-  --rail1-width: 52px;
-  --rail2-width: 220px;
-  --rail1-bg: #0a0a0f;
-  --rail2-bg: var(--bg-secondary);
+  --rail1-bg: #000000;
+  --rail2-bg: #0d0d0d;
 }

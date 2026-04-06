@@ -234,9 +234,9 @@ function WorkflowItemIcon() {
 function ForYouBadge({ reason }: { reason: ScoredWorkflow['reason'] }) {
   if (reason === 'default') return null;
   const colors: Record<string, string> = {
-    twin_match: '#d4a017',
-    frequent: '#6366f1',
-    recent: '#64748b',
+    twin_match: 'rgba(255,255,255,0.9)',
+    frequent: 'rgba(255,255,255,0.65)',
+    recent: 'rgba(255,255,255,0.45)',
   };
   const titles: Record<string, string> = {
     twin_match: 'Matched to your profile',

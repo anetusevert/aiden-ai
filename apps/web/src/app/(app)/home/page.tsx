@@ -158,14 +158,14 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
 };
 
 const CATEGORY_COLORS: Record<WorkflowCategory, string> = {
-  litigation: '#638cff',
-  corporate: '#34d399',
-  compliance: '#a78bfa',
-  employment: '#fbbf24',
-  arbitration: '#f472b6',
-  enforcement: '#f97316',
-  research: '#63b4ff',
-  management: '#94a3b8',
+  litigation: 'rgba(255,255,255,0.9)',
+  corporate: 'rgba(255,255,255,0.88)',
+  compliance: 'rgba(255,255,255,0.86)',
+  employment: 'rgba(255,255,255,0.84)',
+  arbitration: 'rgba(255,255,255,0.82)',
+  enforcement: 'rgba(255,255,255,0.8)',
+  research: 'rgba(255,255,255,0.78)',
+  management: 'rgba(255,255,255,0.76)',
 };
 
 // ---------------------------------------------------------------------------

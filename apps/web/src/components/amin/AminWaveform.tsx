@@ -95,7 +95,7 @@ export function AminWaveform({ size }: AminWaveformProps) {
             width={BAR_WIDTH}
             height={MIN_HEIGHT}
             rx={BAR_WIDTH / 2}
-            fill="#d4a017"
+            fill="rgba(255,255,255,0.85)"
             opacity={0.5}
             transform={`rotate(${rotation} ${x} ${y})`}
           />

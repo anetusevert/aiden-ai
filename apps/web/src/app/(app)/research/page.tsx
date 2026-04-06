@@ -555,7 +555,9 @@ function FileToWiki({
       </span>
       {filed ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#34d399', fontSize: 14 }}>✓ Filed</span>
+          <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: 14 }}>
+            ✓ Filed
+          </span>
           {filedSlug && (
             <button
               className="btn btn-outline"

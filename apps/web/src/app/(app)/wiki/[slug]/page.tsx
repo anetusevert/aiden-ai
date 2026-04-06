@@ -12,16 +12,6 @@ import { useNavigation } from '@/components/NavigationLoader';
 import { useAminContext } from '@/components/amin/AminProvider';
 import { WikiCitationChip } from '@/components/wiki/WikiCitationChip';
 
-const CATEGORY_COLORS: Record<string, string> = {
-  law: '#638cff',
-  regulation: '#f59e0b',
-  concept: '#34d399',
-  entity: '#a78bfa',
-  research: '#38bdf8',
-  synthesis: '#d4a017',
-  case: '#fb923c',
-};
-
 function timeAgo(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
@@ -179,9 +169,9 @@ export default function WikiPageView() {
             <span
               className="badge"
               style={{
-                background: CATEGORY_COLORS[page.category] + '22',
-                color: CATEGORY_COLORS[page.category],
-                border: `1px solid ${CATEGORY_COLORS[page.category]}44`,
+                background: 'rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.92)',
+                border: '1px solid rgba(255,255,255,0.22)',
               }}
             >
               {page.category}
@@ -196,7 +186,7 @@ export default function WikiPageView() {
           {page.is_stale && (
             <div
               className="alert alert-neutral"
-              style={{ marginBottom: 12, borderColor: '#f59e0b44' }}
+              style={{ marginBottom: 12, borderColor: 'rgba(255,255,255,0.2)' }}
             >
               ⏰ This page may be outdated — last updated{' '}
               {timeAgo(page.updated_at)}
@@ -339,7 +329,10 @@ export default function WikiPageView() {
                   marginBottom: 6,
                 }}
               >
-                <span className="wiki-dot" style={{ background: '#638cff' }} />
+                <span
+                  className="wiki-dot"
+                  style={{ background: 'rgba(255,255,255,0.9)' }}
+                />
                 <button
                   className="wiki-sidebar-link"
                   onClick={() => navigateTo(`/wiki/${ol.slug}`)}

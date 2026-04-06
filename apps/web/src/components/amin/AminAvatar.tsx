@@ -23,24 +23,23 @@ interface AminAvatarProps {
   className?: string;
 }
 
-// Ring colors: red when idle/off, green when active/on
+// Ring colors — white spectrum
 const RING_COLORS: Record<AminAvatarState, string> = {
-  idle: '#ef4444',
-  thinking: '#22c55e',
-  speaking: '#34d399',
-  listening: '#34d399',
-  sleeping: '#22c55e40',
-  success: '#34d399',
+  idle: 'rgba(255,255,255,0.25)',
+  thinking: 'rgba(255,255,255,0.6)',
+  speaking: '#ffffff',
+  listening: 'rgba(255,255,255,0.5)',
+  sleeping: 'rgba(255,255,255,0.08)',
+  success: '#ffffff',
 };
 
-// Glow colors: red idle, green active
 const GLOW_COLORS: Record<AminAvatarState, string> = {
-  idle: 'rgba(239,68,68,0.35)',
-  thinking: 'rgba(34,197,94,0.5)',
-  speaking: 'rgba(52,211,153,0.7)',
-  listening: 'rgba(52,211,153,0.4)',
-  sleeping: 'rgba(34,197,94,0.08)',
-  success: 'rgba(52,211,153,0.8)',
+  idle: 'rgba(255,255,255,0.12)',
+  thinking: 'rgba(255,255,255,0.35)',
+  speaking: 'rgba(255,255,255,0.45)',
+  listening: 'rgba(255,255,255,0.28)',
+  sleeping: 'rgba(255,255,255,0.06)',
+  success: 'rgba(255,255,255,0.5)',
 };
 
 export function AminAvatar({
@@ -93,43 +92,42 @@ export function AminAvatar({
         borderColor: RING_COLORS.thinking,
         borderWidth: ['2px', '3px', '2px'],
         boxShadow: [
-          `0 0 8px rgba(34,197,94,0.3)`,
-          `0 0 14px rgba(34,197,94,0.6)`,
-          `0 0 8px rgba(34,197,94,0.3)`,
+          `0 0 8px rgba(255,255,255,0.25)`,
+          `0 0 14px rgba(255,255,255,0.45)`,
+          `0 0 8px rgba(255,255,255,0.25)`,
         ],
       };
     if (s === 'speaking')
       return {
         borderColor: RING_COLORS.speaking,
         boxShadow: [
-          `0 0 8px rgba(52,211,153,0.4)`,
-          `0 0 18px rgba(52,211,153,0.7)`,
-          `0 0 8px rgba(52,211,153,0.4)`,
+          `0 0 8px rgba(255,255,255,0.35)`,
+          `0 0 18px rgba(255,255,255,0.55)`,
+          `0 0 8px rgba(255,255,255,0.35)`,
         ],
       };
     if (s === 'listening')
       return {
         borderColor: RING_COLORS.listening,
-        boxShadow: `0 0 8px rgba(52,211,153,0.4)`,
+        boxShadow: `0 0 8px rgba(255,255,255,0.3)`,
       };
     if (s === 'sleeping')
       return {
         borderColor: RING_COLORS.sleeping,
-        boxShadow: `0 0 4px rgba(34,197,94,0.1)`,
+        boxShadow: `0 0 4px rgba(255,255,255,0.12)`,
         opacity: 0.5,
       };
     if (s === 'success')
       return {
         borderColor: [RING_COLORS.success, RING_COLORS.idle],
         boxShadow: [
-          `0 0 20px rgba(52,211,153,0.8)`,
-          `0 0 8px rgba(239,68,68,0.3)`,
+          `0 0 20px rgba(255,255,255,0.5)`,
+          `0 0 8px rgba(255,255,255,0.2)`,
         ],
       };
-    // idle = OFF = red
     return {
       borderColor: RING_COLORS.idle,
-      boxShadow: `0 0 8px rgba(239,68,68,0.4)`,
+      boxShadow: `0 0 8px rgba(255,255,255,0.2)`,
     };
   })();
 

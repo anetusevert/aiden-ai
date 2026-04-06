@@ -52,35 +52,35 @@ function usePrevious<T>(value: T): T | undefined {
   return ref.current;
 }
 
-/* ── Glow palette (Amin brand: gold/navy) ── */
+/* ── Glow palette (white spectrum) ── */
 const GLOW: Record<
   AvatarState,
   { primary: string; ring: string; mid: string }
 > = {
   sleeping: {
-    primary: 'rgba(120,100,200,0.15)',
-    ring: 'rgba(120,100,200,0.1)',
-    mid: 'rgba(120,100,200,0.06)',
+    primary: 'rgba(255,255,255,0.12)',
+    ring: 'rgba(255,255,255,0.08)',
+    mid: 'rgba(255,255,255,0.04)',
   },
   idle: {
-    primary: 'rgba(30,58,95,0.30)',
-    ring: 'rgba(30,58,95,0.25)',
-    mid: 'rgba(30,58,95,0.08)',
+    primary: 'rgba(255,255,255,0.22)',
+    ring: 'rgba(255,255,255,0.25)',
+    mid: 'rgba(255,255,255,0.06)',
   },
   speaking: {
-    primary: 'rgba(212,160,23,0.55)',
-    ring: 'rgba(212,160,23,0.45)',
-    mid: 'rgba(212,160,23,0.14)',
+    primary: 'rgba(255,255,255,0.55)',
+    ring: 'rgba(255,255,255,0.45)',
+    mid: 'rgba(255,255,255,0.14)',
   },
   listening: {
-    primary: 'rgba(99,180,255,0.45)',
-    ring: 'rgba(99,180,255,0.35)',
-    mid: 'rgba(99,180,255,0.12)',
+    primary: 'rgba(255,255,255,0.42)',
+    ring: 'rgba(255,255,255,0.35)',
+    mid: 'rgba(255,255,255,0.12)',
   },
   thinking: {
-    primary: 'rgba(107,63,160,0.40)',
-    ring: 'rgba(107,63,160,0.30)',
-    mid: 'rgba(107,63,160,0.10)',
+    primary: 'rgba(255,255,255,0.45)',
+    ring: 'rgba(255,255,255,0.35)',
+    mid: 'rgba(255,255,255,0.10)',
   },
   error: {
     primary: 'rgba(248,113,113,0.45)',
@@ -674,42 +674,42 @@ export function AminAvatarV2({
     state === 'sleeping'
       ? {
           borderColor: [
-            'rgba(120,100,200,0.08)',
-            'rgba(120,100,200,0.18)',
-            'rgba(120,100,200,0.08)',
+            'rgba(255,255,255,0.06)',
+            'rgba(255,255,255,0.12)',
+            'rgba(255,255,255,0.06)',
           ],
           boxShadow: [
-            '0 0 4px rgba(120,100,200,0.1)',
-            '0 0 10px rgba(120,100,200,0.18)',
-            '0 0 4px rgba(120,100,200,0.1)',
+            '0 0 4px rgba(255,255,255,0.08)',
+            '0 0 10px rgba(255,255,255,0.14)',
+            '0 0 4px rgba(255,255,255,0.08)',
           ],
           transition: { duration: 4, repeat: Infinity, ease: 'easeInOut' },
         }
       : state === 'idle'
         ? {
             borderColor: [
-              'rgba(30,58,95,0.15)',
-              'rgba(30,58,95,0.40)',
-              'rgba(30,58,95,0.15)',
+              'rgba(255,255,255,0.15)',
+              'rgba(255,255,255,0.35)',
+              'rgba(255,255,255,0.15)',
             ],
             boxShadow: [
-              '0 0 8px rgba(30,58,95,0.15)',
-              '0 0 20px rgba(30,58,95,0.28)',
-              '0 0 8px rgba(30,58,95,0.15)',
+              '0 0 8px rgba(255,255,255,0.12)',
+              '0 0 20px rgba(255,255,255,0.22)',
+              '0 0 8px rgba(255,255,255,0.12)',
             ],
             transition: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' },
           }
         : state === 'speaking'
           ? {
               borderColor: [
-                'rgba(212,160,23,0.25)',
-                'rgba(212,160,23,0.65)',
-                'rgba(212,160,23,0.25)',
+                'rgba(255,255,255,0.35)',
+                'rgba(255,255,255,0.95)',
+                'rgba(255,255,255,0.35)',
               ],
               boxShadow: [
-                '0 0 12px rgba(212,160,23,0.3)',
-                '0 0 30px rgba(212,160,23,0.55)',
-                '0 0 12px rgba(212,160,23,0.3)',
+                '0 0 12px rgba(255,255,255,0.25)',
+                '0 0 30px rgba(255,255,255,0.45)',
+                '0 0 12px rgba(255,255,255,0.25)',
               ],
               transition: {
                 duration: 0.4,
@@ -720,14 +720,14 @@ export function AminAvatarV2({
           : state === 'listening'
             ? {
                 borderColor: [
-                  'rgba(99,180,255,0.20)',
-                  'rgba(99,180,255,0.50)',
-                  'rgba(99,180,255,0.20)',
+                  'rgba(255,255,255,0.25)',
+                  'rgba(255,255,255,0.55)',
+                  'rgba(255,255,255,0.25)',
                 ],
                 boxShadow: [
-                  '0 0 10px rgba(99,180,255,0.2)',
-                  '0 0 26px rgba(99,180,255,0.4)',
-                  '0 0 10px rgba(99,180,255,0.2)',
+                  '0 0 10px rgba(255,255,255,0.18)',
+                  '0 0 26px rgba(255,255,255,0.35)',
+                  '0 0 10px rgba(255,255,255,0.18)',
                 ],
                 transition: {
                   duration: 1.2,
@@ -738,14 +738,14 @@ export function AminAvatarV2({
             : state === 'thinking'
               ? {
                   borderColor: [
-                    'rgba(107,63,160,0.15)',
-                    'rgba(107,63,160,0.38)',
-                    'rgba(107,63,160,0.15)',
+                    'rgba(255,255,255,0.35)',
+                    'rgba(255,255,255,0.65)',
+                    'rgba(255,255,255,0.35)',
                   ],
                   boxShadow: [
-                    '0 0 8px rgba(107,63,160,0.15)',
-                    '0 0 22px rgba(107,63,160,0.32)',
-                    '0 0 8px rgba(107,63,160,0.15)',
+                    '0 0 8px rgba(255,255,255,0.2)',
+                    '0 0 22px rgba(255,255,255,0.38)',
+                    '0 0 8px rgba(255,255,255,0.2)',
                   ],
                   transition: {
                     duration: 2,
@@ -856,10 +856,10 @@ export function AminAvatarV2({
             borderRadius: '50%',
             border: `1.5px solid ${glow.ring}`,
             background: active
-              ? 'rgba(212,160,23,0.03)'
+              ? 'rgba(255,255,255,0.04)'
               : state === 'sleeping'
-                ? 'rgba(120,100,200,0.02)'
-                : 'rgba(30,58,95,0.02)',
+                ? 'rgba(255,255,255,0.02)'
+                : 'rgba(255,255,255,0.02)',
             willChange: 'border-color, box-shadow',
           }}
           animate={innerRingAnim}
@@ -918,7 +918,7 @@ export function AminAvatarV2({
               position: 'absolute',
               inset: -4 * glowScale,
               borderRadius: '50%',
-              border: '1.5px solid rgba(99,180,255,0.25)',
+              border: '1.5px solid rgba(255,255,255,0.25)',
               pointerEvents: 'none',
               willChange: 'transform, opacity',
             }}
@@ -930,7 +930,7 @@ export function AminAvatarV2({
               position: 'absolute',
               inset: -8 * glowScale,
               borderRadius: '50%',
-              border: '1px solid rgba(99,180,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.18)',
               pointerEvents: 'none',
               willChange: 'transform, opacity',
             }}
@@ -947,7 +947,7 @@ export function AminAvatarV2({
               position: 'absolute',
               inset: -12 * glowScale,
               borderRadius: '50%',
-              border: '0.5px solid rgba(99,180,255,0.10)',
+              border: '0.5px solid rgba(255,255,255,0.10)',
               pointerEvents: 'none',
               willChange: 'transform, opacity',
             }}
@@ -974,7 +974,7 @@ export function AminAvatarV2({
               width: px * 0.6,
               height: px * 0.25,
               borderRadius: '50%',
-              border: '1px solid rgba(212,160,23,0.25)',
+              border: '1px solid rgba(255,255,255,0.25)',
               pointerEvents: 'none',
               willChange: 'transform, opacity',
             }}
@@ -990,7 +990,7 @@ export function AminAvatarV2({
               width: px * 0.8,
               height: px * 0.35,
               borderRadius: '50%',
-              border: '1px solid rgba(212,160,23,0.15)',
+              border: '1px solid rgba(255,255,255,0.15)',
               pointerEvents: 'none',
               willChange: 'transform, opacity',
             }}
@@ -1021,7 +1021,7 @@ export function AminAvatarV2({
               cy={ringPx / 2}
               r={ringPx / 2 - 2}
               fill="none"
-              stroke="rgba(212,160,23,0.6)"
+              stroke="rgba(255,255,255,0.65)"
               strokeWidth="2.5"
               strokeLinecap="round"
               initial={{ pathLength: 0 }}
@@ -1044,7 +1044,7 @@ export function AminAvatarV2({
               inset: 0,
               borderRadius: '50%',
               background:
-                'radial-gradient(circle, rgba(212,160,23,0.35) 0%, transparent 70%)',
+                'radial-gradient(circle, rgba(255,255,255,0.35) 0%, transparent 70%)',
               pointerEvents: 'none',
             }}
             initial={{ scale: 0.8, opacity: 0 }}
@@ -1251,7 +1251,7 @@ export function AminAvatarV2({
                     cy="98"
                     r={9}
                     fill="none"
-                    stroke={`rgba(99,180,255,${0.35 - i * 0.1})`}
+                    stroke={`rgba(255,255,255,${0.35 - i * 0.1})`}
                     strokeWidth={1.2 - i * 0.3}
                     initial={false}
                     animate={{
@@ -1269,7 +1269,7 @@ export function AminAvatarV2({
                     cy="98"
                     r={9}
                     fill="none"
-                    stroke={`rgba(99,180,255,${0.35 - i * 0.1})`}
+                    stroke={`rgba(255,255,255,${0.35 - i * 0.1})`}
                     strokeWidth={1.2 - i * 0.3}
                     initial={false}
                     animate={{
@@ -1761,7 +1761,7 @@ export function AminAvatarV2({
                   cx="140"
                   cy="68"
                   r="2"
-                  fill="rgba(107,63,160,0.5)"
+                  fill="rgba(255,255,255,0.45)"
                   initial={false}
                   animate={{ opacity: [0, 1, 0], y: [0, -2, 0] }}
                   transition={{ duration: 1.2, repeat: Infinity }}
@@ -1770,7 +1770,7 @@ export function AminAvatarV2({
                   cx="148"
                   cy="62"
                   r="2.5"
-                  fill="rgba(107,63,160,0.4)"
+                  fill="rgba(255,255,255,0.38)"
                   initial={false}
                   animate={{ opacity: [0, 1, 0], y: [0, -2, 0] }}
                   transition={{ duration: 1.2, repeat: Infinity, delay: 0.25 }}
@@ -1779,7 +1779,7 @@ export function AminAvatarV2({
                   cx="156"
                   cy="56"
                   r="3"
-                  fill="rgba(107,63,160,0.3)"
+                  fill="rgba(255,255,255,0.32)"
                   initial={false}
                   animate={{ opacity: [0, 1, 0], y: [0, -3, 0] }}
                   transition={{ duration: 1.2, repeat: Infinity, delay: 0.5 }}
@@ -1788,7 +1788,7 @@ export function AminAvatarV2({
             )}
           </motion.g>
 
-          {/* Sparkle star — gold tinted for Amin brand */}
+          {/* Sparkle star */}
           <motion.g
             animate={
               state === 'speaking'
@@ -1821,7 +1821,7 @@ export function AminAvatarV2({
           >
             <path
               d="M172 164 L174 170 L180 172 L174 174 L172 180 L170 174 L164 172 L170 170 Z"
-              fill="rgba(212,180,80,0.7)"
+              fill="rgba(255,255,255,0.75)"
             />
             <path
               d="M172 167 L173 170 L176 172 L173 174 L172 177 L171 174 L168 172 L171 170 Z"
@@ -1885,7 +1885,7 @@ export function AminAvatarV2({
               width={Math.max(10, 14 * glowScale)}
               height={Math.max(10, 14 * glowScale)}
             >
-              <circle cx="8" cy="8" r="3" fill="rgba(212,160,23,0.85)" />
+              <circle cx="8" cy="8" r="3" fill="rgba(255,255,255,0.9)" />
               {[0, 1, 2, 3, 4, 5, 6, 7].map(j => {
                 const a = (j / 8) * Math.PI * 2;
                 return (
@@ -1895,7 +1895,7 @@ export function AminAvatarV2({
                     y1={8 + Math.sin(a) * 4.5}
                     x2={8 + Math.cos(a) * 6.5}
                     y2={8 + Math.sin(a) * 6.5}
-                    stroke="rgba(212,160,23,0.7)"
+                    stroke="rgba(255,255,255,0.65)"
                     strokeWidth="1"
                     strokeLinecap="round"
                   />

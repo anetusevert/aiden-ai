@@ -12,13 +12,13 @@ import { useNavigation } from '@/components/NavigationLoader';
 import { useAuth } from '@/lib/AuthContext';
 
 const CATEGORY_COLORS: Record<string, string> = {
-  law: '#638cff',
-  regulation: '#f59e0b',
-  concept: '#34d399',
-  entity: '#a78bfa',
-  research: '#38bdf8',
-  synthesis: '#d4a017',
-  case: '#fb923c',
+  law: 'rgba(255,255,255,0.92)',
+  regulation: 'rgba(255,255,255,0.82)',
+  concept: 'rgba(255,255,255,0.72)',
+  entity: 'rgba(255,255,255,0.62)',
+  research: 'rgba(255,255,255,0.52)',
+  synthesis: 'rgba(255,255,255,0.9)',
+  case: 'rgba(255,255,255,0.78)',
 };
 
 const CATEGORIES = [
@@ -187,8 +187,8 @@ export function WikiPageList() {
             style={
               activeCategory === cat
                 ? {
-                    borderColor: '#d4a017',
-                    background: 'rgba(212,160,23,0.15)',
+                    borderColor: 'rgba(255,255,255,0.45)',
+                    background: 'rgba(255,255,255,0.12)',
                   }
                 : undefined
             }
@@ -217,8 +217,8 @@ export function WikiPageList() {
             style={
               activeJurisdiction === jur
                 ? {
-                    borderColor: '#d4a017',
-                    background: 'rgba(212,160,23,0.15)',
+                    borderColor: 'rgba(255,255,255,0.45)',
+                    background: 'rgba(255,255,255,0.12)',
                   }
                 : undefined
             }
@@ -293,7 +293,7 @@ export function WikiPageList() {
                 {page.is_stale && (
                   <span
                     title="Page may be outdated"
-                    style={{ color: '#f59e0b', fontSize: 14 }}
+                    style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14 }}
                   >
                     ⏰
                   </span>

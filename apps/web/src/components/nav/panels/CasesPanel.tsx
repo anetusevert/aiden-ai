@@ -18,7 +18,7 @@ interface CaseBrief {
 
 const PRIORITY_COLORS: Record<string, string> = {
   high: '#ef4444',
-  medium: '#f59e0b',
+  medium: 'rgba(255, 255, 255, 0.42)',
   low: '#64748b',
 };
 

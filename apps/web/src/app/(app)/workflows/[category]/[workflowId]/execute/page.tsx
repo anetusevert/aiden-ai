@@ -368,7 +368,7 @@ function StepRail({
                     isCompleted
                       ? { backgroundColor: accent, borderColor: accent }
                       : isActive
-                        ? { borderColor: '#d4a017' }
+                        ? { borderColor: 'rgba(255,255,255,0.9)' }
                         : undefined
                   }
                 >
@@ -894,14 +894,14 @@ function CompletionModal({
             cx="40"
             cy="40"
             r="36"
-            stroke="#d4a017"
+            stroke="rgba(255,255,255,0.9)"
             strokeWidth="3"
             opacity="0.3"
           />
           <path
             className="exec-completion-check-path"
             d="M24 42 L34 52 L56 30"
-            stroke="#d4a017"
+            stroke="rgba(255,255,255,0.9)"
             strokeWidth="4"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -970,7 +970,7 @@ export default function WorkflowExecutePage() {
   const workflow = useMemo(() => getWorkflowById(workflowId), [workflowId]);
 
   const steps = workflow?.steps ?? [];
-  const accent = WORKFLOW_CATEGORY_ACCENTS[category] ?? '#d4a017';
+  const accent = WORKFLOW_CATEGORY_ACCENTS[category] ?? 'rgba(255,255,255,0.9)';
 
   const {
     currentStep,

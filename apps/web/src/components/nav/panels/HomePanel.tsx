@@ -93,7 +93,13 @@ export function HomePanel({ soul }: HomePanelProps) {
           <span className="r2-stat-chip">
             {dashboard.active_cases} Active Cases
           </span>
-          <span className="r2-stat-chip r2-stat-chip-warn">
+          <span
+            className="r2-stat-chip"
+            style={{
+              color: 'rgba(255, 255, 255, 0.88)',
+              borderColor: 'rgba(255, 255, 255, 0.35)',
+            }}
+          >
             {dashboard.high_priority} High Priority
           </span>
           <span className="r2-stat-chip">
@@ -104,7 +110,12 @@ export function HomePanel({ soul }: HomePanelProps) {
 
       {dueSoonCases.length > 0 && (
         <div className="r2-section">
-          <div className="r2-section-label r2-section-label-warn">DUE SOON</div>
+          <div
+            className="r2-section-label"
+            style={{ color: 'rgba(255, 255, 255, 0.75)' }}
+          >
+            DUE SOON
+          </div>
           <div className="r2-link-list">
             {dueSoonCases.map(c => (
               <button
@@ -114,7 +125,12 @@ export function HomePanel({ soul }: HomePanelProps) {
                 onClick={() => handleCaseClick(c)}
               >
                 <span
-                  className={`r2-due-dot ${c.urgent ? 'r2-due-dot-red' : 'r2-due-dot-amber'}`}
+                  className={`r2-due-dot${c.urgent ? ' r2-due-dot-red' : ''}`}
+                  style={
+                    c.urgent
+                      ? undefined
+                      : { backgroundColor: 'rgba(255, 255, 255, 0.55)' }
+                  }
                 />
                 <span className="r2-link-text">{c.title}</span>
                 <span className="r2-link-meta">{c.next_deadline}</span>

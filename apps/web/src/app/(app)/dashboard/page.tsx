@@ -63,7 +63,7 @@ function toHijriApprox(): string {
 
 const PRIORITY_COLORS: Record<string, string> = {
   high: '#ef4444',
-  medium: '#f59e0b',
+  medium: '#94a3b8',
   low: '#64748b',
 };
 
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                 <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
               </svg>
             </div>
-            <div className="dashboard-stat-number">
+            <div className="dashboard-stat-number" style={{ fontWeight: 300 }}>
               {dashboard?.active_cases ?? 0}
             </div>
             <div className="dashboard-stat-label">Active Cases</div>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </div>
-            <div className="dashboard-stat-number">
+            <div className="dashboard-stat-number" style={{ fontWeight: 300 }}>
               {dashboard?.high_priority ?? 0}
             </div>
             <div className="dashboard-stat-label">High Priority</div>
@@ -225,7 +225,7 @@ export default function DashboardPage() {
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
             </div>
-            <div className="dashboard-stat-number">
+            <div className="dashboard-stat-number" style={{ fontWeight: 300 }}>
               {(dashboard?.due_today?.length ?? 0) +
                 (dashboard?.due_this_week?.length ?? 0)}
             </div>
@@ -252,7 +252,7 @@ export default function DashboardPage() {
           <div className="dashboard-quick-actions">
             <button
               type="button"
-              className="btn btn-gold"
+              className="btn btn-primary"
               onClick={() => navigateTo('/cases?new=true')}
             >
               + New Case
@@ -344,7 +344,7 @@ export default function DashboardPage() {
                 <p>Create your first case to get started</p>
                 <button
                   type="button"
-                  className="btn btn-gold"
+                  className="btn btn-primary"
                   onClick={() => navigateTo('/cases?new=true')}
                 >
                   New Case

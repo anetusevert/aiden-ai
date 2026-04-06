@@ -1,18 +1,18 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { AminAvatar, type AminAvatarState } from './AminAvatar';
-import { aminBreathing, voiceRingPulse } from '@/lib/motion';
+import { aminBreathing } from '@/lib/motion';
 import { useAminContext } from './AminProvider';
 import { AminVoiceClient, setVoice } from '@/lib/aminVoiceClient';
 import { WakeWordDetector } from '@/lib/wakeWordDetector';
 import { useAuth } from '@/lib/AuthContext';
 
 const RING_COLORS = {
-  off: '#ef4444',
-  active: '#34d399',
-  passive: '#22c55e80',
+  off: 'rgba(255,255,255,0.25)',
+  active: 'rgba(255,255,255,0.5)',
+  passive: 'rgba(255,255,255,0.15)',
 };
 
 export function AminMinimized() {
@@ -104,7 +104,7 @@ export function AminMinimized() {
       >
         <AminAvatar size={44} state={avatarState} showWaveform />
 
-        {/* State indicator ring — red=off, green=on */}
+        {/* State indicator ring — white spectrum */}
         <motion.div
           className="amin-voice-ring"
           style={{

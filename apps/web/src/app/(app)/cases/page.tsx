@@ -116,7 +116,7 @@ export default function CasesPage() {
         </div>
         <button
           type="button"
-          className="btn btn-gold"
+          className="btn btn-primary"
           onClick={() => setShowNewModal(true)}
         >
           + New Case
@@ -261,7 +261,7 @@ export default function CasesPage() {
             <p>Create your first case to get started</p>
             <button
               type="button"
-              className="btn btn-gold"
+              className="btn btn-primary"
               onClick={() => setShowNewModal(true)}
             >
               + New Case
@@ -477,7 +477,7 @@ function NewCaseModal({
             </button>
             <button
               type="button"
-              className="btn btn-gold"
+              className="btn btn-primary"
               disabled={!form.client_id || !form.title || saving}
               onClick={handleCreate}
             >

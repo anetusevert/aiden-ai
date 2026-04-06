@@ -106,17 +106,22 @@ export const drawerMotion = {
 
 /* ── Glass Reveal ── modals, panels, floating surfaces */
 export const glassReveal = {
-  initial: { opacity: 0, scale: 0.96, y: 8 },
+  initial: { opacity: 0, scale: 0.96, y: 8, filter: 'blur(4px)' },
   animate: {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: motionTokens.spring,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.25,
+      ease: motionTokens.ease,
+    },
   },
   exit: {
     opacity: 0,
     scale: 0.97,
     y: 4,
+    filter: 'blur(2px)',
     transition: {
       duration: motionTokens.duration.fast,
       ease: motionTokens.ease,
@@ -142,7 +147,7 @@ export const glassBackdrop = {
   },
 };
 
-/* ── Tiles ── for card grids */
+/* ── Tiles ── for card grids (no lift on hover — border brightening only) */
 export const tileMotion = {
   initial: { opacity: 0, y: 12 },
   animate: (index = 0) => ({
@@ -154,8 +159,8 @@ export const tileMotion = {
       ease: motionTokens.ease,
     },
   }),
-  hover: { y: -3, scale: 1.012 },
-  tap: { scale: 0.985 },
+  hover: { opacity: 1 },
+  tap: { scale: 0.995 },
 };
 
 /* ── Staggered Reveal ── for lists, grids, navigation items */
@@ -168,7 +173,7 @@ export const staggerContainer: Variants = {
 };
 
 export const staggerItem: Variants = {
-  hidden: { opacity: 0, y: 8 },
+  hidden: { opacity: 0, y: 6 },
   visible: {
     opacity: 1,
     y: 0,
@@ -401,6 +406,29 @@ export const goldLineExpand = {
       ease: [0.22, 1, 0.36, 1] as number[],
       delay: 0.2,
     },
+  },
+};
+
+export const lineExpand = goldLineExpand;
+
+/* ── Prestige ── hero text reveal for marketing pages */
+export const prestige = {
+  initial: { opacity: 0, y: 20, filter: 'blur(4px)' },
+  animate: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+/* ── Split Line ── headline line-by-line entry */
+export const splitLine: Variants = {
+  initial: { opacity: 0, y: '100%' },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
   },
 };
 

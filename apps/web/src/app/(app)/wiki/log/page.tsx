@@ -6,14 +6,6 @@ import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 import { apiClient, type WikiLogEntry } from '@/lib/apiClient';
 import { reportScreenContext } from '@/lib/screenContext';
 
-const OP_COLORS: Record<string, string> = {
-  ingest: '#638cff',
-  query: '#38bdf8',
-  update: '#f59e0b',
-  create: '#34d399',
-  lint: '#94a3b8',
-};
-
 const FILTER_OPS = [
   'All',
   'Ingest',
@@ -86,13 +78,14 @@ export default function WikiLogPage() {
         {FILTER_OPS.map(op => (
           <button
             key={op}
-            className={`badge ${activeOp === op ? 'badge-gold' : 'badge-muted'}`}
+            className={`badge ${activeOp === op ? 'badge-default' : 'badge-muted'}`}
             onClick={() => setActiveOp(op)}
             style={
               activeOp === op
                 ? {
-                    borderColor: '#d4a017',
-                    background: 'rgba(212,160,23,0.15)',
+                    borderColor: 'rgba(255,255,255,0.45)',
+                    background: 'rgba(255,255,255,0.12)',
+                    color: 'rgba(255,255,255,0.95)',
                   }
                 : undefined
             }
@@ -141,9 +134,9 @@ export default function WikiLogPage() {
               <span
                 className="badge"
                 style={{
-                  background: (OP_COLORS[log.operation] || '#888') + '22',
-                  color: OP_COLORS[log.operation] || '#888',
-                  border: `1px solid ${OP_COLORS[log.operation] || '#888'}44`,
+                  background: 'rgba(255,255,255,0.1)',
+                  color: 'rgba(255,255,255,0.9)',
+                  border: '1px solid rgba(255,255,255,0.2)',
                   fontSize: 11,
                   flexShrink: 0,
                 }}

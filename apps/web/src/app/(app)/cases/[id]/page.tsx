@@ -404,7 +404,7 @@ export default function CaseDetailPage() {
           </div>
 
           {caseData.amin_briefing && (
-            <div className="detail-card detail-card-gold">
+            <div className="detail-card">
               <h3 className="detail-card-title">⚡ Amin&apos;s Case Brief</h3>
               <p className="detail-briefing">{caseData.amin_briefing}</p>
             </div>
@@ -413,7 +413,7 @@ export default function CaseDetailPage() {
           <div className="case-quick-actions">
             <button
               type="button"
-              className="btn btn-sm btn-gold btn-full"
+              className="btn btn-sm btn-primary btn-full"
               onClick={() => navigateTo(`/workflows?case=${params.id}`)}
             >
               ▶ Start Workflow
@@ -469,7 +469,7 @@ export default function CaseDetailPage() {
                 >
                   <button
                     type="button"
-                    className="btn btn-sm btn-gold"
+                    className="btn btn-sm btn-primary"
                     onClick={handleCreateDoc}
                     disabled={creatingDoc}
                   >
@@ -535,7 +535,7 @@ export default function CaseDetailPage() {
                   />
                   <button
                     type="button"
-                    className="btn btn-sm btn-gold"
+                    className="btn btn-sm btn-primary"
                     disabled={!newNote.trim() || addingNote}
                     onClick={handleAddNote}
                   >
@@ -603,7 +603,7 @@ export default function CaseDetailPage() {
                 </p>
                 <button
                   type="button"
-                  className="btn btn-gold"
+                  className="btn btn-primary"
                   onClick={() =>
                     navigateTo(
                       `/workflows/${caseData.practice_area ?? 'litigation'}?case=${params.id}`

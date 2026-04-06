@@ -3,34 +3,65 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/AuthContext';
 import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
+import { useEffect, useState } from 'react';
 
 export function MarketingHeader() {
   const { isAuthenticated } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
-    <header className="ha-header">
+    <header className={`ha-header${scrolled ? ' scrolled' : ''}`}>
       <Link
         href="/"
         className="ha-logo"
         style={{ display: 'inline-flex', alignItems: 'center' }}
       >
-        <HeyAminLogo variant="mark" size={48} />
+        <HeyAminLogo variant="full" size={100} />
       </Link>
-      <nav>
-        {isAuthenticated ? (
-          <Link
-            href="/documents"
-            className="ha-btn-primary"
-            style={{ padding: '0.5rem 1.5rem', fontSize: '0.8125rem' }}
-          >
-            Open App
-          </Link>
-        ) : (
-          <Link href="/login" className="ha-nav-link">
-            Sign in
-          </Link>
-        )}
-      </nav>
+
+      <div className="ha-header-nav">
+        <div className="ha-header-nav-links">
+          <a href="#platform" className="ha-header-nav-link">
+            Platform
+          </a>
+          <a href="#research" className="ha-header-nav-link">
+            Research
+          </a>
+          <a href="#security" className="ha-header-nav-link">
+            Security
+          </a>
+          <a href="#about" className="ha-header-nav-link">
+            About
+          </a>
+        </div>
+
+        <div className="ha-header-actions">
+          {isAuthenticated ? (
+            <Link href="/documents" className="ha-btn-primary ha-btn-sm">
+              Open App
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="ha-btn-ghost"
+                style={{ height: 36, fontSize: 13 }}
+              >
+                Sign in
+              </Link>
+              <Link href="/register" className="ha-btn-primary ha-btn-sm">
+                Request Access
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
     </header>
   );
 }

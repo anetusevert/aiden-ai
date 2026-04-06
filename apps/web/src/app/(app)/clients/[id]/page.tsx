@@ -8,13 +8,13 @@ import { reportScreenContext } from '@/lib/screenContext';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 const TYPE_COLORS: Record<string, string> = {
-  individual: '#38bdf8',
-  company: '#34d399',
-  organisation: '#a78bfa',
+  individual: 'rgba(255,255,255,0.9)',
+  company: 'rgba(255,255,255,0.85)',
+  organisation: 'rgba(255,255,255,0.8)',
 };
 const PRIORITY_COLORS: Record<string, string> = {
   high: '#ef4444',
-  medium: '#f59e0b',
+  medium: '#94a3b8',
   low: '#64748b',
 };
 
@@ -264,7 +264,7 @@ export default function ClientDetailPage() {
 
           <button
             type="button"
-            className="btn btn-gold btn-full"
+            className="btn btn-primary btn-full"
             onClick={() => navigateTo(`/cases?new=true&client_id=${client.id}`)}
           >
             + New Case for this Client
@@ -284,7 +284,7 @@ export default function ClientDetailPage() {
             <h2>Cases ({client.case_count})</h2>
             <button
               type="button"
-              className="btn btn-sm btn-gold"
+              className="btn btn-sm btn-primary"
               onClick={() =>
                 navigateTo(`/cases?new=true&client_id=${client.id}`)
               }

@@ -58,12 +58,11 @@ export default function MarketingEntrySequence({
                     transition: { duration: 0.4, ease: motionTokens.ease },
                   }}
                 >
-                  {/* Gold bloom behind avatar */}
                   <motion.div
                     className="mkt-entry-bloom"
                     initial={{ opacity: 0, scale: 0.4 }}
                     animate={{
-                      opacity: [0, 0.5, 0.3],
+                      opacity: [0, 0.3, 0.15],
                       scale: [0.4, 1.6, 1.8],
                     }}
                     transition={{ duration: 1.4, ease: 'easeOut', delay: 0.2 }}
@@ -154,7 +153,7 @@ export default function MarketingEntrySequence({
                     }}
                   >
                     Legal intelligence,{' '}
-                    <span className="ha-accent">elevated.</span>
+                    <span style={{ color: '#ffffff' }}>elevated.</span>
                   </motion.h1>
 
                   <motion.div

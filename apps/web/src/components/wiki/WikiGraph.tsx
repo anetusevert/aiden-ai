@@ -10,13 +10,13 @@ import {
 import { useNavigation } from '@/components/NavigationLoader';
 
 const CATEGORY_COLORS: Record<string, string> = {
-  law: '#638cff',
-  regulation: '#f59e0b',
-  concept: '#34d399',
-  entity: '#a78bfa',
-  research: '#38bdf8',
-  synthesis: '#d4a017',
-  case: '#fb923c',
+  law: 'rgba(255,255,255,0.92)',
+  regulation: 'rgba(255,255,255,0.82)',
+  concept: 'rgba(255,255,255,0.72)',
+  entity: 'rgba(255,255,255,0.62)',
+  research: 'rgba(255,255,255,0.52)',
+  synthesis: 'rgba(255,255,255,0.9)',
+  case: 'rgba(255,255,255,0.78)',
 };
 
 interface SimNode extends d3.SimulationNodeDatum {

@@ -190,8 +190,8 @@ export default function OperatorLayout({
           background: var(--secondary-light, rgba(255, 255, 255, 0.04));
         }
         .operator-subnav-link-active {
-          color: var(--accent, var(--amin-accent, #d4a017));
-          background: rgba(212, 160, 23, 0.08);
+          color: rgba(255, 255, 255, 0.95);
+          background: rgba(255, 255, 255, 0.08);
         }
         .operator-subnav-icon {
           display: flex;

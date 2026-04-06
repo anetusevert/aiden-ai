@@ -12,9 +12,9 @@ interface ClientItem {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  individual: '#38bdf8',
-  company: '#34d399',
-  organisation: '#a78bfa',
+  individual: 'rgba(255, 255, 255, 0.7)',
+  company: 'rgba(255, 255, 255, 0.8)',
+  organisation: 'rgba(255, 255, 255, 0.6)',
 };
 
 function TypeIcon({ type }: { type: string }) {

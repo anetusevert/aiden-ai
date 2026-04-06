@@ -336,7 +336,7 @@ export default function MyAminPage() {
                     background: 'var(--bg-elevated)',
                     border: 'none',
                     borderLeft: isSelected
-                      ? '3px solid #d4a017'
+                      ? '3px solid rgba(255,255,255,0.9)'
                       : '3px solid transparent',
                     borderRadius: 'var(--radius-md)',
                     padding: '14px 16px',
@@ -345,7 +345,7 @@ export default function MyAminPage() {
                     transition: 'all 0.15s ease',
                     width: '100%',
                     backgroundColor: isSelected
-                      ? 'rgba(212,160,23,0.08)'
+                      ? 'rgba(255,255,255,0.08)'
                       : 'var(--bg-elevated)',
                   }}
                 >
@@ -356,7 +356,7 @@ export default function MyAminPage() {
                       height: 16,
                       borderRadius: '50%',
                       border: isSelected
-                        ? '5px solid #d4a017'
+                        ? '5px solid rgba(255,255,255,0.9)'
                         : '2px solid var(--text-muted)',
                       flexShrink: 0,
                       transition: 'border 0.15s ease',
@@ -413,7 +413,7 @@ export default function MyAminPage() {
                       color: hasError
                         ? 'var(--error)'
                         : isPlaying
-                          ? '#d4a017'
+                          ? 'rgba(255,255,255,0.95)'
                           : 'var(--text-secondary)',
                       flexShrink: 0,
                       transition: 'border-color 0.15s ease, color 0.15s ease',
@@ -483,11 +483,11 @@ export default function MyAminPage() {
                     alignItems: 'center',
                     gap: 'var(--space-3)',
                     background: isSelected
-                      ? 'rgba(212,160,23,0.08)'
+                      ? 'rgba(255,255,255,0.08)'
                       : 'var(--bg-elevated)',
                     border: 'none',
                     borderLeft: isSelected
-                      ? '3px solid #d4a017'
+                      ? '3px solid rgba(255,255,255,0.9)'
                       : '3px solid transparent',
                     borderRadius: 'var(--radius-md)',
                     padding: '12px 16px',
@@ -504,7 +504,7 @@ export default function MyAminPage() {
                       height: 16,
                       borderRadius: '50%',
                       border: isSelected
-                        ? '5px solid #d4a017'
+                        ? '5px solid rgba(255,255,255,0.9)'
                         : '2px solid var(--text-muted)',
                       flexShrink: 0,
                       transition: 'border 0.15s ease',
