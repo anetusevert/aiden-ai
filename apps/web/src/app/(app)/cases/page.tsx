@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
 import { useAuth } from '@/lib/AuthContext';
@@ -32,23 +32,42 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: '#64748b',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Active',
+  on_hold: 'On Hold',
+  pending: 'Pending',
+  closed: 'Closed',
+};
+
+const PA_ABBREV: Record<string, string> = {
+  litigation: 'Lit',
+  corporate: 'Corp',
+  compliance: 'Comp',
+  employment: 'Emp',
+  dispute_resolution: 'Disp',
+  enforcement: 'Enf',
+  research: 'Res',
+  firm_management: 'Mgmt',
+};
+
 export default function CasesPage() {
   const { navigateTo } = useNavigation();
   const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [cases, setCases] = useState<CaseBrief[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState(
-    searchParams.get('status') ?? ''
+  const [searchInput, setSearchInput] = useState(
+    () => searchParams.get('search') ?? ''
   );
-  const [priorityFilter, setPriorityFilter] = useState(
-    searchParams.get('priority') ?? ''
-  );
-  const [paFilter, setPaFilter] = useState('');
   const [showNewModal, setShowNewModal] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+
+  const statusFilter = searchParams.get('status') ?? '';
+  const priorityFilter = searchParams.get('priority') ?? '';
+  const paFilter = searchParams.get('practice_area') ?? '';
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -91,13 +110,38 @@ export default function CasesPage() {
     if (searchParams.get('new') === 'true') setShowNewModal(true);
   }, [searchParams]);
 
+  useEffect(() => {
+    setSearchInput(searchParams.get('search') ?? '');
+  }, [searchParams]);
+
+  const patchQuery = useCallback(
+    (patch: Record<string, string>) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      for (const [k, v] of Object.entries(patch)) {
+        if (v) sp.set(k, v);
+        else sp.delete(k);
+      }
+      const q = sp.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  const pushSearchToUrl = (value: string) => {
+    patchQuery({ search: value });
+  };
+
   const fetchCases = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (statusFilter) params.set('status', statusFilter);
-    if (priorityFilter) params.set('priority', priorityFilter);
-    if (paFilter) params.set('practice_area', paFilter);
+    const s = searchParams.get('search');
+    if (s) params.set('search', s);
+    const st = searchParams.get('status');
+    if (st) params.set('status', st);
+    const pr = searchParams.get('priority');
+    if (pr) params.set('priority', pr);
+    const pa = searchParams.get('practice_area');
+    if (pa) params.set('practice_area', pa);
     params.set('limit', '100');
     try {
       const res = await fetch(`/api/v1/cases?${params}`, {
@@ -112,7 +156,7 @@ export default function CasesPage() {
       /* */
     }
     setLoading(false);
-  }, [search, statusFilter, priorityFilter, paFilter]);
+  }, [searchParams]);
 
   useEffect(() => {
     const t = setTimeout(fetchCases, 300);
@@ -195,8 +239,12 @@ export default function CasesPage() {
           type="text"
           className="page-search"
           placeholder="Search by title or case number..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={e => {
+            const v = e.target.value;
+            setSearchInput(v);
+            pushSearchToUrl(v);
+          }}
         />
         <div className="page-filter-chips">
           {['', 'active', 'on_hold', 'pending', 'closed'].map(s => (
@@ -204,9 +252,9 @@ export default function CasesPage() {
               key={s || 'all'}
               type="button"
               className={`chip${statusFilter === s ? ' chip-active' : ''}`}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => patchQuery({ status: s })}
             >
-              {s || 'All'}
+              {s ? (STATUS_LABELS[s] ?? s) : 'All'}
             </button>
           ))}
         </div>
@@ -216,9 +264,24 @@ export default function CasesPage() {
               key={p || 'all'}
               type="button"
               className={`chip${priorityFilter === p ? ' chip-active' : ''}`}
-              onClick={() => setPriorityFilter(p)}
+              onClick={() => patchQuery({ priority: p })}
             >
-              {p || 'Priority'}
+              {p ? p.charAt(0).toUpperCase() + p.slice(1) : 'Priority'}
+            </button>
+          ))}
+        </div>
+        <div className="page-filter-chips">
+          {Object.keys(PA_ABBREV).map(pa => (
+            <button
+              key={pa}
+              type="button"
+              className={`chip${paFilter === pa ? ' chip-active' : ''}`}
+              title={pa.replace(/_/g, ' ')}
+              onClick={() =>
+                patchQuery({ practice_area: paFilter === pa ? '' : pa })
+              }
+            >
+              {PA_ABBREV[pa]}
             </button>
           ))}
         </div>

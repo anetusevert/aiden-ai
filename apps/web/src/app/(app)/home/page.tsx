@@ -1,59 +1,154 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
-import { useNavigation } from '@/components/NavigationLoader';
-import { useSidebarWorkflows } from '@/hooks/useSidebarWorkflows';
-import { useNewsPolling } from '@/hooks/useNewsPolling';
+import { useAminContext } from '@/components/amin/AminProvider';
+import { AminAvatar } from '@/components/amin/AminAvatar';
+import type { AminAvatarState } from '@/components/amin/AminAvatar';
 import {
   WORKFLOW_CATEGORIES,
-  type WorkflowDefinition,
   type WorkflowCategory,
-  type WorkflowCategoryMeta,
 } from '@/lib/workflowRegistry';
-import {
-  staggerContainer,
-  staggerItem,
-  tileMotion,
-  fadeUp,
-  letterReveal,
-} from '@/lib/motion';
-import {
-  getWorkflowCategoryHref,
-  getWorkflowHref,
-} from '@/lib/workflowPresentation';
+import { getWorkflowCategoryHref } from '@/lib/workflowPresentation';
 
 // ---------------------------------------------------------------------------
-// Greeting helper
+// Types
 // ---------------------------------------------------------------------------
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+interface CaseBrief {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  practice_area: string;
+  next_deadline: string | null;
+  client_display_name: string;
+  urgent: boolean;
 }
 
-function getFormattedDate(): string {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+interface DashboardData {
+  active_cases: number;
+  high_priority: number;
+  due_today: CaseBrief[];
+  due_this_week: CaseBrief[];
+  recently_accessed: CaseBrief[];
 }
 
 // ---------------------------------------------------------------------------
-// Category icons (matching Sidebar)
+// Constants
 // ---------------------------------------------------------------------------
+
+type TabId = 'clients' | 'cases' | 'workflows' | 'documents' | 'intelligence';
+
+interface TabDef {
+  id: TabId;
+  label: string;
+  icon: React.ReactNode;
+}
+
+const TABS: TabDef[] = [
+  {
+    id: 'clients',
+    label: 'Clients',
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    id: 'cases',
+    label: 'Cases',
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <rect x="2" y="7" width="20" height="14" rx="2" />
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+      </svg>
+    ),
+  },
+  {
+    id: 'workflows',
+    label: 'Workflows',
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    id: 'documents',
+    label: 'Documents',
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path d="M7 3h8l4 4v11a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" />
+        <path d="M15 3v5h5" />
+        <path d="M9 13h6" />
+        <path d="M9 17h6" />
+      </svg>
+    ),
+  },
+  {
+    id: 'intelligence',
+    label: 'Intelligence',
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4H20v13.5A2.5 2.5 0 0 1 17.5 20H7a3 3 0 0 1-3-3V6.5Z" />
+        <path d="M8 8h8" />
+        <path d="M8 12h8" />
+        <path d="M8 16h5" />
+      </svg>
+    ),
+  },
+];
 
 const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   litigation: (
     <svg
-      width="22"
-      height="22"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -64,8 +159,8 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   ),
   corporate: (
     <svg
-      width="22"
-      height="22"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -77,8 +172,8 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   ),
   compliance: (
     <svg
-      width="22"
-      height="22"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -89,8 +184,8 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   ),
   employment: (
     <svg
-      width="22"
-      height="22"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -104,8 +199,8 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   ),
   arbitration: (
     <svg
-      width="22"
-      height="22"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -117,8 +212,8 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   ),
   enforcement: (
     <svg
-      width="22"
-      height="22"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -130,8 +225,8 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   ),
   research: (
     <svg
-      width="22"
-      height="22"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -143,8 +238,8 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   ),
   management: (
     <svg
-      width="22"
-      height="22"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -157,450 +252,571 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
   ),
 };
 
-const CATEGORY_COLORS: Record<WorkflowCategory, string> = {
-  litigation: 'rgba(255,255,255,0.9)',
-  corporate: 'rgba(255,255,255,0.88)',
-  compliance: 'rgba(255,255,255,0.86)',
-  employment: 'rgba(255,255,255,0.84)',
-  arbitration: 'rgba(255,255,255,0.82)',
-  enforcement: 'rgba(255,255,255,0.8)',
-  research: 'rgba(255,255,255,0.78)',
-  management: 'rgba(255,255,255,0.76)',
+const PRIORITY_COLORS: Record<string, string> = {
+  critical: '#ef4444',
+  high: '#f59e0b',
+  medium: '#3b82f6',
+  low: '#6b7280',
 };
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// Helpers
 // ---------------------------------------------------------------------------
 
-function ForYouBadge({ reason }: { reason: string }) {
-  if (reason === 'default') return null;
-  const labels: Record<string, string> = {
-    twin_match: 'Twin Match',
-    frequent: 'Frequent',
-    recent: 'Recent',
-  };
-  return (
-    <span className={`home-foryou-badge home-foryou-badge--${reason}`}>
-      {labels[reason] || ''}
-    </span>
-  );
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
-function WorkflowItemIcon() {
+function avatarStateFromVoice(
+  voiceMode: string,
+  aminStatus: string
+): AminAvatarState {
+  if (voiceMode === 'active') {
+    if (aminStatus === 'listening') return 'listening';
+    if (aminStatus === 'thinking') return 'thinking';
+    if (aminStatus === 'speaking') return 'speaking';
+    return 'listening';
+  }
+  return 'idle';
+}
+
+// ---------------------------------------------------------------------------
+// Tab content components
+// ---------------------------------------------------------------------------
+
+function ClientsTab() {
+  const router = useRouter();
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
+    <motion.div
+      className="hp-tab-items"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
     >
-      <polyline points="4,17 10,11 4,5" />
-      <line x1="12" y1="19" x2="20" y2="19" />
-    </svg>
+      <button className="hp-quick-link" onClick={() => router.push('/clients')}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+        </svg>
+        <span>View All Clients</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="hp-quick-link-arrow"
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </button>
+      <button
+        className="hp-quick-link"
+        onClick={() => router.push('/clients?action=new')}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>New Client</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="hp-quick-link-arrow"
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </button>
+    </motion.div>
   );
 }
 
-function timeAgo(ts: number): string {
-  const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+function CasesTab({
+  cases,
+  onCaseClick,
+}: {
+  cases: CaseBrief[];
+  onCaseClick: (c: CaseBrief) => void;
+}) {
+  const router = useRouter();
+  return (
+    <motion.div
+      className="hp-tab-items"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+    >
+      {cases.slice(0, 5).map(c => (
+        <button
+          key={c.id}
+          className="hp-quick-link hp-quick-link--case"
+          onClick={() => onCaseClick(c)}
+        >
+          <span
+            className="hp-case-priority"
+            style={{ background: PRIORITY_COLORS[c.priority] || '#6b7280' }}
+          />
+          <div className="hp-quick-link-body">
+            <span className="hp-quick-link-title">{c.title}</span>
+            <span className="hp-quick-link-sub">{c.client_display_name}</span>
+          </div>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="hp-quick-link-arrow"
+          >
+            <polyline points="9,18 15,12 9,6" />
+          </svg>
+        </button>
+      ))}
+      <button className="hp-quick-link" onClick={() => router.push('/cases')}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <rect x="2" y="7" width="20" height="14" rx="2" />
+          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+        </svg>
+        <span>View All Cases</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="hp-quick-link-arrow"
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </button>
+    </motion.div>
+  );
 }
 
-function getNewsUpdatedLabel(dateStr: string | null): string {
-  if (!dateStr) return 'Live updates available';
-  return `Updated ${new Date(dateStr).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })}`;
+function WorkflowsTab() {
+  const router = useRouter();
+  return (
+    <motion.div
+      className="hp-tab-items hp-tab-items--grid"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+    >
+      {WORKFLOW_CATEGORIES.map(cat => (
+        <button
+          key={cat.id}
+          className="hp-wf-tile"
+          onClick={() => router.push(getWorkflowCategoryHref(cat.id))}
+        >
+          <span className="hp-wf-tile-icon">{CATEGORY_ICONS[cat.id]}</span>
+          <span className="hp-wf-tile-name">{cat.name}</span>
+        </button>
+      ))}
+    </motion.div>
+  );
 }
+
+function DocumentsTab() {
+  const router = useRouter();
+  return (
+    <motion.div
+      className="hp-tab-items"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+    >
+      <button
+        className="hp-quick-link"
+        onClick={() => router.push('/documents')}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path d="M7 3h8l4 4v11a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" />
+          <path d="M15 3v5h5" />
+        </svg>
+        <span>Document Vault</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="hp-quick-link-arrow"
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </button>
+      <button
+        className="hp-quick-link"
+        onClick={() => router.push('/global-legal')}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+        <span>Legal Library</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="hp-quick-link-arrow"
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </button>
+    </motion.div>
+  );
+}
+
+function IntelligenceTab() {
+  const router = useRouter();
+  return (
+    <motion.div
+      className="hp-tab-items"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+    >
+      <button className="hp-quick-link" onClick={() => router.push('/news')}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4H20v13.5A2.5 2.5 0 0 1 17.5 20H7a3 3 0 0 1-3-3V6.5Z" />
+          <path d="M8 8h8" />
+          <path d="M8 12h8" />
+        </svg>
+        <span>Legal News</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="hp-quick-link-arrow"
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </button>
+      <button className="hp-quick-link" onClick={() => router.push('/wiki')}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <span>Legal Wiki</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="hp-quick-link-arrow"
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </button>
+      <button
+        className="hp-quick-link"
+        onClick={() => router.push('/global-legal')}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+        <span>Global Legal</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="hp-quick-link-arrow"
+        >
+          <polyline points="9,18 15,12 9,6" />
+        </svg>
+      </button>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
 
 export default function HomePage() {
-  const { user, appLanguage } = useAuth();
-  const { navigateTo } = useNavigation();
-  const tNav = useTranslations('nav');
-  const tWf = useTranslations('workflows');
-  const tSb = useTranslations('sidebar');
+  const { user } = useAuth();
+  const router = useRouter();
+  const { voiceMode, setVoiceMode, aminStatus, openPanel } = useAminContext();
 
-  const { forYou, continueItems, allGroups, trackAccess } =
-    useSidebarWorkflows(null);
-
-  const { items: newsItems, isLoading: newsLoading } = useNewsPolling();
+  const [activeTab, setActiveTab] = useState<TabId>('cases');
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
 
   const greeting = useMemo(() => getGreeting(), []);
-  const dateStr = useMemo(() => getFormattedDate(), []);
   const firstName = user?.full_name?.split(' ')[0] || '';
 
-  const workflowDisplayName = useCallback(
-    (wf: WorkflowDefinition) => {
-      if (appLanguage === 'ar') return wf.name_ar;
-      if (appLanguage === 'en') return wf.name;
-      return tWf(wf.id);
-    },
-    [appLanguage, tWf]
+  const avatarState = useMemo(
+    () => avatarStateFromVoice(voiceMode, aminStatus),
+    [voiceMode, aminStatus]
   );
 
-  const categoryDisplayName = useCallback(
-    (cat: WorkflowCategoryMeta) => {
-      if (appLanguage === 'ar') return cat.name_ar;
-      if (appLanguage === 'en') return cat.name;
-      return cat.name;
+  useEffect(() => {
+    fetch('/api/v1/cases/dashboard', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data) setDashboard(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleActivateToggle = useCallback(() => {
+    setVoiceMode(voiceMode === 'active' ? 'off' : 'active');
+  }, [voiceMode, setVoiceMode]);
+
+  const handleCaseClick = useCallback(
+    (c: CaseBrief) => {
+      fetch(`/api/v1/cases/${c.id}/set-active`, {
+        method: 'POST',
+        credentials: 'include',
+      }).catch(() => {});
+      router.push(`/cases/${c.id}`);
     },
-    [appLanguage]
+    [router]
   );
 
-  const handleWorkflowClick = useCallback(
-    (wf: WorkflowDefinition) => {
-      trackAccess(wf.id);
-      navigateTo(getWorkflowHref(wf));
-    },
-    [trackAccess, navigateTo]
-  );
-
-  const categoryWorkflowCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const group of allGroups) {
-      counts[group.category.id] = group.workflows.length;
-    }
-    return counts;
-  }, [allGroups]);
+  const recentCases = dashboard?.recently_accessed ?? [];
 
   return (
-    <div className="home-page">
-      <div className="home-page-backdrop" aria-hidden />
+    <div className="hp-root">
+      {/* Ambient backdrop */}
+      <div className="hp-backdrop" aria-hidden />
 
-      <div className="home-page-content">
-        {/* ── GREETING ── */}
-        <motion.header className="home-greeting" {...fadeUp}>
-          <div className="home-greeting-row">
-            <div>
-              <p className="home-greeting-date">{dateStr}</p>
-              <h1 className="home-greeting-headline">
-                {greeting}
-                {firstName && (
-                  <>
-                    ,{' '}
-                    <span className="home-greeting-name">
-                      {firstName.split('').map((char, i) => (
-                        <motion.span
-                          key={i}
-                          custom={i}
-                          variants={letterReveal}
-                          initial="hidden"
-                          animate="visible"
-                          style={{ display: 'inline-block' }}
-                        >
-                          {char}
-                        </motion.span>
-                      ))}
-                    </span>
-                  </>
+      {/* ── AMIN HERO ── */}
+      <motion.section
+        className="hp-hero"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <button
+          type="button"
+          className="hp-avatar-wrap"
+          onClick={openPanel}
+          aria-label="Open Amin"
+        >
+          <AminAvatar size={120} state={avatarState} />
+        </button>
+
+        <motion.h1
+          className="hp-greeting"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {greeting}
+          {firstName ? `, ${firstName}` : ''}
+        </motion.h1>
+
+        <motion.p
+          className="hp-tagline"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          Your legal intelligence, ready.
+        </motion.p>
+
+        <motion.button
+          type="button"
+          className={`hp-activate-btn${voiceMode === 'active' ? ' hp-activate-btn--active' : ''}`}
+          onClick={handleActivateToggle}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          {voiceMode === 'active' ? (
+            <>
+              <span className="hp-activate-dot hp-activate-dot--live" />
+              Amin is listening
+            </>
+          ) : (
+            <>
+              <span className="hp-activate-dot" />
+              Activate Amin
+            </>
+          )}
+        </motion.button>
+      </motion.section>
+
+      {/* ── NAVIGATION TABS ── */}
+      <motion.nav
+        className="hp-tabs"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`hp-tab${activeTab === tab.id ? ' hp-tab--active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </motion.nav>
+
+      {/* ── TAB CONTENT ── */}
+      <motion.div
+        className="hp-tab-content"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.55, duration: 0.3 }}
+      >
+        <AnimatePresence mode="wait">
+          {activeTab === 'clients' && <ClientsTab key="clients" />}
+          {activeTab === 'cases' && (
+            <CasesTab
+              key="cases"
+              cases={dashboard?.recently_accessed ?? []}
+              onCaseClick={handleCaseClick}
+            />
+          )}
+          {activeTab === 'workflows' && <WorkflowsTab key="workflows" />}
+          {activeTab === 'documents' && <DocumentsTab key="documents" />}
+          {activeTab === 'intelligence' && (
+            <IntelligenceTab key="intelligence" />
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* ── RECENT CASES STRIP ── */}
+      {recentCases.length > 0 && (
+        <motion.section
+          className="hp-cases-strip"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <h2 className="hp-strip-label">Recent Cases</h2>
+          <div className="hp-strip-scroll">
+            {recentCases.map((c, i) => (
+              <motion.button
+                key={c.id}
+                type="button"
+                className="hp-case-card"
+                onClick={() => handleCaseClick(c)}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{
+                  delay: 0.65 + i * 0.06,
+                  duration: 0.35,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              >
+                <span
+                  className="hp-case-card-priority"
+                  style={{
+                    background: PRIORITY_COLORS[c.priority] || '#6b7280',
+                  }}
+                />
+                <span className="hp-case-card-title">{c.title}</span>
+                <span className="hp-case-card-client">
+                  {c.client_display_name}
+                </span>
+                {c.next_deadline && (
+                  <span className="hp-case-card-deadline">
+                    {new Date(c.next_deadline).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </span>
                 )}
-              </h1>
-            </div>
-
-            <button
-              type="button"
-              className="home-news-entry-button"
-              onClick={() => navigateTo('/news')}
-            >
-              <span className="home-news-entry-button-kicker">
-                Legal Intelligence
-              </span>
-              <span className="home-news-entry-button-title">
-                Open live news room
-              </span>
-              <span className="home-news-entry-button-meta">
-                {newsLoading
-                  ? 'Refreshing feed...'
-                  : `${newsItems.length} stories · ${getNewsUpdatedLabel(null)}`}
-              </span>
-            </button>
+              </motion.button>
+            ))}
           </div>
-        </motion.header>
-
-        {/* ── FOR YOU ── */}
-        {forYou.length > 0 && (
-          <section className="home-section">
-            <motion.h2
-              className="home-section-label"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              {tSb('forYou')}
-            </motion.h2>
-            <motion.div
-              className="home-foryou-row"
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-            >
-              {forYou.map(scored => (
-                <motion.button
-                  key={scored.workflow.id}
-                  className="home-foryou-tile"
-                  variants={staggerItem}
-                  whileHover={tileMotion.hover}
-                  whileTap={tileMotion.tap}
-                  onClick={() => handleWorkflowClick(scored.workflow)}
-                >
-                  <span className="home-foryou-tile-icon">
-                    <WorkflowItemIcon />
-                  </span>
-                  <span className="home-foryou-tile-name">
-                    {workflowDisplayName(scored.workflow)}
-                  </span>
-                  <ForYouBadge reason={scored.reason} />
-                </motion.button>
-              ))}
-            </motion.div>
-          </section>
-        )}
-
-        {/* ── CONTINUE ── */}
-        {continueItems.length > 0 && (
-          <section className="home-section">
-            <motion.h2
-              className="home-section-label"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.25 }}
-            >
-              {tSb('continue')}
-            </motion.h2>
-            <motion.div
-              className="home-continue-row"
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-            >
-              {continueItems.map(item => (
-                <motion.button
-                  key={item.workflow.id}
-                  className="home-continue-pill"
-                  variants={staggerItem}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => handleWorkflowClick(item.workflow)}
-                >
-                  <span className="home-continue-pill-name">
-                    {workflowDisplayName(item.workflow)}
-                  </span>
-                  <span className="home-continue-pill-time">
-                    {timeAgo(item.lastAccessedAt)}
-                  </span>
-                </motion.button>
-              ))}
-            </motion.div>
-          </section>
-        )}
-
-        {/* ── WORKFLOWS ── */}
-        <section className="home-section">
-          <motion.h2
-            className="home-section-label"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            {tSb('allWorkflows')}
-          </motion.h2>
-          <motion.div
-            className="home-workflows-grid"
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-          >
-            {WORKFLOW_CATEGORIES.map(cat => {
-              const color = CATEGORY_COLORS[cat.id];
-              const count = categoryWorkflowCounts[cat.id] || 0;
-
-              return (
-                <motion.button
-                  key={cat.id}
-                  className="home-workflow-tile"
-                  variants={staggerItem}
-                  whileHover={tileMotion.hover}
-                  whileTap={tileMotion.tap}
-                  style={{ '--tile-accent': color } as React.CSSProperties}
-                  onClick={() => navigateTo(getWorkflowCategoryHref(cat.id))}
-                >
-                  <span className="home-workflow-tile-icon">
-                    {CATEGORY_ICONS[cat.id]}
-                  </span>
-                  <span className="home-workflow-tile-name">
-                    {categoryDisplayName(cat)}
-                  </span>
-                  <span className="home-workflow-tile-count">
-                    {count} workflow{count !== 1 ? 's' : ''}
-                  </span>
-                </motion.button>
-              );
-            })}
-          </motion.div>
-        </section>
-
-        {/* ── REFERENCES ── */}
-        <section className="home-section">
-          <motion.h2
-            className="home-section-label"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
-          >
-            {tSb('reference')}
-          </motion.h2>
-          <motion.button
-            className="home-reference-card"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
-            whileHover={tileMotion.hover}
-            whileTap={tileMotion.tap}
-            onClick={() => navigateTo('/global-legal')}
-          >
-            <span className="home-reference-card-icon">
-              <svg
-                width="26"
-                height="26"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
-            </span>
-            <div className="home-reference-card-text">
-              <span className="home-reference-card-title">
-                {tNav('globalLegalLibrary')}
-              </span>
-              <span className="home-reference-card-sub">
-                Browse statutes, regulations, and legal instruments
-              </span>
-            </div>
-            <span className="home-reference-card-arrow">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <polyline points="9,18 15,12 9,6" />
-              </svg>
-            </span>
-          </motion.button>
-
-          <motion.button
-            className="home-reference-card"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: 0.45,
-              duration: 0.4,
-              ease: [0.2, 0.8, 0.2, 1],
-            }}
-            whileHover={tileMotion.hover}
-            whileTap={tileMotion.tap}
-            onClick={() => navigateTo('/documents')}
-          >
-            <span className="home-reference-card-icon">
-              <svg
-                width="26"
-                height="26"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14,2 14,8 20,8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10,9 9,9 8,9" />
-              </svg>
-            </span>
-            <div className="home-reference-card-text">
-              <span className="home-reference-card-title">Document Vault</span>
-              <span className="home-reference-card-sub">
-                Securely manage and index your legal documents
-              </span>
-            </div>
-            <span className="home-reference-card-arrow">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <polyline points="9,18 15,12 9,6" />
-              </svg>
-            </span>
-          </motion.button>
-
-          <motion.button
-            className="home-reference-card home-reference-card--news"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
-            whileHover={tileMotion.hover}
-            whileTap={tileMotion.tap}
-            onClick={() => navigateTo('/news')}
-          >
-            <span className="home-reference-card-icon">
-              <svg
-                width="26"
-                height="26"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4H20v13.5A2.5 2.5 0 0 1 17.5 20H7a3 3 0 0 1-3-3V6.5Z" />
-                <path d="M8 8h8" />
-                <path d="M8 12h8" />
-                <path d="M8 16h5" />
-              </svg>
-            </span>
-            <div className="home-reference-card-text">
-              <span className="home-reference-card-title">
-                Legal Intelligence
-              </span>
-              <span className="home-reference-card-sub">
-                {newsLoading
-                  ? 'Refreshing current legal developments'
-                  : `${newsItems.length} source-linked stories · ${getNewsUpdatedLabel(
-                      null
-                    )}`}
-              </span>
-            </div>
-            <span className="home-reference-card-arrow">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <polyline points="9,18 15,12 9,6" />
-              </svg>
-            </span>
-          </motion.button>
-        </section>
-      </div>
+        </motion.section>
+      )}
     </div>
   );
 }

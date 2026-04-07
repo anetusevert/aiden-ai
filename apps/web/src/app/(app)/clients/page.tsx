@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
+import { useAuth } from '@/lib/AuthContext';
 import { reportScreenContext } from '@/lib/screenContext';
 import {
   fadeUp,
@@ -32,15 +33,55 @@ const TYPE_COLORS: Record<string, string> = {
   organisation: 'rgba(255,255,255,0.8)',
 };
 
+const TYPE_LABELS: Record<string, string> = {
+  '': 'All',
+  individual: 'Individual',
+  company: 'Company',
+  organisation: 'Organisation',
+};
+
 export default function ClientsPage() {
   const { navigateTo } = useNavigation();
+  const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const [searchInput, setSearchInput] = useState(
+    () => searchParams.get('search') ?? ''
+  );
   const [showNewModal, setShowNewModal] = useState(false);
+  const [seedLoading, setSeedLoading] = useState(false);
+
+  const isAdmin = user?.role === 'ADMIN';
+
+  const handleSeedMockDemo = useCallback(async () => {
+    setSeedLoading(true);
+    try {
+      await fetch('/api/v1/seed/mock-cases', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      /* */
+    }
+    setSeedLoading(false);
+  }, []);
+
+  const handleWipeMockDemo = useCallback(async () => {
+    setSeedLoading(true);
+    try {
+      await fetch('/api/v1/seed/mock-cases', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    } catch {
+      /* */
+    }
+    setSeedLoading(false);
+  }, []);
 
   useEffect(() => {
     reportScreenContext({
@@ -55,11 +96,25 @@ export default function ClientsPage() {
     if (searchParams.get('new') === 'true') setShowNewModal(true);
   }, [searchParams]);
 
+  useEffect(() => {
+    setSearchInput(searchParams.get('search') ?? '');
+  }, [searchParams]);
+
+  const pushSearchToUrl = (value: string) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (value) sp.set('search', value);
+    else sp.delete('search');
+    const q = sp.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  };
+
   const fetchClients = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (typeFilter) params.set('client_type', typeFilter);
+    const s = searchParams.get('search');
+    if (s) params.set('search', s);
+    const ct = searchParams.get('client_type');
+    if (ct) params.set('client_type', ct);
     params.set('limit', '50');
     try {
       const res = await fetch(`/api/v1/clients?${params}`, {
@@ -74,7 +129,7 @@ export default function ClientsPage() {
       /* */
     }
     setLoading(false);
-  }, [search, typeFilter]);
+  }, [searchParams]);
 
   useEffect(() => {
     const timer = setTimeout(fetchClients, 300);
@@ -82,6 +137,15 @@ export default function ClientsPage() {
   }, [fetchClients]);
 
   const types = ['', 'individual', 'company', 'organisation'];
+  const typeFilter = searchParams.get('client_type') ?? '';
+
+  const setTypeFilter = (t: string) => {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (t) sp.set('client_type', t);
+    else sp.delete('client_type');
+    const q = sp.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  };
 
   return (
     <motion.div
@@ -96,13 +160,49 @@ export default function ClientsPage() {
     >
       <div className="page-header">
         <h1 className="page-title">Clients</h1>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setShowNewModal(true)}
-        >
-          + New Client
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={seedLoading}
+                onClick={async () => {
+                  await handleSeedMockDemo();
+                  fetchClients();
+                }}
+                style={{ fontSize: 12, height: 32, padding: '0 12px' }}
+              >
+                {seedLoading ? '...' : 'Load Demo Data'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={seedLoading}
+                onClick={async () => {
+                  await handleWipeMockDemo();
+                  fetchClients();
+                }}
+                style={{
+                  fontSize: 12,
+                  height: 32,
+                  padding: '0 12px',
+                  color: '#ef4444',
+                  borderColor: 'rgba(239,68,68,0.3)',
+                }}
+              >
+                {seedLoading ? '...' : 'Wipe Demo Data'}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowNewModal(true)}
+          >
+            + New Client
+          </button>
+        </div>
       </div>
 
       <div className="page-filters">
@@ -110,8 +210,12 @@ export default function ClientsPage() {
           type="text"
           className="page-search"
           placeholder="Search clients..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={e => {
+            const v = e.target.value;
+            setSearchInput(v);
+            pushSearchToUrl(v);
+          }}
         />
         <div className="page-filter-chips">
           {types.map(t => (
@@ -121,7 +225,7 @@ export default function ClientsPage() {
               className={`chip${typeFilter === t ? ' chip-active' : ''}`}
               onClick={() => setTypeFilter(t)}
             >
-              {t || 'All'}
+              {TYPE_LABELS[t]}
             </button>
           ))}
         </div>

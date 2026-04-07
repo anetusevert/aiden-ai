@@ -56,6 +56,7 @@ class AminAgent:
 
         self._registry = ToolRegistry()
         register_all_tools(self._registry)
+        self._api_key_override: str | None = None
 
         self._tool_context = {
             "db": db,
@@ -93,6 +94,16 @@ class AminAgent:
             )
             self.db.add(user_msg)
             await self.db.flush()
+
+            # 1b. Load workspace LLM config (DB override for API key)
+            try:
+                from src.models.workspace import Workspace
+                ws = await self.db.get(Workspace, self.workspace_id)
+                if ws and ws.settings:
+                    llm_cfg = ws.settings.get("llm_config", {})
+                    self._api_key_override = llm_cfg.get("api_key") or None
+            except Exception:
+                pass
 
             # 2. Load soul + twin + case context
             soul = load_soul_files()
@@ -192,6 +203,7 @@ class AminAgent:
             if not force_no_tools and tools_for_call:
                 response = await chat_completion(
                     messages=llm_messages, tools=tools_for_call,
+                    api_key_override=self._api_key_override,
                 )
                 choice = response.choices[0]
                 msg = choice.message
@@ -318,6 +330,7 @@ class AminAgent:
             final_content = ""
             async for chunk in stream_chat_completion(
                 messages=llm_messages, tools=None,
+                api_key_override=self._api_key_override,
             ):
                 if chunk.choices:
                     delta = chunk.choices[0].delta

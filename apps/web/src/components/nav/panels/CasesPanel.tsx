@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useNavigation } from '@/components/NavigationLoader';
 
 interface CaseBrief {
@@ -42,11 +42,35 @@ const PA_ABBREV: Record<string, string> = {
 
 export function CasesPanel() {
   const { navigateTo } = useNavigation();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [paFilter, setPaFilter] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') ?? '';
+  const statusFilter = searchParams.get('status') ?? '';
+  const priorityFilter = searchParams.get('priority') ?? '';
+  const paFilter = searchParams.get('practice_area') ?? '';
+  const [searchInput, setSearchInput] = useState(
+    () => searchParams.get('search') ?? ''
+  );
   const [cases, setCases] = useState<CaseBrief[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setSearchInput(searchParams.get('search') ?? '');
+  }, [searchParams]);
+
+  const patchQuery = useCallback(
+    (patch: Record<string, string>) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      for (const [k, v] of Object.entries(patch)) {
+        if (v) sp.set(k, v);
+        else sp.delete(k);
+      }
+      const q = sp.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   const fetchCases = useCallback(async () => {
     setLoading(true);
@@ -54,6 +78,7 @@ export function CasesPanel() {
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
+      if (priorityFilter) params.set('priority', priorityFilter);
       if (paFilter) params.set('practice_area', paFilter);
       params.set('limit', '20');
       const res = await fetch(`/api/v1/cases?${params}`, {
@@ -67,7 +92,7 @@ export function CasesPanel() {
       /* */
     }
     setLoading(false);
-  }, [search, statusFilter, paFilter]);
+  }, [search, statusFilter, priorityFilter, paFilter]);
 
   useEffect(() => {
     const timer = setTimeout(fetchCases, 300);
@@ -86,39 +111,46 @@ export function CasesPanel() {
   const practiceAreas = Object.keys(PA_ABBREV);
 
   return (
-    <>
+    <div className="r2-panel-stack">
       <div className="r2-header">CASES</div>
 
       <div className="r2-search">
         <input
           type="text"
           placeholder="Search cases..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={e => {
+            const v = e.target.value;
+            setSearchInput(v);
+            patchQuery({ search: v });
+          }}
           className="r2-search-input"
+          aria-label="Search cases"
         />
       </div>
 
-      <div className="r2-filter-chips">
+      <div className="r2-filter-chips r2-filter-chips-grid-status">
         {statuses.map(s => (
           <button
             key={s || 'all'}
             type="button"
             className={`r2-chip${statusFilter === s ? ' r2-chip-active' : ''}`}
-            onClick={() => setStatusFilter(s)}
+            onClick={() => patchQuery({ status: s })}
           >
             {s ? (STATUS_LABELS[s] ?? s) : 'All'}
           </button>
         ))}
       </div>
 
-      <div className="r2-filter-chips r2-filter-chips-scroll">
+      <div className="r2-filter-chips r2-filter-chips-grid-pa">
         {practiceAreas.map(pa => (
           <button
             key={pa}
             type="button"
             className={`r2-chip r2-chip-sm${paFilter === pa ? ' r2-chip-active' : ''}`}
-            onClick={() => setPaFilter(paFilter === pa ? '' : pa)}
+            onClick={() =>
+              patchQuery({ practice_area: paFilter === pa ? '' : pa })
+            }
             title={pa.replace(/_/g, ' ')}
           >
             {PA_ABBREV[pa]}
@@ -195,6 +227,6 @@ export function CasesPanel() {
           + New Case
         </button>
       </div>
-    </>
+    </div>
   );
 }

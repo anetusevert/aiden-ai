@@ -26,7 +26,8 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${base}/:path*`,
+        // Preserve `/api` — FastAPI routes are mounted at `/api/v1/...`, not `/v1/...`.
+        destination: `${base}/api/:path*`,
       },
     ];
   },
