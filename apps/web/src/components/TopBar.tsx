@@ -1,9 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
+import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/lib/AuthContext';
+import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 import {
   getCategoryMeta,
   getWorkflowById,
@@ -18,6 +20,10 @@ function getBreadcrumb(
 ): { parent?: string; current: string } {
   if (pathname === '/home') {
     return { current: 'Home' };
+  }
+
+  if (pathname === '/dashboard') {
+    return { current: 'Dashboard' };
   }
 
   if (pathname === '/news') {
@@ -84,6 +90,7 @@ export function TopBar() {
   const routeLabels = useMemo(
     () => ({
       '/home': 'Home',
+      '/dashboard': 'Dashboard',
       '/news': 'Legal Intelligence',
       '/documents': t('documents'),
       '/research': t('research'),
@@ -116,6 +123,13 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-left">
+        <Link
+          href="/dashboard"
+          className="topbar-brand"
+          aria-label="HeyAmin — Home"
+        >
+          <HeyAminLogo variant="mark" size={24} />
+        </Link>
         <nav
           className="topbar-breadcrumb"
           aria-label={tCommon('breadcrumbNav')}

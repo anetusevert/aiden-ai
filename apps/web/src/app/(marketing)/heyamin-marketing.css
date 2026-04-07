@@ -61,6 +61,23 @@
   gap: 0;
 }
 
+/* ── Logo lockup (mark + wordmark text) ── */
+.ha-logo-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none !important;
+  color: #ffffff !important;
+}
+
+.ha-logo-wordmark {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  line-height: 1;
+}
+
 .ha-header-nav {
   display: flex;
   align-items: center;
@@ -417,42 +434,326 @@
 }
 
 /* ==========================================================================
-   Social Proof Strip
+   Alternate section background
    ========================================================================== */
 
-.ha-social-proof {
-  padding: 3rem 1.5rem;
+.ha-section-alt {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+/* ==========================================================================
+   Research — Stats Row
+   ========================================================================== */
+
+.ha-research-header {
   text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.ha-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.ha-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ha-stat-value {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.ha-stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #52525b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   Security — Card Grid
+   ========================================================================== */
+
+.ha-security-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 3rem;
+}
+
+.ha-security-card {
+  padding: 1.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 200ms ease;
+}
+
+.ha-security-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ha-security-icon {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.ha-security-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #ffffff !important;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.ha-security-desc {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #71717a !important;
+  margin: 0;
+}
+
+/* ==========================================================================
+   About — Typographic Section
+   ========================================================================== */
+
+.ha-section-about {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.ha-social-proof-label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #52525b;
-  margin-bottom: 2rem;
+.ha-about-content {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
 }
 
-.ha-social-proof-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2.5rem;
-  flex-wrap: wrap;
+.ha-about-headline {
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem) !important;
+  font-weight: 500;
+  color: #ffffff !important;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0 0 2rem !important;
+}
+
+.ha-about-body {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: #a1a1aa !important;
+  margin: 0 0 1.25rem;
+}
+
+.ha-about-divider {
+  width: 60px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 2.5rem auto;
+  transform-origin: center;
+}
+
+.ha-about-philosophy {
+  font-size: 1.125rem;
+  font-style: italic;
+  font-weight: 400;
+  color: #71717a !important;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Feature Visuals — Animated Illustrations
+   ========================================================================== */
+
+.fv-case-card,
+.fv-graph,
+.fv-editor {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0a0a0a;
   overflow: hidden;
 }
 
-.ha-social-proof-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.2);
-  white-space: nowrap;
-  transition: color 300ms ease;
+/* ── Case Card ── */
+.fv-card-chrome {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  height: 100%;
 }
 
-.ha-social-proof-name:hover {
-  color: rgba(255, 255, 255, 0.5);
+.fv-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.fv-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.fv-card-title-line {
+  width: 120px;
+  height: 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  margin-bottom: 4px;
+}
+
+.fv-card-subtitle-line {
+  width: 80px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fv-badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.fv-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: var(--badge-color);
+  background: color-mix(in srgb, var(--badge-color) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--badge-color) 20%, transparent);
+}
+
+.fv-info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.fv-info-label {
+  width: 60px;
+  height: 7px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.fv-info-value {
+  height: 7px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fv-timeline {
+  position: relative;
+  margin-top: auto;
+  height: 16px;
+}
+
+.fv-timeline-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-50%);
+}
+
+.fv-timeline-dot {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transform: translate(-50%, -50%);
+}
+
+/* ── Knowledge Graph ── */
+.fv-graph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.fv-graph-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Document Editor ── */
+.fv-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.fv-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.fv-toolbar-btn {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.3);
+  width: 24px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.fv-editor-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  position: relative;
+}
+
+.fv-doc-line {
+  height: 7px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  transform-origin: left;
+}
+
+.fv-cursor {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  width: 2px;
+  height: 14px;
+  background: #ffffff;
+  border-radius: 1px;
 }
 
 /* ==========================================================================
@@ -883,8 +1184,12 @@
     display: none;
   }
 
-  .ha-social-proof-row {
-    gap: 1.5rem;
+  .ha-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ha-security-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .ha-footer {
@@ -916,5 +1221,12 @@
   .mkt-entry-tagline {
     font-size: 1.25rem;
     padding: 0 1rem;
+  }
+  .ha-security-grid {
+    grid-template-columns: 1fr;
+  }
+  .ha-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
   }
 }

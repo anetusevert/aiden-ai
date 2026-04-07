@@ -259,22 +259,8 @@ export function Rail1() {
           className="rail1-logo-heyamin"
           onClick={() => navigateTo('/dashboard')}
           type="button"
-          style={{
-            opacity: 0.7,
-            transition: 'opacity 150ms ease',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 0,
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.opacity = '1';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.opacity = '0.7';
-          }}
         >
-          <HeyAminLogo variant="mark" size={28} />
+          <HeyAminLogo variant="mark" size={36} />
         </button>
         <div className="rail1-logo-divider" />
       </div>

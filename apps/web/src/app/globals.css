@@ -6202,6 +6202,19 @@ a.mkt-footer-link:hover {
   gap: var(--space-4);
 }
 
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.92;
+  transition: opacity 150ms ease;
+  line-height: 0;
+}
+
+.topbar-brand:hover {
+  opacity: 1;
+}
+
 .topbar-left {
   display: flex;
   align-items: center;
@@ -10550,7 +10563,7 @@ textarea:focus-visible {
   z-index: 2;
 }
 
-/* HeyAmin Logo mark hover glow in Rail 1 */
+/* HeyAmin Logo mark in Rail 1 */
 .rail1-logo-heyamin {
   display: flex;
   align-items: center;
@@ -10558,14 +10571,17 @@ textarea:focus-visible {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 6px;
   color: #fff;
   border-radius: var(--radius-md);
-  transition: filter 0.2s ease;
+  transition:
+    filter 0.2s ease,
+    opacity 0.15s ease;
+  opacity: 1;
 }
 
 .rail1-logo-heyamin:hover {
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.45));
 }
 
 .rail1-amin-btn {
@@ -11357,16 +11373,16 @@ textarea:focus-visible {
   }
 }
 
-@keyframes breathe-gold {
+@keyframes breathe-briefing {
   0%,
   100% {
     box-shadow:
-      0 0 8px rgba(255, 255, 255, 0.08),
+      0 0 8px rgba(255, 255, 255, 0.06),
       inset 0 1px 0 rgba(255, 255, 255, 0.03);
   }
   50% {
     box-shadow:
-      0 0 20px rgba(255, 255, 255, 0.18),
+      0 0 16px rgba(255, 255, 255, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 }
@@ -11900,7 +11916,7 @@ textarea:focus-visible {
 .app-shell .dashboard-stat-card {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: 16px;
+  border-radius: 8px;
   padding: var(--space-5);
   cursor: pointer;
   transition: all var(--duration-base) var(--ease-out);
@@ -11912,8 +11928,6 @@ textarea:focus-visible {
 .app-shell .dashboard-stat-card:hover {
   background: var(--glass-bg-hover);
   border-color: var(--glass-border-hover);
-  box-shadow: var(--shadow-glass);
-  transform: translateY(-2px);
 }
 
 .app-shell .dashboard-stat-card-danger {
@@ -11925,19 +11939,10 @@ textarea:focus-visible {
   box-shadow: 0 8px 32px rgba(248, 113, 113, 0.1);
 }
 
-.app-shell .dashboard-stat-card-warn {
-  border-color: var(--status-warning-border);
-}
-
-.app-shell .dashboard-stat-card-warn:hover {
-  border-color: var(--status-warning);
-  box-shadow: 0 8px 32px rgba(251, 191, 36, 0.1);
-}
-
 .app-shell .dashboard-stat-icon {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--glass-bg-elevated);
   border: 1px solid var(--glass-border);
   display: flex;
@@ -11947,15 +11952,12 @@ textarea:focus-visible {
 }
 
 .app-shell .dashboard-stat-card-danger .dashboard-stat-icon {
-  color: var(--status-danger);
-}
-.app-shell .dashboard-stat-card-warn .dashboard-stat-icon {
-  color: var(--status-warning);
+  color: var(--status-error);
 }
 
 .app-shell .dashboard-stat-number {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 300;
   color: var(--text-primary);
   letter-spacing: -0.02em;
   line-height: 1;
@@ -11971,16 +11973,17 @@ textarea:focus-visible {
 
 .app-shell .dashboard-briefing-card {
   background: var(--glass-bg);
-  border: 1px solid var(--border-accent);
-  border-left: 3px solid #ffffff;
-  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
   padding: var(--space-5);
-  animation: breathe-gold 4s ease-in-out infinite;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  animation: breathe-briefing 4s ease-in-out infinite;
 }
 
 .app-shell .dashboard-briefing-title {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #ffffff;
@@ -12297,7 +12300,7 @@ textarea:focus-visible {
 .app-shell .detail-card-gold {
   border-color: var(--border-accent);
   border-left: 3px solid #ffffff;
-  animation: breathe-gold 4s ease-in-out infinite;
+  animation: breathe-briefing 4s ease-in-out infinite;
 }
 
 .app-shell .detail-field {

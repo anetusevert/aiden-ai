@@ -179,7 +179,7 @@ export default function DashboardPage() {
                 <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
               </svg>
             </div>
-            <div className="dashboard-stat-number" style={{ fontWeight: 300 }}>
+            <div className="dashboard-stat-number">
               {dashboard?.active_cases ?? 0}
             </div>
             <div className="dashboard-stat-label">Active Cases</div>
@@ -203,13 +203,13 @@ export default function DashboardPage() {
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </div>
-            <div className="dashboard-stat-number" style={{ fontWeight: 300 }}>
+            <div className="dashboard-stat-number">
               {dashboard?.high_priority ?? 0}
             </div>
             <div className="dashboard-stat-label">High Priority</div>
           </div>
 
-          <div className="dashboard-stat-card dashboard-stat-card-warn">
+          <div className="dashboard-stat-card">
             <div className="dashboard-stat-icon">
               <svg
                 width="20"
@@ -225,7 +225,7 @@ export default function DashboardPage() {
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
             </div>
-            <div className="dashboard-stat-number" style={{ fontWeight: 300 }}>
+            <div className="dashboard-stat-number">
               {(dashboard?.due_today?.length ?? 0) +
                 (dashboard?.due_this_week?.length ?? 0)}
             </div>

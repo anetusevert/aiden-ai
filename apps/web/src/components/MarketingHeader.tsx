@@ -17,12 +17,9 @@ export function MarketingHeader() {
 
   return (
     <header className={`ha-header${scrolled ? ' scrolled' : ''}`}>
-      <Link
-        href="/"
-        className="ha-logo"
-        style={{ display: 'inline-flex', alignItems: 'center' }}
-      >
-        <HeyAminLogo variant="full" size={100} />
+      <Link href="/" className="ha-logo-lockup">
+        <HeyAminLogo variant="mark" size={36} />
+        <span className="ha-logo-wordmark">HeyAmin</span>
       </Link>
 
       <div className="ha-header-nav">
@@ -43,7 +40,7 @@ export function MarketingHeader() {
 
         <div className="ha-header-actions">
           {isAuthenticated ? (
-            <Link href="/documents" className="ha-btn-primary ha-btn-sm">
+            <Link href="/home" className="ha-btn-primary ha-btn-sm">
               Open App
             </Link>
           ) : (
@@ -55,7 +52,7 @@ export function MarketingHeader() {
               >
                 Sign in
               </Link>
-              <Link href="/register" className="ha-btn-primary ha-btn-sm">
+              <Link href="/login" className="ha-btn-primary ha-btn-sm">
                 Request Access
               </Link>
             </>
