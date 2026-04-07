@@ -7,14 +7,13 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.dependencies.auth import RequestContext, require_admin
 from src.models.case import Case
 from src.models.client import Client
-from src.models.organization import OrganizationMembership
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +29,8 @@ class SeedResponse(BaseModel):
 
 
 async def _get_org_id(ctx: RequestContext, db: AsyncSession) -> str:
+    from src.models.organization import OrganizationMembership
+
     result = await db.execute(
         select(OrganizationMembership.organization_id)
         .where(OrganizationMembership.user_id == ctx.user.id)
