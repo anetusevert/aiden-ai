@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
+import { useAuth } from '@/lib/AuthContext';
 import { reportScreenContext } from '@/lib/screenContext';
 import {
   fadeUp,
@@ -33,6 +34,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export default function CasesPage() {
   const { navigateTo } = useNavigation();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const [cases, setCases] = useState<CaseBrief[]>([]);
   const [total, setTotal] = useState(0);
@@ -46,6 +48,35 @@ export default function CasesPage() {
   );
   const [paFilter, setPaFilter] = useState('');
   const [showNewModal, setShowNewModal] = useState(false);
+  const [seedLoading, setSeedLoading] = useState(false);
+
+  const isAdmin = user?.role === 'ADMIN';
+
+  const handleSeedMockCases = useCallback(async () => {
+    setSeedLoading(true);
+    try {
+      await fetch('/api/v1/seed/mock-cases', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      /* */
+    }
+    setSeedLoading(false);
+  }, []);
+
+  const handleWipeMockCases = useCallback(async () => {
+    setSeedLoading(true);
+    try {
+      await fetch('/api/v1/seed/mock-cases', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    } catch {
+      /* */
+    }
+    setSeedLoading(false);
+  }, []);
 
   useEffect(() => {
     reportScreenContext({
@@ -114,13 +145,49 @@ export default function CasesPage() {
             <span className="stat-chip">Total: {total}</span>
           </div>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setShowNewModal(true)}
-        >
-          + New Case
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={seedLoading}
+                onClick={async () => {
+                  await handleSeedMockCases();
+                  fetchCases();
+                }}
+                style={{ fontSize: 12, height: 32, padding: '0 12px' }}
+              >
+                {seedLoading ? '...' : 'Load Demo Data'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={seedLoading}
+                onClick={async () => {
+                  await handleWipeMockCases();
+                  fetchCases();
+                }}
+                style={{
+                  fontSize: 12,
+                  height: 32,
+                  padding: '0 12px',
+                  color: '#ef4444',
+                  borderColor: 'rgba(239,68,68,0.3)',
+                }}
+              >
+                {seedLoading ? '...' : 'Wipe Demo Data'}
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowNewModal(true)}
+          >
+            + New Case
+          </button>
+        </div>
       </div>
 
       <div className="page-filters">

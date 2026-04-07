@@ -30,6 +30,7 @@ from src.routers import (
     scraping_router,
     search_admin_router,
     search_router,
+    seed_router,
     soul_router,
     tenants_router,
     twins_router,
@@ -156,6 +157,7 @@ app.include_router(news_router)
 app.include_router(office_router)
 app.include_router(clients_router)
 app.include_router(cases_router)
+app.include_router(seed_router)
 app.include_router(wiki_router)
 app.include_router(wopi_router)
 

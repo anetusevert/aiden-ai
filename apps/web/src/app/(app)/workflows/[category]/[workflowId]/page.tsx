@@ -101,12 +101,12 @@ export default function WorkflowDetailPage() {
         </div>
       )}
       <section
-        className="workflow-detail-hero"
+        className="workflow-detail-hero wf-detail-compact"
         style={{ '--workflow-accent': accent } as React.CSSProperties}
       >
         <div className="workflow-detail-hero-top">
           <span className="workflow-detail-icon">
-            {renderCategoryIcon(workflow.category, 22)}
+            {renderCategoryIcon(workflow.category, 20)}
           </span>
           <span className="workflow-detail-category">
             {getCategoryDisplayName(workflow.category)}

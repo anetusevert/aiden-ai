@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
 import {
   WORKFLOW_REGISTRY,
@@ -19,13 +19,15 @@ import {
   fadeUp,
   staggerContainer,
   staggerItem,
-  tileMotion,
+  glassReveal,
+  glassBackdrop,
 } from '@/lib/motion';
 
 export default function WorkflowCategoryPage() {
   const params = useParams<{ category: string }>();
   const { navigateTo } = useNavigation();
   const category = params.category as WorkflowCategory;
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const workflows = useMemo(
     () => WORKFLOW_REGISTRY.filter(workflow => workflow.category === category),
@@ -46,31 +48,33 @@ export default function WorkflowCategoryPage() {
   const accent = WORKFLOW_CATEGORY_ACCENTS[category];
   return (
     <motion.div className="workflow-hub-page" {...fadeUp}>
+      {/* Compact inline header */}
       <section
-        className="workflow-hub-hero"
+        className="wf-hub-header"
         style={{ '--workflow-accent': accent } as React.CSSProperties}
       >
-        <div className="workflow-hub-hero-icon">
-          {renderCategoryIcon(category, 28)}
+        <div className="wf-hub-header-row">
+          <div className="wf-hub-header-icon">
+            {renderCategoryIcon(category, 22)}
+          </div>
+          <div className="wf-hub-header-meta">
+            <h1 className="wf-hub-header-title">
+              {getCategoryDisplayName(category)}
+            </h1>
+            <span className="wf-hub-header-count">
+              {workflows.length} workflow{workflows.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
-        <div className="workflow-hub-hero-copy">
-          <span className="workflow-hub-kicker">Practice area</span>
-          <h1 className="workflow-hub-title">
-            {getCategoryDisplayName(category)}
-          </h1>
-          <p className="workflow-hub-subtitle">
-            Amin can guide lawyers through structured tasks, source the right
-            workspace, and move each matter into the correct execution path.
-          </p>
-        </div>
-        <div className="workflow-hub-hero-stat">
-          <span>Available workflows</span>
-          <strong>{workflows.length}</strong>
-        </div>
+        <p className="wf-hub-header-sub">
+          Structured tasks guided by Amin — source the right workspace and move
+          each matter into the correct execution path.
+        </p>
       </section>
 
+      {/* Workflow cards */}
       <motion.section
-        className="workflow-hub-grid"
+        className="wf-hub-grid"
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
@@ -79,32 +83,74 @@ export default function WorkflowCategoryPage() {
           <motion.button
             key={workflow.id}
             type="button"
-            className="workflow-hub-card"
+            className="wf-hub-card"
             style={{ '--workflow-accent': accent } as React.CSSProperties}
             variants={staggerItem}
-            whileHover={tileMotion.hover}
-            whileTap={tileMotion.tap}
             onClick={() => navigateTo(getWorkflowHref(workflow))}
           >
-            <div className="workflow-hub-card-head">
-              <span className="workflow-hub-card-icon">
-                {renderCategoryIcon(workflow.category, 18)}
-              </span>
-              <span className="workflow-hub-card-tools">
+            <div className="wf-hub-card-body">
+              <h2 className="wf-hub-card-title">{workflow.name}</h2>
+              <p className="wf-hub-card-desc">{workflow.description}</p>
+            </div>
+            <div className="wf-hub-card-meta">
+              <span className="wf-hub-pill">{workflow.steps.length} steps</span>
+              <span className="wf-hub-pill">
                 {getToolLabel(workflow.route)}
               </span>
-            </div>
-            <h2 className="workflow-hub-card-title">{workflow.name}</h2>
-            <p className="workflow-hub-card-description">
-              {workflow.description}
-            </p>
-            <div className="workflow-hub-card-footer">
-              <span>{workflow.steps.length} steps</span>
-              <span>Open workflow</span>
+              <span className="wf-hub-card-open">Open &rarr;</span>
             </div>
           </motion.button>
         ))}
+
+        {/* Create Workflow placeholder */}
+        <motion.button
+          type="button"
+          className="wf-hub-card wf-create-card"
+          variants={staggerItem}
+          onClick={() => setShowCreateModal(true)}
+        >
+          <div className="wf-create-icon">+</div>
+          <span className="wf-create-label">Create Workflow</span>
+        </motion.button>
       </motion.section>
+
+      <AnimatePresence>
+        {showCreateModal && (
+          <motion.div
+            className="modal-backdrop"
+            {...glassBackdrop}
+            onClick={() => setShowCreateModal(false)}
+          >
+            <motion.div
+              className="modal-content"
+              {...glassReveal}
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: 420 }}
+            >
+              <div className="modal-header">
+                <h2>Create Workflow</h2>
+                <button
+                  type="button"
+                  className="modal-close"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  &times;
+                </button>
+              </div>
+              <div
+                className="modal-body"
+                style={{ textAlign: 'center', padding: '2rem 1.5rem' }}
+              >
+                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  Custom workflow creation is coming soon. You will be able to
+                  define your own multi-step workflows, assign tools, and share
+                  them across your practice.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

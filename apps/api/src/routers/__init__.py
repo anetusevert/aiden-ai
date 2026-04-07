@@ -28,6 +28,7 @@ from src.routers.workflows import router as workflows_router
 from src.routers.news import router as news_router
 from src.routers.office import router as office_router
 from src.routers.workspaces import router as workspaces_router
+from src.routers.seed import router as seed_router
 from src.routers.wiki import router as wiki_router
 from src.routers.wopi import router as wopi_router
 
@@ -60,6 +61,7 @@ __all__ = [
     "news_router",
     "office_router",
     "voice_ws",
+    "seed_router",
     "wiki_router",
     "wopi_router",
 ]
