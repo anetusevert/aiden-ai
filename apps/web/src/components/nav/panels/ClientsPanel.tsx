@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useNavigation } from '@/components/NavigationLoader';
 
 interface ClientItem {
@@ -67,10 +68,24 @@ function TypeIcon({ type }: { type: string }) {
 
 export function ClientsPanel() {
   const { navigateTo } = useNavigation();
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.get('search') ?? '';
+  const typeFilter = searchParams.get('client_type') ?? '';
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const setClientType = useCallback(
+    (t: string) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      if (t) sp.set('client_type', t);
+      else sp.delete('client_type');
+      const q = sp.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -106,26 +121,16 @@ export function ClientsPanel() {
   };
 
   return (
-    <>
+    <div className="r2-panel-stack">
       <div className="r2-header">CLIENTS</div>
 
-      <div className="r2-search">
-        <input
-          type="text"
-          placeholder="Search clients..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="r2-search-input"
-        />
-      </div>
-
-      <div className="r2-filter-chips">
+      <div className="r2-filter-chips r2-filter-chips-grid">
         {types.map(t => (
           <button
             key={t || 'all'}
             type="button"
             className={`r2-chip${typeFilter === t ? ' r2-chip-active' : ''}`}
-            onClick={() => setTypeFilter(t)}
+            onClick={() => setClientType(t)}
           >
             {typeLabels[t]}
           </button>
@@ -185,6 +190,6 @@ export function ClientsPanel() {
           + New Client
         </button>
       </div>
-    </>
+    </div>
   );
 }

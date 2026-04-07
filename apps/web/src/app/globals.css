@@ -4762,8 +4762,28 @@ a.mkt-footer-link:hover {
 
 .rail2-content {
   flex: 1;
+  min-height: 0;
   padding: 8px 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
+}
+
+/* Single full-height panel: header + filters + scrollable list + footer */
+.r2-panel-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.r2-panel-stack .r2-scrollable {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* -------------------------------------------------------------------------
@@ -13010,6 +13030,21 @@ textarea:focus-visible {
 .app-shell .r2-filter-chips-scroll {
   overflow-x: auto;
   flex-wrap: nowrap;
+}
+
+/* Narrow rail: 2×2 grid so type filters stay visible without wrapping */
+.app-shell .r2-filter-chips-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: var(--space-1) var(--space-4);
+  flex-shrink: 0;
+}
+
+.app-shell .r2-filter-chips-grid .r2-chip {
+  min-width: 0;
+  text-align: center;
+  padding: 4px 4px;
 }
 
 .app-shell .r2-case-row {
