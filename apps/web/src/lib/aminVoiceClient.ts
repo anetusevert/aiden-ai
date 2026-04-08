@@ -55,6 +55,7 @@ let _activeVoice = 'onyx';
 let _activeLanguage = 'en';
 
 const MALE_VOICES = new Set(['onyx', 'echo', 'fable']);
+const SUPPORTED_LANGUAGES = new Set(['en', 'ar', 'fr', 'ur', 'tl']);
 
 const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
   en: 'CRITICAL INSTRUCTION: You MUST respond exclusively in English.',
@@ -68,6 +69,11 @@ function _buildSessionInstructions(): string {
   const langInstruction =
     LANGUAGE_INSTRUCTIONS[_activeLanguage] ?? LANGUAGE_INSTRUCTIONS.en;
   return `${langInstruction}\n\nYou are Amin, an AI legal assistant specialized in GCC and Saudi Arabian law. You are professional, concise, and helpful.`;
+}
+
+export function normalizeLanguage(language: string | null | undefined): string {
+  const normalized = language?.trim().toLowerCase();
+  return normalized && SUPPORTED_LANGUAGES.has(normalized) ? normalized : 'en';
 }
 
 const LANGUAGE_CONFIRMATIONS: Record<string, string> = {
@@ -104,7 +110,7 @@ export function getVoice(): string {
  */
 export function setLanguage(language: string): void {
   const prev = _activeLanguage;
-  _activeLanguage = language;
+  _activeLanguage = normalizeLanguage(language);
   if (_singletonInstance?.connected && prev !== _activeLanguage) {
     _singletonInstance.sendSessionUpdate({
       instructions: _buildSessionInstructions(),
@@ -196,17 +202,8 @@ export class AminVoiceClient {
       this._sessionReady = false;
       this.handlers.onConnected?.();
 
-      // Send a complete session config after a short delay so the backend
-      // proxy has time to establish the upstream OpenAI connection and send
-      // its own session.update first. Our update reinforces the correct
-      // voice, language, modalities, and turn detection.
-      setTimeout(() => {
-        if (this._disconnected || this.ws !== ws) return;
-        this._sendFullSessionConfig();
-      }, 400);
-
       // Mic capture is deferred until we receive session.updated from OpenAI
-      // to avoid streaming audio before the session is configured.
+      // to avoid streaming audio before the server-backed session is configured.
       this._startKeepalive();
       this._resetSilenceTimer();
     };
@@ -396,29 +393,6 @@ export class AminVoiceClient {
         response: {
           modalities: ['text', 'audio'],
           instructions: `Say exactly this and nothing else: "${text}"`,
-        },
-      })
-    );
-  }
-
-  private _sendFullSessionConfig(): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    this.ws.send(
-      JSON.stringify({
-        type: 'session.update',
-        session: {
-          modalities: ['text', 'audio'],
-          voice: _activeVoice,
-          instructions: _buildSessionInstructions(),
-          input_audio_format: 'pcm16',
-          output_audio_format: 'pcm16',
-          input_audio_transcription: { model: 'whisper-1' },
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 500,
-          },
         },
       })
     );

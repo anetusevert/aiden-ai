@@ -30,11 +30,21 @@ LANGUAGE_NAMES: dict[str, str] = {
     "tl": "Filipino (Tagalog)",
 }
 
+SUPPORTED_LANGUAGES = set(LANGUAGE_NAMES.keys())
 
-async def _load_voice_prefs(user_id: str) -> tuple[str, str]:
-    """Return ``(voice, language_instruction)`` for *user_id*.
 
-    Falls back to ``("onyx", <english instruction>)`` on any error.
+def normalize_app_language(value: str | None) -> str:
+    """Return a supported language code, defaulting to English."""
+    if not value:
+        return "en"
+    normalized = value.strip().lower()
+    return normalized if normalized in SUPPORTED_LANGUAGES else "en"
+
+
+async def _load_voice_prefs(user_id: str) -> tuple[str, str, str]:
+    """Return ``(voice, language_instruction, language_code)`` for *user_id*.
+
+    Falls back to ``("onyx", <english instruction>, "en")`` on any error.
     """
     from src.database import async_session_maker
     from src.services.agent.context_builder import get_safe_voice
@@ -46,13 +56,13 @@ async def _load_voice_prefs(user_id: str) -> tuple[str, str]:
             await db.commit()
             prefs = twin.preferences or {}
             voice = get_safe_voice(prefs)
-            lang_code = prefs.get("app_language", "en")
+            lang_code = normalize_app_language(prefs.get("app_language"))
     except Exception as exc:
         logger.warning("Failed to load twin prefs for voice WS: %s", exc)
         voice = "onyx"
         lang_code = "en"
 
-    lang_name = LANGUAGE_NAMES.get(lang_code, "English")
+    lang_name = LANGUAGE_NAMES[lang_code]
     if lang_code == "en":
         instruction = "CRITICAL INSTRUCTION: You MUST respond exclusively in English."
     else:
@@ -68,7 +78,7 @@ async def _load_voice_prefs(user_id: str) -> tuple[str, str]:
         "You are Amin, an AI legal assistant specialized in GCC and Saudi Arabian law. "
         "You are professional, concise, and helpful."
     )
-    return voice, full_instructions
+    return voice, full_instructions, lang_code
 
 
 async def _load_workspace_api_key(workspace_id: str | None) -> str | None:
@@ -147,9 +157,10 @@ async def voice_ws(websocket: WebSocket, conversation_id: Optional[str] = None):
         "You are Amin, an AI legal assistant specialized in GCC and Saudi Arabian law. "
         "You are professional, concise, and helpful."
     )
+    lang_code = "en"
     if user_id:
         try:
-            voice, instructions = await _load_voice_prefs(user_id)
+            voice, instructions, lang_code = await _load_voice_prefs(user_id)
         except Exception as exc:
             logger.warning("Voice WS: failed to load prefs, using defaults: %s", exc)
 
@@ -162,7 +173,10 @@ async def voice_ws(websocket: WebSocket, conversation_id: Optional[str] = None):
                 "instructions": instructions,
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
-                "input_audio_transcription": {"model": "whisper-1"},
+                "input_audio_transcription": {
+                    "model": "whisper-1",
+                    "language": lang_code,
+                },
                 "turn_detection": {
                     "type": "server_vad",
                     "threshold": 0.5,

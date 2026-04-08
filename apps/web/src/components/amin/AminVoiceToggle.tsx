@@ -4,8 +4,9 @@ import { useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { voiceRingPulse } from '@/lib/motion';
 import { useAminContext } from './AminProvider';
-import { AminVoiceClient } from '@/lib/aminVoiceClient';
+import { AminVoiceClient, setLanguage, setVoice } from '@/lib/aminVoiceClient';
 import { WakeWordDetector } from '@/lib/wakeWordDetector';
+import { useAuth } from '@/lib/AuthContext';
 
 export type VoiceMode = 'off' | 'active' | 'passive';
 
@@ -17,6 +18,7 @@ const RING_COLORS: Record<VoiceMode, string> = {
 
 export function AminVoiceToggle() {
   const { voiceMode, setVoiceMode } = useAminContext();
+  const { aminVoice, appLanguage } = useAuth();
   const voiceClientRef = useRef<AminVoiceClient | null>(null);
   const wakeDetectorRef = useRef<WakeWordDetector | null>(null);
 
@@ -38,6 +40,9 @@ export function AminVoiceToggle() {
     setVoiceMode('active');
     wakeDetectorRef.current?.stop();
 
+    if (aminVoice) setVoice(aminVoice);
+    setLanguage(appLanguage);
+
     if (!voiceClientRef.current) {
       voiceClientRef.current = new AminVoiceClient({
         onAutoIdle: () => enterPassive(),
@@ -52,7 +57,7 @@ export function AminVoiceToggle() {
     } else {
       voiceClientRef.current.resumeMicCapture();
     }
-  }, [setVoiceMode, enterPassive]);
+  }, [setVoiceMode, enterPassive, aminVoice, appLanguage]);
 
   const enterOff = useCallback(() => {
     setVoiceMode('off');

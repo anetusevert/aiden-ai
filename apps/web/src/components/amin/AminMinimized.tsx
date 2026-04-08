@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { AminAvatar, type AminAvatarState } from './AminAvatar';
 import { aminBreathing } from '@/lib/motion';
 import { useAminContext } from './AminProvider';
-import { AminVoiceClient, setVoice } from '@/lib/aminVoiceClient';
+import { AminVoiceClient, setLanguage, setVoice } from '@/lib/aminVoiceClient';
 import { WakeWordDetector } from '@/lib/wakeWordDetector';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -18,7 +18,7 @@ const RING_COLORS = {
 export function AminMinimized() {
   const { aminStatus, voiceMode, setVoiceMode, openPanel, sendGreeting } =
     useAminContext();
-  const { aminVoice } = useAuth();
+  const { aminVoice, appLanguage } = useAuth();
 
   const voiceClientRef = useRef<AminVoiceClient | null>(null);
   const wakeDetectorRef = useRef<WakeWordDetector | null>(null);
@@ -44,6 +44,7 @@ export function AminMinimized() {
     sendGreeting();
 
     if (aminVoice) setVoice(aminVoice);
+    setLanguage(appLanguage);
 
     if (!voiceClientRef.current) {
       voiceClientRef.current = new AminVoiceClient({
@@ -59,7 +60,7 @@ export function AminMinimized() {
     } else {
       voiceClientRef.current.resumeMicCapture();
     }
-  }, [setVoiceMode, enterPassive, sendGreeting, aminVoice]);
+  }, [setVoiceMode, enterPassive, sendGreeting, aminVoice, appLanguage]);
 
   const enterOff = useCallback(() => {
     setVoiceMode('off');

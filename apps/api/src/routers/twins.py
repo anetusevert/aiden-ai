@@ -79,6 +79,14 @@ class TwinUpdate(BaseModel):
 # ---------- Helpers ----------
 
 
+def normalize_app_language(value: str | None) -> str:
+    """Return a supported app language code, defaulting to English."""
+    if not value:
+        return "en"
+    normalized = value.strip().lower()
+    return normalized if normalized in VALID_LANGUAGES else "en"
+
+
 def _twin_to_response(twin) -> TwinResponse:
     """Build a TwinResponse from a UserTwin model instance."""
     prefs = twin.preferences or {}
@@ -92,7 +100,7 @@ def _twin_to_response(twin) -> TwinResponse:
         learned_corrections=twin.learned_corrections or [],
         personality_model=twin.personality_model or {},
         amin_voice=get_safe_voice(prefs),
-        app_language=prefs.get("app_language", "en"),
+        app_language=normalize_app_language(prefs.get("app_language")),
         consolidated_at=twin.consolidated_at.isoformat() if twin.consolidated_at else None,
         created_at=twin.created_at.isoformat(),
         updated_at=twin.updated_at.isoformat(),
@@ -149,7 +157,7 @@ async def update_my_twin(
             safe = body.amin_voice if body.amin_voice in VALID_VOICES else "onyx"
             prefs["amin_voice"] = safe
         if body.app_language is not None:
-            prefs["app_language"] = body.app_language
+            prefs["app_language"] = normalize_app_language(body.app_language)
         twin.preferences = prefs
 
     await db.commit()

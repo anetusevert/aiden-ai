@@ -18,7 +18,13 @@ import {
   getDefaultOutputLanguage,
 } from './apiClient';
 import { getApiBaseUrl } from './api';
-import { setVoice, setLanguage } from './aminVoiceClient';
+import { normalizeLanguage, setVoice, setLanguage } from './aminVoiceClient';
+
+const SUPPORTED_VOICES = new Set(['onyx', 'echo', 'fable']);
+
+function normalizeVoice(voice: string | null | undefined): string {
+  return voice && SUPPORTED_VOICES.has(voice) ? voice : 'onyx';
+}
 
 interface AuthContextType {
   user: CurrentUserResponse | null;
@@ -59,10 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [appLanguage, setAppLanguage] = useState('en');
 
   const setAminPreferences = useCallback((voice: string, language: string) => {
-    setAminVoice(voice);
-    setAppLanguage(language);
-    setVoice(voice);
-    setLanguage(language);
+    const normalizedVoice = normalizeVoice(voice);
+    const normalizedLanguage = normalizeLanguage(language);
+    setAminVoice(normalizedVoice);
+    setAppLanguage(normalizedLanguage);
+    setVoice(normalizedVoice);
+    setLanguage(normalizedLanguage);
   }, []);
 
   const loadTwinPreferences = useCallback(async () => {
@@ -77,8 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (res.ok) {
         const data = await res.json();
-        const voice = data.amin_voice || 'onyx';
-        const lang = data.app_language || 'en';
+        const voice = normalizeVoice(data.amin_voice);
+        const lang = normalizeLanguage(data.app_language);
         setAminVoice(voice);
         setAppLanguage(lang);
         setVoice(voice);
