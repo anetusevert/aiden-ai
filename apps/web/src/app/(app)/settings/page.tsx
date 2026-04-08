@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
-import { apiClient, LLMConfigResponse, LLMTestResult } from '@/lib/apiClient';
+import {
+  apiClient,
+  LLMConfigResponse,
+  LLMConfigUpdate,
+  LLMTestResult,
+} from '@/lib/apiClient';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 
 type ProviderKey = 'openai' | 'anthropic' | 'openai_compatible' | 'stub';
@@ -161,7 +166,7 @@ export default function SettingsPage() {
     setTestResult(null);
 
     try {
-      const body: Record<string, string | null | undefined> = {
+      const body: LLMConfigUpdate = {
         provider,
         model: getEffectiveModel(),
       };
