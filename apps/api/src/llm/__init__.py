@@ -5,12 +5,15 @@ It supports multiple providers via a common interface.
 
 Providers:
 - StubLLMProvider: Deterministic output for tests (default in test mode)
-- OpenAILLMProvider: Optional OpenAI integration
+- OpenAILLMProvider: OpenAI integration
+- AnthropicLLMProvider: Anthropic (Claude) integration
+- OpenAICompatibleLLMProvider: Any OpenAI-compatible API (Ollama, OpenRouter, etc.)
 
 Configuration:
-- LLM_PROVIDER: "stub" or "openai" (default: "stub")
+- LLM_PROVIDER: "stub", "openai", "anthropic", or "openai_compatible"
 - LLM_MODEL: Model name (provider-specific)
-- LLM_API_KEY: API key (required for OpenAI)
+- LLM_API_KEY: API key (required for OpenAI/Anthropic)
+- LLM_BASE_URL: Base URL (required for openai_compatible)
 """
 
 from src.llm.base import LLMProvider, LLMResponse

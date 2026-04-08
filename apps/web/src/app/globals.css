@@ -13256,6 +13256,12 @@ textarea:focus-visible {
   font-size: 0.6875rem;
 }
 
+.settings-field-hint {
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
 .settings-select,
 .settings-input {
   background: var(--bg-elevated);

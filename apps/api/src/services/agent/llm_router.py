@@ -14,20 +14,37 @@ _client_cache: Any = None
 _client_cache_key: str | None = None
 
 
-def _get_client(api_key_override: str | None = None):
+def _get_client(
+    api_key_override: str | None = None,
+    base_url_override: str | None = None,
+):
     """Get or create an AsyncOpenAI client.
 
     Uses api_key_override (from workspace DB settings) if provided,
     otherwise falls back to env var LLM_API_KEY.
+    Supports base_url_override for OpenAI-compatible providers.
     """
     global _client_cache, _client_cache_key
     api_key = api_key_override or settings.llm_api_key
-    if not api_key:
+    base_url = base_url_override or settings.llm_base_url
+    cache_key = f"{api_key}|{base_url}"
+
+    if not api_key and not base_url:
         return None
-    if _client_cache is None or _client_cache_key != api_key:
+
+    if _client_cache is None or _client_cache_key != cache_key:
         from openai import AsyncOpenAI
-        _client_cache = AsyncOpenAI(api_key=api_key)
-        _client_cache_key = api_key
+
+        kwargs: dict[str, Any] = {}
+        if api_key:
+            kwargs["api_key"] = api_key
+        else:
+            kwargs["api_key"] = "not-needed"
+        if base_url:
+            kwargs["base_url"] = base_url
+
+        _client_cache = AsyncOpenAI(**kwargs)
+        _client_cache_key = cache_key
     return _client_cache
 
 
@@ -62,6 +79,7 @@ async def chat_completion(
     tools: list[dict[str, Any]] | None = None,
     model: str | None = None,
     api_key_override: str | None = None,
+    base_url_override: str | None = None,
 ) -> Any:
     """Non-streaming completion with optional tools.
 
@@ -69,7 +87,7 @@ async def chat_completion(
     with exponential backoff: 1s, 2s, 4s, up to 4 attempts.
     """
     use_model = model or settings.llm_model or "gpt-4o"
-    client = _get_client(api_key_override)
+    client = _get_client(api_key_override, base_url_override)
 
     if client is None:
         return _stub_completion(messages)
@@ -147,6 +165,7 @@ async def stream_chat_completion(
     tools: list[dict[str, Any]] | None = None,
     model: str | None = None,
     api_key_override: str | None = None,
+    base_url_override: str | None = None,
 ) -> AsyncIterator[Any]:
     """Streaming completion that yields delta chunks.
 
@@ -154,7 +173,7 @@ async def stream_chat_completion(
     Once streaming begins, errors are propagated (no mid-stream retry).
     """
     use_model = model or settings.llm_model or "gpt-4o"
-    client = _get_client(api_key_override)
+    client = _get_client(api_key_override, base_url_override)
 
     if client is None:
         yield _stub_delta(messages)

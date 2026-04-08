@@ -223,13 +223,15 @@ class Settings(BaseSettings):
     # =========================================================================
     # LLM Configuration
     # =========================================================================
-    # LLM_PROVIDER: "stub" (default, for testing) or "openai"
+    # LLM_PROVIDER: "stub", "openai", "anthropic", or "openai_compatible"
     # LLM_MODEL: Model name (provider-specific, optional)
-    # LLM_API_KEY: API key (required for OpenAI)
+    # LLM_API_KEY: API key (required for OpenAI/Anthropic)
+    # LLM_BASE_URL: Base URL for openai_compatible provider (e.g. http://localhost:11434/v1)
     # =========================================================================
     llm_provider: str = "stub"
     llm_model: str | None = None
     llm_api_key: str | None = None
+    llm_base_url: str | None = None
 
     # =========================================================================
     # Global Legal Corpus Configuration

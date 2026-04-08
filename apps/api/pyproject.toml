@@ -30,6 +30,7 @@ dependencies = [
     "pgvector>=0.2.0",
     # LLM providers
     "openai>=1.0.0",
+    "anthropic>=0.39.0",
     "argon2-cffi>=23.1.0",
     # Agent enhancements
     "tiktoken>=0.7.0",

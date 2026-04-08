@@ -3,60 +3,156 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
-import { getApiBaseUrl } from '@/lib/api';
+import { apiClient, LLMConfigResponse, LLMTestResult } from '@/lib/apiClient';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 
-interface LLMConfig {
-  provider: string;
-  model: string | null;
-  api_key_set: boolean;
-  api_key_preview: string | null;
+type ProviderKey = 'openai' | 'anthropic' | 'openai_compatible' | 'stub';
+
+interface ProviderOption {
+  value: ProviderKey;
+  label: string;
+  description: string;
+  needsApiKey: boolean;
+  needsBaseUrl: boolean;
+  models: { value: string; label: string }[];
+  keyPlaceholder: string;
+  keyHelpUrl?: string;
+  keyHelpLabel?: string;
 }
 
-interface TestResult {
-  success: boolean;
-  provider: string;
-  model: string;
-  message: string;
+const PROVIDERS: ProviderOption[] = [
+  {
+    value: 'openai',
+    label: 'OpenAI',
+    description: 'GPT-4o, GPT-4 Turbo, o3 and more',
+    needsApiKey: true,
+    needsBaseUrl: false,
+    models: [
+      { value: 'gpt-4o', label: 'GPT-4o (Recommended)' },
+      { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Faster, cheaper)' },
+      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+      { value: 'o3-mini', label: 'o3-mini (Reasoning)' },
+    ],
+    keyPlaceholder: 'sk-...',
+    keyHelpUrl: 'https://platform.openai.com/api-keys',
+    keyHelpLabel: 'platform.openai.com/api-keys',
+  },
+  {
+    value: 'anthropic',
+    label: 'Anthropic',
+    description: 'Claude Sonnet, Opus, Haiku',
+    needsApiKey: true,
+    needsBaseUrl: false,
+    models: [
+      {
+        value: 'claude-sonnet-4-20250514',
+        label: 'Claude Sonnet 4 (Recommended)',
+      },
+      {
+        value: 'claude-opus-4-20250514',
+        label: 'Claude Opus 4 (Most capable)',
+      },
+      { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fast)' },
+    ],
+    keyPlaceholder: 'sk-ant-...',
+    keyHelpUrl: 'https://console.anthropic.com/settings/keys',
+    keyHelpLabel: 'console.anthropic.com/settings/keys',
+  },
+  {
+    value: 'openai_compatible',
+    label: 'OpenAI-Compatible',
+    description: 'Ollama, OpenRouter, vLLM, Together AI, Groq, LM Studio',
+    needsApiKey: false,
+    needsBaseUrl: true,
+    models: [{ value: 'llama3', label: 'Llama 3 (default)' }],
+    keyPlaceholder: 'API key (optional for local models)',
+  },
+  {
+    value: 'stub',
+    label: 'Stub (Test Mode)',
+    description: 'No external API calls — returns placeholder responses',
+    needsApiKey: false,
+    needsBaseUrl: false,
+    models: [],
+    keyPlaceholder: '',
+  },
+];
+
+function getProviderOption(key: string): ProviderOption {
+  return PROVIDERS.find(p => p.value === key) || PROVIDERS[0];
 }
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const [config, setConfig] = useState<LLMConfig | null>(null);
+  const [config, setConfig] = useState<LLMConfigResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [testResult, setTestResult] = useState<LLMTestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const [provider, setProvider] = useState('openai');
+  const [provider, setProvider] = useState<ProviderKey>('openai');
   const [model, setModel] = useState('gpt-4o');
   const [apiKey, setApiKey] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
+  const [customModel, setCustomModel] = useState('');
 
-  const baseUrl = getApiBaseUrl();
+  const providerOption = getProviderOption(provider);
+  const hasPresetModels = providerOption.models.length > 0;
+  const isCustomModelMode =
+    provider === 'openai_compatible' ||
+    (hasPresetModels && model === '__custom__');
 
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch(`${baseUrl}/admin/settings/llm`, {
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data: LLMConfig = await res.json();
+      const data = await apiClient.getLLMConfig();
       setConfig(data);
-      setProvider(data.provider);
-      setModel(data.model || 'gpt-4o');
+      setProvider((data.provider || 'openai') as ProviderKey);
+      const pOpt = getProviderOption(data.provider);
+      const knownModel = pOpt.models.find(m => m.value === data.model);
+      if (knownModel) {
+        setModel(data.model || pOpt.models[0]?.value || '');
+      } else if (data.model && pOpt.models.length > 0) {
+        setModel('__custom__');
+        setCustomModel(data.model);
+      } else {
+        setModel(data.model || pOpt.models[0]?.value || '');
+        if (!knownModel && data.model) {
+          setCustomModel(data.model);
+        }
+      }
+      if (data.base_url) setBaseUrl(data.base_url);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load settings');
     } finally {
       setLoading(false);
     }
-  }, [baseUrl]);
+  }, []);
 
   useEffect(() => {
     fetchConfig();
   }, [fetchConfig]);
+
+  const handleProviderChange = (newProvider: ProviderKey) => {
+    setProvider(newProvider);
+    setTestResult(null);
+    setError(null);
+    setSuccess(null);
+    const pOpt = getProviderOption(newProvider);
+    if (pOpt.models.length > 0) {
+      setModel(pOpt.models[0].value);
+    } else {
+      setModel('');
+    }
+    setCustomModel('');
+  };
+
+  const getEffectiveModel = (): string | null => {
+    if (provider === 'stub') return null;
+    if (isCustomModelMode) return customModel || null;
+    return model || null;
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -65,20 +161,14 @@ export default function SettingsPage() {
     setTestResult(null);
 
     try {
-      const body: Record<string, string | null> = { provider, model };
+      const body: Record<string, string | null | undefined> = {
+        provider,
+        model: getEffectiveModel(),
+      };
       if (apiKey) body.api_key = apiKey;
+      if (providerOption.needsBaseUrl) body.base_url = baseUrl || null;
 
-      const res = await fetch(`${baseUrl}/admin/settings/llm`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data: LLMConfig = await res.json();
+      const data = await apiClient.updateLLMConfig(body);
       setConfig(data);
       setApiKey('');
       setSuccess('LLM configuration saved successfully.');
@@ -96,13 +186,7 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      const res = await fetch(`${baseUrl}/admin/settings/llm/test`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data: TestResult = await res.json();
+      const data = await apiClient.testLLMConnection();
       setTestResult(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Test failed');
@@ -161,7 +245,7 @@ export default function SettingsPage() {
           <div>
             <h2 className="settings-card-title">LLM Provider</h2>
             <p className="settings-card-desc">
-              Connect an OpenAI API key to enable Amin&apos;s full capabilities
+              Connect an AI provider to enable Amin&apos;s full capabilities
             </p>
           </div>
         </div>
@@ -174,11 +258,13 @@ export default function SettingsPage() {
           <div className="settings-form">
             <div className="settings-status">
               <span
-                className={`settings-status-dot ${config?.api_key_set ? 'active' : 'inactive'}`}
+                className={`settings-status-dot ${config?.api_key_set || config?.provider === 'stub' || config?.provider === 'openai_compatible' ? 'active' : 'inactive'}`}
               />
               <span className="settings-status-text">
-                {config?.api_key_set
-                  ? `Connected — ${config.provider} (${config.model || 'default'})`
+                {config?.api_key_set ||
+                config?.provider === 'stub' ||
+                config?.provider === 'openai_compatible'
+                  ? `Connected — ${getProviderOption(config?.provider || 'stub').label} (${config?.model || 'default'})`
                   : 'Not configured — Amin is running in stub mode'}
               </span>
               {config?.api_key_preview && (
@@ -196,56 +282,110 @@ export default function SettingsPage() {
                 id="provider"
                 className="settings-select"
                 value={provider}
-                onChange={e => setProvider(e.target.value)}
+                onChange={e =>
+                  handleProviderChange(e.target.value as ProviderKey)
+                }
               >
-                <option value="openai">OpenAI</option>
-                <option value="stub">Stub (Test Mode)</option>
+                {PROVIDERS.map(p => (
+                  <option key={p.value} value={p.value}>
+                    {p.label} — {p.description}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {provider === 'openai' && (
+            {provider !== 'stub' && (
               <>
-                <div className="settings-field">
-                  <label className="settings-label" htmlFor="model">
-                    Model
-                  </label>
-                  <select
-                    id="model"
-                    className="settings-select"
-                    value={model}
-                    onChange={e => setModel(e.target.value)}
-                  >
-                    <option value="gpt-4o">GPT-4o (Recommended)</option>
-                    <option value="gpt-4o-mini">
-                      GPT-4o Mini (Faster, cheaper)
-                    </option>
-                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                    <option value="o3-mini">o3-mini (Reasoning)</option>
-                  </select>
-                </div>
+                {hasPresetModels && (
+                  <div className="settings-field">
+                    <label className="settings-label" htmlFor="model">
+                      Model
+                    </label>
+                    <select
+                      id="model"
+                      className="settings-select"
+                      value={model}
+                      onChange={e => setModel(e.target.value)}
+                    >
+                      {providerOption.models.map(m => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                      <option value="__custom__">Custom model...</option>
+                    </select>
+                  </div>
+                )}
 
-                <div className="settings-field">
-                  <label className="settings-label" htmlFor="apiKey">
-                    API Key
-                    {config?.api_key_set && (
-                      <span className="settings-label-hint">
-                        {' '}
-                        — leave blank to keep current key
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    id="apiKey"
-                    type="password"
-                    className="settings-input"
-                    placeholder={
-                      config?.api_key_set ? '••••••••••••' : 'sk-...'
-                    }
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
+                {isCustomModelMode && (
+                  <div className="settings-field">
+                    <label className="settings-label" htmlFor="customModel">
+                      {hasPresetModels ? 'Custom Model Name' : 'Model Name'}
+                    </label>
+                    <input
+                      id="customModel"
+                      type="text"
+                      className="settings-input"
+                      placeholder="e.g. llama3, mixtral, gpt-4o..."
+                      value={customModel}
+                      onChange={e => setCustomModel(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {providerOption.needsBaseUrl && (
+                  <div className="settings-field">
+                    <label className="settings-label" htmlFor="baseUrl">
+                      Base URL
+                    </label>
+                    <input
+                      id="baseUrl"
+                      type="url"
+                      className="settings-input"
+                      placeholder="http://localhost:11434/v1"
+                      value={baseUrl}
+                      onChange={e => setBaseUrl(e.target.value)}
+                    />
+                    <p className="settings-field-hint">
+                      The OpenAI-compatible chat completions endpoint (must end
+                      with /v1)
+                    </p>
+                  </div>
+                )}
+
+                {(providerOption.needsApiKey ||
+                  provider === 'openai_compatible') && (
+                  <div className="settings-field">
+                    <label className="settings-label" htmlFor="apiKey">
+                      API Key
+                      {!providerOption.needsApiKey && (
+                        <span className="settings-label-hint">
+                          {' '}
+                          — optional for local models
+                        </span>
+                      )}
+                      {config?.api_key_set && (
+                        <span className="settings-label-hint">
+                          {' '}
+                          — leave blank to keep current key
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      id="apiKey"
+                      type="password"
+                      className="settings-input"
+                      placeholder={
+                        config?.api_key_set
+                          ? '••••••••••••'
+                          : providerOption.keyPlaceholder
+                      }
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      autoComplete="off"
+                    />
+                  </div>
+                )}
               </>
             )}
 
@@ -275,49 +415,87 @@ export default function SettingsPage() {
                 onClick={handleSave}
                 disabled={saving}
               >
-                {saving ? 'Saving…' : 'Save Configuration'}
+                {saving ? 'Saving...' : 'Save Configuration'}
               </button>
               <button
                 className="settings-btn settings-btn-secondary"
                 onClick={handleTest}
-                disabled={testing || !config?.api_key_set}
+                disabled={testing}
               >
-                {testing ? 'Testing…' : 'Test Connection'}
+                {testing ? 'Testing...' : 'Test Connection'}
               </button>
             </div>
           </div>
         )}
       </motion.div>
 
-      <motion.div
-        className="settings-card settings-card-info"
-        variants={staggerItem}
-      >
-        <h3 className="settings-info-title">How to get an API key</h3>
-        <ol className="settings-info-steps">
-          <li>
-            Go to{' '}
-            <a
-              href="https://platform.openai.com/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              platform.openai.com/api-keys
-            </a>
-          </li>
-          <li>Click &quot;Create new secret key&quot;</li>
-          <li>Copy the key and paste it above</li>
-          <li>
-            Click &quot;Save Configuration&quot;, then &quot;Test
-            Connection&quot;
-          </li>
-        </ol>
-        <p className="settings-info-note">
-          Your API key is stored securely in the database and is never exposed
-          in the UI after saving. Amin uses GPT-4o by default for the best
-          balance of capability and speed.
-        </p>
-      </motion.div>
+      {providerOption.keyHelpUrl && (
+        <motion.div
+          className="settings-card settings-card-info"
+          variants={staggerItem}
+        >
+          <h3 className="settings-info-title">
+            How to get a {providerOption.label} API key
+          </h3>
+          <ol className="settings-info-steps">
+            <li>
+              Go to{' '}
+              <a
+                href={providerOption.keyHelpUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {providerOption.keyHelpLabel}
+              </a>
+            </li>
+            <li>Create a new API key</li>
+            <li>Copy the key and paste it above</li>
+            <li>
+              Click &quot;Save Configuration&quot;, then &quot;Test
+              Connection&quot;
+            </li>
+          </ol>
+          <p className="settings-info-note">
+            Your API key is stored securely in the database and is never exposed
+            in the UI after saving.
+          </p>
+        </motion.div>
+      )}
+
+      {provider === 'openai_compatible' && (
+        <motion.div
+          className="settings-card settings-card-info"
+          variants={staggerItem}
+        >
+          <h3 className="settings-info-title">Using open-source models</h3>
+          <p className="settings-info-note">
+            Any service that exposes an OpenAI-compatible chat completions API
+            will work. Common options:
+          </p>
+          <ul className="settings-info-steps">
+            <li>
+              <strong>Ollama</strong> — local, free. Base URL:{' '}
+              <code>http://localhost:11434/v1</code>
+            </li>
+            <li>
+              <strong>LM Studio</strong> — local, free. Base URL:{' '}
+              <code>http://localhost:1234/v1</code>
+            </li>
+            <li>
+              <strong>OpenRouter</strong> — cloud, many models. Base URL:{' '}
+              <code>https://openrouter.ai/api/v1</code>
+            </li>
+            <li>
+              <strong>Together AI</strong> — cloud, fast inference. Base URL:{' '}
+              <code>https://api.together.xyz/v1</code>
+            </li>
+            <li>
+              <strong>Groq</strong> — cloud, very fast. Base URL:{' '}
+              <code>https://api.groq.com/openai/v1</code>
+            </li>
+          </ul>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

@@ -447,12 +447,6 @@ class OpenAILLMProvider(LLMProvider):
     """
 
     def __init__(self, api_key: str, default_model: str = "gpt-4o-mini"):
-        """Initialize OpenAI provider.
-
-        Args:
-            api_key: OpenAI API key
-            default_model: Default model to use
-        """
         self._api_key = api_key
         self._default_model = default_model
         self._client = None
@@ -497,20 +491,15 @@ class OpenAILLMProvider(LLMProvider):
 
         use_model = model or self._default_model
 
-        # Newer models (o1, o3, gpt-5+) require different API parameters:
-        # - Use max_completion_tokens instead of max_tokens
-        # - Don't support custom temperature (only default value)
         is_new_model = use_model.startswith(("o1", "o3", "gpt-5", "gpt-6"))
 
         if is_new_model:
-            # Newer models: use max_completion_tokens, no temperature parameter
             response = await client.chat.completions.create(
                 model=use_model,
                 messages=messages,
                 max_completion_tokens=max_tokens,
             )
         else:
-            # Standard models (gpt-3.5, gpt-4): use max_tokens and temperature
             response = await client.chat.completions.create(
                 model=use_model,
                 messages=messages,
@@ -529,94 +518,288 @@ class OpenAILLMProvider(LLMProvider):
         )
 
 
+class AnthropicLLMProvider(LLMProvider):
+    """Anthropic (Claude) LLM provider.
+
+    Uses the Anthropic Messages API. Requires an Anthropic API key.
+    """
+
+    def __init__(self, api_key: str, default_model: str = "claude-sonnet-4-20250514"):
+        self._api_key = api_key
+        self._default_model = default_model
+        self._client = None
+
+    @property
+    def provider_name(self) -> str:
+        return "anthropic"
+
+    @property
+    def default_model(self) -> str:
+        return self._default_model
+
+    def _get_client(self):
+        """Lazy-load the Anthropic client."""
+        if self._client is None:
+            try:
+                from anthropic import AsyncAnthropic
+
+                self._client = AsyncAnthropic(api_key=self._api_key)
+            except ImportError:
+                raise RuntimeError(
+                    "Anthropic package not installed. Run: pip install anthropic"
+                )
+        return self._client
+
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        model: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 2048,
+        system_prompt: str | None = None,
+    ) -> LLMResponse:
+        """Generate text using Anthropic API."""
+        client = self._get_client()
+        use_model = model or self._default_model
+
+        kwargs: dict = {
+            "model": use_model,
+            "max_tokens": max_tokens,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if system_prompt:
+            kwargs["system"] = system_prompt
+        if temperature > 0:
+            kwargs["temperature"] = temperature
+
+        response = await client.messages.create(**kwargs)
+        text = ""
+        for block in response.content:
+            if hasattr(block, "text"):
+                text += block.text
+
+        return LLMResponse(
+            text=text,
+            model=use_model,
+            provider=self.provider_name,
+            prompt_tokens=response.usage.input_tokens if response.usage else None,
+            completion_tokens=response.usage.output_tokens if response.usage else None,
+            total_tokens=(
+                (response.usage.input_tokens + response.usage.output_tokens)
+                if response.usage
+                else None
+            ),
+        )
+
+
+class OpenAICompatibleLLMProvider(LLMProvider):
+    """OpenAI-compatible API provider for self-hosted and third-party models.
+
+    Works with any service that implements the OpenAI chat completions API:
+    Ollama, LM Studio, vLLM, OpenRouter, Together AI, Groq, etc.
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        default_model: str = "llama3",
+    ):
+        self._api_key = api_key
+        self._base_url = base_url.rstrip("/")
+        self._default_model = default_model
+        self._client = None
+
+    @property
+    def provider_name(self) -> str:
+        return "openai_compatible"
+
+    @property
+    def default_model(self) -> str:
+        return self._default_model
+
+    def _get_client(self):
+        """Lazy-load the OpenAI-compatible client."""
+        if self._client is None:
+            from openai import AsyncOpenAI
+
+            self._client = AsyncOpenAI(
+                api_key=self._api_key or "not-needed",
+                base_url=self._base_url,
+            )
+        return self._client
+
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        model: str | None = None,
+        temperature: float = 0.0,
+        max_tokens: int = 2048,
+        system_prompt: str | None = None,
+    ) -> LLMResponse:
+        """Generate text using an OpenAI-compatible API."""
+        client = self._get_client()
+
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        use_model = model or self._default_model
+
+        response = await client.chat.completions.create(
+            model=use_model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+        usage = response.usage
+        return LLMResponse(
+            text=response.choices[0].message.content or "",
+            model=use_model,
+            provider=self.provider_name,
+            prompt_tokens=usage.prompt_tokens if usage else None,
+            completion_tokens=usage.completion_tokens if usage else None,
+            total_tokens=usage.total_tokens if usage else None,
+        )
+
+
+VALID_PROVIDERS = {"stub", "openai", "anthropic", "openai_compatible"}
+
+
 def get_llm_provider_from_settings(settings: "Settings") -> LLMProvider:
     """Get an LLM provider based on explicit settings (non-cached).
 
     This is the core relay logic. Use this for testing or when you need
     a fresh provider instance with specific settings.
 
-    Args:
-        settings: The Settings instance to read configuration from
-
-    Returns:
-        Configured LLMProvider instance
-
     Raises:
-        LLMProviderConfigError: If configuration is invalid (e.g., OpenAI
-            selected but API key missing in non-dev environment, or
-            unknown provider specified)
+        LLMProviderConfigError: If configuration is invalid
     """
     provider_name = getattr(settings, "llm_provider", "stub").lower()
     model = getattr(settings, "llm_model", None)
     api_key = getattr(settings, "llm_api_key", None)
     environment = getattr(settings, "environment", "dev")
 
-    # Validate provider name
-    valid_providers = {"stub", "openai"}
-    if provider_name not in valid_providers:
+    if provider_name not in VALID_PROVIDERS:
         raise LLMProviderConfigError(
             f"Unknown LLM_PROVIDER: '{provider_name}'.\n"
             f"\n"
-            f"  Valid providers: {', '.join(sorted(valid_providers))}\n"
+            f"  Valid providers: {', '.join(sorted(VALID_PROVIDERS))}\n"
             f"\n"
             f"  Remediation:\n"
-            f"    Set LLM_PROVIDER to one of: stub, openai\n"
+            f"    Set LLM_PROVIDER to one of: {', '.join(sorted(VALID_PROVIDERS))}\n"
         )
 
-    # Handle stub provider (always allowed)
     if provider_name == "stub":
         logger.info("LLM Provider Relay: Using StubLLMProvider (LLM_PROVIDER=stub)")
         return StubLLMProvider()
 
-    # Handle OpenAI provider
     if provider_name == "openai":
-        if api_key:
-            # API key present - use OpenAI
-            effective_model = model or "gpt-4o-mini"
-            logger.info(
-                f"LLM Provider Relay: Using OpenAILLMProvider "
-                f"(model={effective_model})"
-            )
-            return OpenAILLMProvider(api_key=api_key, default_model=effective_model)
+        return _resolve_openai_provider(api_key, model, environment)
 
-        # API key missing - behavior depends on environment
+    if provider_name == "anthropic":
+        return _resolve_anthropic_provider(api_key, model, environment)
+
+    if provider_name == "openai_compatible":
+        base_url = getattr(settings, "llm_base_url", None)
+        return _resolve_openai_compatible_provider(
+            api_key, model, base_url, environment
+        )
+
+    return StubLLMProvider()
+
+
+def _resolve_openai_provider(
+    api_key: str | None, model: str | None, environment: str
+) -> LLMProvider:
+    if api_key:
+        effective_model = model or "gpt-4o-mini"
+        logger.info(
+            "LLM Provider Relay: Using OpenAILLMProvider (model=%s)", effective_model
+        )
+        return OpenAILLMProvider(api_key=api_key, default_model=effective_model)
+    return _handle_missing_key("openai", environment, "LLM_API_KEY=sk-your-api-key")
+
+
+def _resolve_anthropic_provider(
+    api_key: str | None, model: str | None, environment: str
+) -> LLMProvider:
+    if api_key:
+        effective_model = model or "claude-sonnet-4-20250514"
+        logger.info(
+            "LLM Provider Relay: Using AnthropicLLMProvider (model=%s)",
+            effective_model,
+        )
+        return AnthropicLLMProvider(api_key=api_key, default_model=effective_model)
+    return _handle_missing_key(
+        "anthropic", environment, "LLM_API_KEY=sk-ant-your-api-key"
+    )
+
+
+def _resolve_openai_compatible_provider(
+    api_key: str | None,
+    model: str | None,
+    base_url: str | None,
+    environment: str,
+) -> LLMProvider:
+    if not base_url:
         if environment == "dev":
-            # Dev environment: warn loudly and fall back to stub
             logger.warning(
-                "=" * 70 + "\n"
-                "  LLM PROVIDER RELAY: FALLBACK TO STUB\n"
-                "=" * 70 + "\n"
-                "  LLM_PROVIDER=openai but LLM_API_KEY is not set.\n"
-                "  ENVIRONMENT=dev, so falling back to StubLLMProvider.\n"
-                "\n"
-                "  To use OpenAI, set:\n"
-                "    LLM_API_KEY=sk-your-api-key\n"
-                "\n"
-                "  The Stub provider returns generic/deterministic answers.\n"
-                "  This is suitable for development and testing only.\n"
-                "=" * 70
+                "LLM_PROVIDER=openai_compatible but LLM_BASE_URL not set. "
+                "Falling back to StubLLMProvider."
             )
             return StubLLMProvider()
-        else:
-            # Staging/prod: hard fail with clear error
-            raise LLMProviderConfigError(
-                f"CRITICAL LLM CONFIGURATION ERROR\n"
-                f"\n"
-                f"  Current configuration:\n"
-                f"    ENVIRONMENT = {environment}\n"
-                f"    LLM_PROVIDER = openai\n"
-                f"    LLM_API_KEY = (not set)\n"
-                f"\n"
-                f"  OpenAI provider requires an API key in non-dev environments.\n"
-                f"\n"
-                f"  Remediation (choose one):\n"
-                f"    1. Set LLM_API_KEY=sk-your-api-key\n"
-                f"    2. Set LLM_PROVIDER=stub (for testing only)\n"
-                f"    3. Set ENVIRONMENT=dev (for local development)\n"
-            )
+        raise LLMProviderConfigError(
+            "LLM_BASE_URL is required for openai_compatible provider."
+        )
+    effective_model = model or "llama3"
+    logger.info(
+        "LLM Provider Relay: Using OpenAICompatibleLLMProvider "
+        "(base_url=%s, model=%s)",
+        base_url,
+        effective_model,
+    )
+    return OpenAICompatibleLLMProvider(
+        api_key=api_key or "",
+        base_url=base_url,
+        default_model=effective_model,
+    )
 
-    # Should never reach here, but defensive fallback
-    return StubLLMProvider()
+
+def _handle_missing_key(
+    provider_name: str, environment: str, remediation_hint: str
+) -> LLMProvider:
+    """Common fallback logic when an API key is missing."""
+    if environment == "dev":
+        logger.warning(
+            "=" * 70 + "\n"
+            "  LLM PROVIDER RELAY: FALLBACK TO STUB\n"
+            "=" * 70 + "\n"
+            "  LLM_PROVIDER=%s but LLM_API_KEY is not set.\n"
+            "  ENVIRONMENT=dev, so falling back to StubLLMProvider.\n"
+            "\n"
+            "  To use %s, set:\n"
+            "    %s\n"
+            "=" * 70,
+            provider_name,
+            provider_name,
+            remediation_hint,
+        )
+        return StubLLMProvider()
+    raise LLMProviderConfigError(
+        f"CRITICAL LLM CONFIGURATION ERROR\n"
+        f"\n"
+        f"  LLM_PROVIDER={provider_name} but LLM_API_KEY is not set.\n"
+        f"  ENVIRONMENT={environment}\n"
+        f"\n"
+        f"  Remediation:\n"
+        f"    1. Set {remediation_hint}\n"
+        f"    2. Set LLM_PROVIDER=stub (for testing only)\n"
+    )
 
 
 @lru_cache(maxsize=1)
@@ -653,19 +836,15 @@ def get_stub_provider() -> StubLLMProvider:
     return StubLLMProvider()
 
 
+_PROVIDER_DEFAULT_MODELS = {
+    "openai": "gpt-4o-mini",
+    "anthropic": "claude-sonnet-4-20250514",
+    "openai_compatible": "llama3",
+}
+
+
 def get_llm_status() -> dict:
-    """Get the current LLM provider status for diagnostics.
-
-    Returns a dictionary with:
-    - provider: The active provider name ("stub" or "openai")
-    - model: The active model name
-    - configured_provider: What LLM_PROVIDER is set to
-    - api_key_set: Whether LLM_API_KEY is set (not the actual key)
-    - environment: Current environment
-    - is_fallback: Whether we fell back from OpenAI to Stub
-
-    This is useful for health checks and debugging.
-    """
+    """Get the current LLM provider status for diagnostics."""
     from src.config import settings
 
     provider_name = getattr(settings, "llm_provider", "stub").lower()
@@ -674,21 +853,32 @@ def get_llm_status() -> dict:
     environment = getattr(settings, "environment", "dev")
 
     api_key_set = bool(api_key)
-
-    # Determine what provider is actually active
     is_fallback = False
-    if provider_name == "openai":
+
+    if provider_name in ("openai", "anthropic"):
         if api_key_set:
-            active_provider = "openai"
-            active_model = model or "gpt-4o-mini"
+            active_provider = provider_name
+            active_model = model or _PROVIDER_DEFAULT_MODELS.get(provider_name, "gpt-4o-mini")
         else:
-            # Fallback to stub (only possible in dev)
             active_provider = "stub"
             active_model = "stub-v1"
             is_fallback = True
+    elif provider_name == "openai_compatible":
+        base_url = getattr(settings, "llm_base_url", None)
+        if base_url:
+            active_provider = "openai_compatible"
+            active_model = model or "llama3"
+        else:
+            active_provider = "stub"
+            active_model = "stub-v1"
+            is_fallback = True
+    elif provider_name == "stub":
+        active_provider = "stub"
+        active_model = "stub-v1"
     else:
         active_provider = "stub"
         active_model = "stub-v1"
+        is_fallback = True
 
     return {
         "provider": active_provider,

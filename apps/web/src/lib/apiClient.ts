@@ -2655,6 +2655,38 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // ===========================================================================
+  // Admin Settings — LLM Provider
+  // ===========================================================================
+
+  async getLLMConfig(): Promise<LLMConfigResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<LLMConfigResponse>(
+      `${baseUrl}/admin/settings/llm`,
+      { method: 'GET', headers: this.getHeaders() }
+    );
+  }
+
+  async updateLLMConfig(data: LLMConfigUpdate): Promise<LLMConfigResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<LLMConfigResponse>(
+      `${baseUrl}/admin/settings/llm`,
+      {
+        method: 'PUT',
+        headers: { ...this.getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async testLLMConnection(): Promise<LLMTestResult> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<LLMTestResult>(
+      `${baseUrl}/admin/settings/llm/test`,
+      { method: 'POST', headers: this.getHeaders() }
+    );
+  }
 }
 
 // ============================================================================
@@ -3149,6 +3181,32 @@ export interface WikiIngestResponse {
   action: string;
   links_created: number;
   contradictions: string[];
+}
+
+// =============================================================================
+// Admin Settings — LLM Provider Types
+// =============================================================================
+
+export interface LLMConfigResponse {
+  provider: string;
+  model: string | null;
+  api_key_set: boolean;
+  api_key_preview: string | null;
+  base_url: string | null;
+}
+
+export interface LLMConfigUpdate {
+  provider: string;
+  model?: string | null;
+  api_key?: string | null;
+  base_url?: string | null;
+}
+
+export interface LLMTestResult {
+  success: boolean;
+  provider: string;
+  model: string;
+  message: string;
 }
 
 /**
