@@ -186,7 +186,7 @@ export function Rail1() {
   const isAdmin = user?.role === 'ADMIN';
 
   const SECTION_ROUTES: Record<NavSection, string> = {
-    home: '/dashboard',
+    home: '/home',
     clients: '/clients',
     cases: '/cases',
     workflows: '/workflows/litigation',
@@ -246,7 +246,7 @@ export function Rail1() {
         return;
       }
 
-      const route = def.directRoute ?? SECTION_ROUTES[section] ?? '/dashboard';
+      const route = def.directRoute ?? SECTION_ROUTES[section] ?? '/home';
       navigateTo(route);
     },
     [navigateTo, pathname, togglePanel] // eslint-disable-line react-hooks/exhaustive-deps
@@ -257,7 +257,7 @@ export function Rail1() {
       <div className="rail1-top">
         <button
           className="rail1-logo-heyamin"
-          onClick={() => navigateTo('/dashboard')}
+          onClick={() => navigateTo('/home')}
           type="button"
         >
           <HeyAminLogo variant="mark" size={36} />

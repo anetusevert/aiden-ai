@@ -5,7 +5,7 @@ from typing import Any
 from src.services.agent.tool_registry import Tool, ToolResult
 
 KNOWN_ROUTES = {
-    "dashboard": "/dashboard",
+    "dashboard": "/home",
     "cases": "/cases",
     "clients": "/clients",
     "knowledge": "/knowledge",

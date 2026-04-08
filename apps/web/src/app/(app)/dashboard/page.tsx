@@ -75,6 +75,7 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<
     'deadline' | 'priority' | 'practice_area' | 'client'
   >('deadline');
+  const [error, setError] = useState(false);
 
   const firstName = user?.full_name?.split(' ')[0] ?? 'Counsellor';
 
@@ -89,12 +90,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetch('/api/v1/cases/dashboard', { credentials: 'include' })
-      .then(r => (r.ok ? r.json() : null))
+      .then(r => {
+        if (!r.ok) throw new Error('Dashboard fetch failed');
+        return r.json();
+      })
       .then(data => {
         setDashboard(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, []);
 
   const handleCaseClick = useCallback(
@@ -180,7 +187,7 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div className="dashboard-stat-number">
-              {dashboard?.active_cases ?? 0}
+              {error ? '–' : (dashboard?.active_cases ?? 0)}
             </div>
             <div className="dashboard-stat-label">Active Cases</div>
           </div>
@@ -204,7 +211,7 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div className="dashboard-stat-number">
-              {dashboard?.high_priority ?? 0}
+              {error ? '–' : (dashboard?.high_priority ?? 0)}
             </div>
             <div className="dashboard-stat-label">High Priority</div>
           </div>
@@ -226,8 +233,10 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div className="dashboard-stat-number">
-              {(dashboard?.due_today?.length ?? 0) +
-                (dashboard?.due_this_week?.length ?? 0)}
+              {error
+                ? '–'
+                : (dashboard?.due_today?.length ?? 0) +
+                  (dashboard?.due_this_week?.length ?? 0)}
             </div>
             <div className="dashboard-stat-label">Due This Week</div>
           </div>
@@ -235,7 +244,9 @@ export default function DashboardPage() {
           <div className="dashboard-briefing-card">
             <div className="dashboard-briefing-title">Amin&apos;s Briefing</div>
             <div className="dashboard-briefing-body">
-              {dashboard ? (
+              {error ? (
+                'Unable to load briefing. Please refresh the page.'
+              ) : dashboard ? (
                 dashboard.active_cases > 0 ? (
                   `You have ${dashboard.active_cases} active case${dashboard.active_cases !== 1 ? 's' : ''}. ${dashboard.high_priority} require${dashboard.high_priority !== 1 ? '' : 's'} urgent attention. ${(dashboard.due_today?.length ?? 0) + (dashboard.due_this_week?.length ?? 0)} deadline${(dashboard.due_today?.length ?? 0) + (dashboard.due_this_week?.length ?? 0) !== 1 ? 's' : ''} approaching this week.`
                 ) : (

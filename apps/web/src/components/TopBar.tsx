@@ -123,11 +123,7 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <Link
-          href="/dashboard"
-          className="topbar-brand"
-          aria-label="HeyAmin — Home"
-        >
+        <Link href="/home" className="topbar-brand" aria-label="HeyAmin — Home">
           <HeyAminLogo variant="mark" size={24} />
         </Link>
         <nav
