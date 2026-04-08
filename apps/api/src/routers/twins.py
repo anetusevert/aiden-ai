@@ -177,9 +177,21 @@ class VoicePreviewRequest(BaseModel):
 async def voice_preview(
     body: VoicePreviewRequest,
     ctx: Annotated[RequestContext, Depends(get_workspace_context)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Generate a short TTS preview clip for the given voice."""
-    api_key = settings.llm_api_key
+    # Try workspace DB key first, then fall back to env var
+    api_key: str | None = None
+    try:
+        from src.models.workspace import Workspace
+
+        ws = await db.get(Workspace, ctx.workspace.id)
+        if ws and ws.settings:
+            api_key = ws.settings.get("llm_config", {}).get("api_key") or None
+    except Exception as exc:
+        logger.warning("voice_preview: failed to load workspace API key: %s", exc)
+    if not api_key:
+        api_key = settings.llm_api_key
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

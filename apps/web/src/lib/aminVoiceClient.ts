@@ -70,15 +70,27 @@ function _buildSessionInstructions(): string {
   return `${langInstruction}\n\nYou are Amin, an AI legal assistant specialized in GCC and Saudi Arabian law. You are professional, concise, and helpful.`;
 }
 
+const LANGUAGE_CONFIRMATIONS: Record<string, string> = {
+  en: 'I have switched to English. How can I help you?',
+  ar: '\u0644\u0642\u062F \u0627\u0646\u062A\u0642\u0644\u062A \u0625\u0644\u0649 \u0627\u0644\u0639\u0631\u0628\u064A\u0629. \u0643\u064A\u0641 \u064A\u0645\u0643\u0646\u0646\u064A \u0645\u0633\u0627\u0639\u062F\u062A\u0643\u061F',
+  fr: 'Je suis pass\u00E9 au fran\u00E7ais. Comment puis-je vous aider ?',
+  ur: '\u0645\u06CC\u06BA \u0627\u0631\u062F\u0648 \u0645\u06CC\u06BA \u0628\u0627\u062A \u06A9\u0631 \u0631\u06C1\u0627 \u06C1\u0648\u06BA\u06D4 \u0645\u06CC\u06BA \u0622\u067E \u06A9\u06CC \u06A9\u06CC\u0633\u06D2 \u0645\u062F\u062F \u06A9\u0631 \u0633\u06A9\u062A\u0627 \u06C1\u0648\u06BA\u061F',
+  tl: 'Lumipat na ako sa Filipino. Paano kita matutulungan?',
+};
+
 /**
  * Update the active voice for Amin's realtime session.
  * Takes effect immediately if a session is connected; otherwise
- * applied on next connect.
+ * applied on next connect. Triggers a spoken confirmation.
  */
 export function setVoice(voice: string): void {
+  const prev = _activeVoice;
   _activeVoice = MALE_VOICES.has(voice) ? voice : 'onyx';
-  if (_singletonInstance?.connected) {
+  if (_singletonInstance?.connected && prev !== _activeVoice) {
     _singletonInstance.sendSessionUpdate({ voice: _activeVoice });
+    _singletonInstance.requestSpokenConfirmation(
+      'Your voice has been updated. This is how I sound now.'
+    );
   }
 }
 
@@ -88,14 +100,18 @@ export function getVoice(): string {
 
 /**
  * Update the active language for Amin's realtime session.
- * Sends updated instructions to OpenAI Realtime if connected.
+ * Sends updated instructions and a spoken confirmation in the new language.
  */
 export function setLanguage(language: string): void {
+  const prev = _activeLanguage;
   _activeLanguage = language;
-  if (_singletonInstance?.connected) {
+  if (_singletonInstance?.connected && prev !== _activeLanguage) {
     _singletonInstance.sendSessionUpdate({
       instructions: _buildSessionInstructions(),
     });
+    const confirmation =
+      LANGUAGE_CONFIRMATIONS[_activeLanguage] ?? LANGUAGE_CONFIRMATIONS.en;
+    _singletonInstance.requestSpokenConfirmation(confirmation);
   }
 }
 
@@ -123,6 +139,7 @@ export class AminVoiceClient {
   private _lastDisconnectTime = 0;
   private _playbackQueue: string[] = [];
   private _isPlaying = false;
+  private _sessionReady = false;
 
   constructor(handlers: VoiceEventHandler = {}) {
     if (_singletonInstance && _singletonInstance !== this) {
@@ -176,21 +193,20 @@ export class AminVoiceClient {
       clearTimeout(connectTimeout);
       if (this._disconnected || this.ws !== ws) return;
       this.reconnectAttempts = 0;
+      this._sessionReady = false;
       this.handlers.onConnected?.();
 
-      // Delay client-side session.update to let the backend proxy establish
-      // the upstream OpenAI connection and send its own session.update first.
+      // Send a complete session config after a short delay so the backend
+      // proxy has time to establish the upstream OpenAI connection and send
+      // its own session.update first. Our update reinforces the correct
+      // voice, language, modalities, and turn detection.
       setTimeout(() => {
         if (this._disconnected || this.ws !== ws) return;
-        this.sendSessionUpdate({
-          voice: _activeVoice,
-          instructions: _buildSessionInstructions(),
-        });
-      }, 300);
+        this._sendFullSessionConfig();
+      }, 400);
 
-      if (!this._micPaused) {
-        void this.startMicCapture();
-      }
+      // Mic capture is deferred until we receive session.updated from OpenAI
+      // to avoid streaming audio before the session is configured.
       this._startKeepalive();
       this._resetSilenceTimer();
     };
@@ -365,17 +381,64 @@ export class AminVoiceClient {
 
   sendSessionUpdate(params: { voice?: string; instructions?: string }): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    const session: Record<string, string> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const session: Record<string, any> = {};
     if (params.voice) session.voice = params.voice;
     if (params.instructions) session.instructions = params.instructions;
     if (Object.keys(session).length === 0) return;
     this.ws.send(JSON.stringify({ type: 'session.update', session }));
   }
 
+  requestSpokenConfirmation(text: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(
+      JSON.stringify({
+        type: 'response.create',
+        response: {
+          modalities: ['text', 'audio'],
+          instructions: `Say exactly this and nothing else: "${text}"`,
+        },
+      })
+    );
+  }
+
+  private _sendFullSessionConfig(): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(
+      JSON.stringify({
+        type: 'session.update',
+        session: {
+          modalities: ['text', 'audio'],
+          voice: _activeVoice,
+          instructions: _buildSessionInstructions(),
+          input_audio_format: 'pcm16',
+          output_audio_format: 'pcm16',
+          input_audio_transcription: { model: 'whisper-1' },
+          turn_detection: {
+            type: 'server_vad',
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500,
+          },
+        },
+      })
+    );
+  }
+
   private _handleServerEvent(data: Record<string, unknown>): void {
     const type = data.type as string;
 
     switch (type) {
+      case 'session.created':
+      case 'session.updated':
+        if (!this._sessionReady) {
+          this._sessionReady = true;
+          if (!this._micPaused) {
+            void this.startMicCapture();
+          }
+        }
+        break;
+
       case 'input_audio_buffer.speech_started':
         this._userSpeaking = true;
         this.handlers.onSpeakingChange?.(true);

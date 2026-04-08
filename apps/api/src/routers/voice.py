@@ -138,21 +138,46 @@ async def voice_ws(websocket: WebSocket, conversation_id: Optional[str] = None):
         await websocket.close(1011)
         return
 
-    # ── Server-side session.update with saved voice + language ────
+    # ── Server-side session.update with full config ─────────────
+    # Must send a complete session before any audio arrives so the model
+    # knows the language, voice, modalities, and turn detection settings.
+    voice = "onyx"
+    instructions = (
+        "CRITICAL INSTRUCTION: You MUST respond exclusively in English.\n\n"
+        "You are Amin, an AI legal assistant specialized in GCC and Saudi Arabian law. "
+        "You are professional, concise, and helpful."
+    )
     if user_id:
         try:
             voice, instructions = await _load_voice_prefs(user_id)
-            session_update = json.dumps({
-                "type": "session.update",
-                "session": {
-                    "voice": voice,
-                    "instructions": instructions,
-                },
-            })
-            await upstream_ws.send(session_update)
-            logger.debug("Voice WS: sent server-side session.update voice=%s user=%s", voice, user_id)
         except Exception as exc:
-            logger.warning("Voice WS: failed to send session.update: %s", exc)
+            logger.warning("Voice WS: failed to load prefs, using defaults: %s", exc)
+
+    try:
+        session_update = json.dumps({
+            "type": "session.update",
+            "session": {
+                "modalities": ["text", "audio"],
+                "voice": voice,
+                "instructions": instructions,
+                "input_audio_format": "pcm16",
+                "output_audio_format": "pcm16",
+                "input_audio_transcription": {"model": "whisper-1"},
+                "turn_detection": {
+                    "type": "server_vad",
+                    "threshold": 0.5,
+                    "prefix_padding_ms": 300,
+                    "silence_duration_ms": 500,
+                },
+            },
+        })
+        await upstream_ws.send(session_update)
+        logger.debug(
+            "Voice WS: sent full session.update voice=%s user=%s",
+            voice, user_id,
+        )
+    except Exception as exc:
+        logger.warning("Voice WS: failed to send session.update: %s", exc)
 
     # ── Relay loops ───────────────────────────────────────────────
 
