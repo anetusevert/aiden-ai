@@ -71,6 +71,23 @@ async def _load_voice_prefs(user_id: str) -> tuple[str, str]:
     return voice, full_instructions
 
 
+async def _load_workspace_api_key(workspace_id: str | None) -> str | None:
+    """Load the LLM API key from workspace settings (DB) if available."""
+    if not workspace_id:
+        return None
+    try:
+        from src.database import async_session_maker
+        from src.models.workspace import Workspace
+
+        async with async_session_maker() as db:
+            ws = await db.get(Workspace, workspace_id)
+            if ws and ws.settings:
+                return ws.settings.get("llm_config", {}).get("api_key") or None
+    except Exception as exc:
+        logger.warning("Voice WS: failed to load workspace API key: %s", exc)
+    return None
+
+
 async def voice_ws(websocket: WebSocket, conversation_id: Optional[str] = None):
     """Proxy WebSocket that bridges the browser and OpenAI Realtime API."""
     await websocket.accept()
@@ -86,15 +103,17 @@ async def voice_ws(websocket: WebSocket, conversation_id: Optional[str] = None):
         token = websocket.query_params.get("token")
 
     user_id: str | None = None
+    workspace_id: str | None = None
     if token:
         try:
             payload = decode_access_token(token)
             user_id = payload.sub
+            workspace_id = payload.workspace_id
         except Exception:
             logger.debug("Voice WS: invalid JWT — continuing without user prefs")
 
-    # ── API key ───────────────────────────────────────────────────
-    api_key = getattr(settings, "openai_api_key", None) or getattr(settings, "llm_api_key", None)
+    # ── API key (workspace DB override → env fallback) ────────────
+    api_key = await _load_workspace_api_key(workspace_id) or settings.llm_api_key
     if not api_key:
         await websocket.send_json({"type": "error", "error": {"message": "OpenAI API key not configured"}})
         await websocket.close(1008)
