@@ -31,4 +31,6 @@ export function NextIntlClientProvider({
   return <>{children}</>;
 }
 
-export default { useTranslations, NextIntlClientProvider };
+const nextIntlShim = { useTranslations, NextIntlClientProvider };
+
+export default nextIntlShim;

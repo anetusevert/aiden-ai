@@ -438,10 +438,11 @@ export default function KnowledgeBasePage() {
   }, [isPlatformAdmin, hasActiveJobOnSource, loadSources, loadJobs, loadStats]);
 
   useEffect(() => {
+    const triggerTimeouts = triggerErrorTimeouts.current;
     return () => {
       if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-      triggerErrorTimeouts.current.forEach(t => clearTimeout(t));
-      triggerErrorTimeouts.current.clear();
+      triggerTimeouts.forEach(t => clearTimeout(t));
+      triggerTimeouts.clear();
     };
   }, []);
 

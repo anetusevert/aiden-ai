@@ -45,9 +45,6 @@ export class WakeWordDetector {
   start(): void {
     if (this._running) return;
     if (!WakeWordDetector.isSupported()) {
-      console.warn(
-        '[WakeWord] SpeechRecognition not supported in this browser'
-      );
       return;
     }
 
@@ -69,7 +66,6 @@ export class WakeWordDetector {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript.toLowerCase().trim();
         if (KEYWORDS.some(kw => transcript.includes(kw))) {
-          console.log('[WakeWord] Detected wake word in:', transcript);
           this.stop();
           this._onWake();
           return;
@@ -80,7 +76,6 @@ export class WakeWordDetector {
     this.recognition.onerror = event => {
       const err = event.error;
       if (err === 'aborted' || err === 'no-speech') return;
-      console.warn('[WakeWord] Recognition error:', err);
     };
 
     this.recognition.onend = () => {
@@ -99,9 +94,7 @@ export class WakeWordDetector {
 
     try {
       this.recognition.start();
-      console.log('[WakeWord] Listening for wake word...');
     } catch (e) {
-      console.warn('[WakeWord] Failed to start:', e);
       this._running = false;
     }
   }
@@ -121,7 +114,6 @@ export class WakeWordDetector {
       }
       this.recognition = null;
     }
-    console.log('[WakeWord] Stopped');
   }
 
   get running(): boolean {

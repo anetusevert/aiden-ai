@@ -381,8 +381,7 @@ export class AminVoiceClient {
 
   sendSessionUpdate(params: { voice?: string; instructions?: string }): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const session: Record<string, any> = {};
+    const session: Record<string, string> = {};
     if (params.voice) session.voice = params.voice;
     if (params.instructions) session.instructions = params.instructions;
     if (Object.keys(session).length === 0) return;

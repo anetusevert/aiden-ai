@@ -106,6 +106,7 @@ export function UserAvatar({
       aria-label={user.full_name || user.email || 'User avatar'}
     >
       {hasPhoto ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={user.avatar_url!}
           alt={user.full_name || 'User'}

@@ -597,10 +597,14 @@ function DocumentStepContent({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoCreated = useRef(false);
 
-  const templateConfig = WORKFLOW_TEMPLATE_MAP[workflow.id] ?? {
-    title: `${workflow.name} — ${step.name}`,
-    doc_type: 'docx' as const,
-  };
+  const templateConfig = useMemo(
+    () =>
+      WORKFLOW_TEMPLATE_MAP[workflow.id] ?? {
+        title: `${workflow.name} — ${step.name}`,
+        doc_type: 'docx' as const,
+      },
+    [workflow.id, workflow.name, step.name]
+  );
 
   const createDocument = useCallback(async () => {
     setCreating(true);
@@ -968,8 +972,7 @@ export default function WorkflowExecutePage() {
   const workflowId = params.workflowId;
 
   const workflow = useMemo(() => getWorkflowById(workflowId), [workflowId]);
-
-  const steps = workflow?.steps ?? [];
+  const steps = useMemo(() => workflow?.steps ?? [], [workflow]);
   const accent = WORKFLOW_CATEGORY_ACCENTS[category] ?? 'rgba(255,255,255,0.9)';
 
   const {

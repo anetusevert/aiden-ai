@@ -58,6 +58,8 @@ export function HomeNewsCard({ item, index }: HomeNewsCardProps) {
     >
       {item.image_url && !imgError ? (
         <div className="home-news-card-img">
+          {/* External news images are passthrough URLs; keep img to avoid remote loader config. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={item.image_url}
             alt=""
