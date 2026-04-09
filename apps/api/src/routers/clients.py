@@ -3,19 +3,24 @@
 import logging
 from datetime import datetime
 from typing import Annotated, Any
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from src.database import get_db
-from src.dependencies.auth import RequestContext, require_admin, require_editor, require_viewer
+from src.dependencies.auth import (
+    RequestContext,
+    require_admin,
+    require_editor,
+    require_viewer,
+)
 from src.models.case import Case
 from src.models.client import Client
+from src.services.organization_access_service import ensure_workspace_org_access
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/clients", tags=["clients"])
 
@@ -117,13 +122,14 @@ def _get_org_id(ctx: RequestContext) -> str:
 
 async def _get_org_id_from_user(ctx: RequestContext, db: AsyncSession) -> str:
     """Resolve organization ID via organization membership."""
-    from src.models.organization import OrganizationMembership
-    result = await db.execute(
-        select(OrganizationMembership.organization_id)
-        .where(OrganizationMembership.user_id == ctx.user.id)
-        .limit(1)
+    org_id = await ensure_workspace_org_access(
+        db,
+        tenant_id=ctx.tenant.id,
+        workspace_id=ctx.workspace.id if ctx.workspace else "",
+        workspace_name=ctx.workspace.name if ctx.workspace else None,
+        user_id=ctx.user.id,
+        workspace_role=ctx.role or "VIEWER",
     )
-    org_id = result.scalar_one_or_none()
     if not org_id:
         raise HTTPException(status_code=400, detail="User is not a member of any organization")
     return org_id
@@ -176,6 +182,7 @@ async def extract_client_from_document(
             doc.close()
         elif ext in (".docx", ".doc"):
             import io
+
             from docx import Document as DocxDoc
             doc = DocxDoc(io.BytesIO(content))
             text = "\n".join(p.text for p in doc.paragraphs)

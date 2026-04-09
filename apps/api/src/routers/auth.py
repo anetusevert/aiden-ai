@@ -30,6 +30,7 @@ from src.database import get_db
 from src.dependencies.auth import RequestContext, get_workspace_context
 from src.models import RefreshSession, Tenant, User, Workspace, WorkspaceMembership
 from src.schemas.auth import (
+    AvatarUpdateRequest,
     CookieAuthResponse,
     CurrentUserResponse,
     DevLoginRequest,
@@ -38,8 +39,8 @@ from src.schemas.auth import (
 )
 from src.services.audit_service import log_audit_event
 from src.services.login_workspace_service import resolve_workspace_for_login
+from src.services.organization_access_service import ensure_workspace_org_access
 from src.utils.cookies import clear_auth_cookies, set_auth_cookies
-from src.utils.passwords import normalize_email, verify_password
 from src.utils.jwt import (
     InvalidTokenError,
     TokenExpiredError,
@@ -48,6 +49,7 @@ from src.utils.jwt import (
     create_refresh_token,
     decode_refresh_token,
 )
+from src.utils.passwords import normalize_email, verify_password
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -147,6 +149,15 @@ async def _issue_auth_session(
     audit_meta: dict | None = None,
 ) -> CookieAuthResponse:
     """Create tokens, refresh session, set cookies, audit, commit."""
+    await ensure_workspace_org_access(
+        db,
+        tenant_id=tenant.id,
+        workspace_id=workspace.id,
+        workspace_name=workspace.name,
+        user_id=user.id,
+        workspace_role=membership.role,
+    )
+
     access_token = create_access_token(
         user_id=user.id,
         tenant_id=tenant.id,
@@ -193,6 +204,30 @@ async def _issue_auth_session(
         role=membership.role,
         expires_in=settings.access_token_expires_minutes * 60,
     )
+
+
+def _normalize_avatar_url(avatar_url: str | None) -> str | None:
+    """Validate and normalize persisted avatar data."""
+    if avatar_url is None:
+        return None
+
+    value = avatar_url.strip()
+    if not value:
+        return None
+
+    if not value.startswith("data:image/") or ";base64," not in value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Avatar must be a base64-encoded image data URL.",
+        )
+
+    if len(value) > 1_500_000:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Avatar image is too large.",
+        )
+
+    return value
 
 
 @router.post(
@@ -716,6 +751,15 @@ async def get_me(
         # Must have come from header
         auth_mode = "bearer"
 
+    await ensure_workspace_org_access(
+        db,
+        tenant_id=ctx.tenant.id,
+        workspace_id=ctx.workspace.id if ctx.workspace else "",
+        workspace_name=ctx.workspace.name if ctx.workspace else None,
+        user_id=ctx.user.id,
+        workspace_role=ctx.role or "VIEWER",
+    )
+
     # Log auth.me access
     await log_audit_event(
         db=db,
@@ -733,6 +777,50 @@ async def get_me(
         role=ctx.role or "",
         email=ctx.user.email,
         full_name=ctx.user.full_name,
+        avatar_url=ctx.user.avatar_url,
+        is_platform_admin=ctx.user.is_platform_admin,
+        auth_mode=auth_mode,  # type: ignore
+    )
+
+
+@router.put(
+    "/me/avatar",
+    response_model=CurrentUserResponse,
+    summary="Update current user avatar",
+)
+async def update_my_avatar(
+    request: Request,
+    payload: AvatarUpdateRequest,
+    ctx: Annotated[RequestContext, Depends(get_workspace_context)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CurrentUserResponse:
+    """Persist the authenticated user's avatar image."""
+    auth_mode: str = "cookie"
+    if request.cookies.get("access_token") is None:
+        auth_mode = "bearer"
+
+    ctx.user.avatar_url = _normalize_avatar_url(payload.avatar_url)
+    db.add(ctx.user)
+    await db.commit()
+    await db.refresh(ctx.user)
+
+    await log_audit_event(
+        db=db,
+        ctx=ctx,
+        action="auth.avatar.update",
+        status="success",
+        meta={"has_avatar": bool(ctx.user.avatar_url)},
+        request=request,
+    )
+
+    return CurrentUserResponse(
+        user_id=str(ctx.user.id),
+        tenant_id=str(ctx.tenant.id),
+        workspace_id=str(ctx.workspace.id) if ctx.workspace else "",
+        role=ctx.role or "",
+        email=ctx.user.email,
+        full_name=ctx.user.full_name,
+        avatar_url=ctx.user.avatar_url,
         is_platform_admin=ctx.user.is_platform_admin,
         auth_mode=auth_mode,  # type: ignore
     )

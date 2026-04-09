@@ -3,9 +3,19 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Tenant, User, Workspace, WorkspaceMembership
+from src.models import (
+    Organization,
+    OrganizationMembership,
+    Tenant,
+    User,
+    Workspace,
+    WorkspaceMembership,
+)
+from src.schemas.tenant import (
+    BootstrapResponse,
+    TenantCreateWithBootstrap,
+)
 from src.utils.passwords import hash_password
-from src.schemas.tenant import BootstrapPayload, BootstrapResponse, TenantCreateWithBootstrap
 
 
 class BootstrapError(Exception):
@@ -22,7 +32,7 @@ class TenantExistsError(BootstrapError):
 
 class BootstrapService:
     """Service for bootstrapping tenants with initial setup.
-    
+
     Creates tenant + workspace + user + admin membership in a single transaction.
     Ensures atomicity - if any part fails, the entire operation is rolled back.
     """
@@ -34,13 +44,13 @@ class BootstrapService:
         self, data: TenantCreateWithBootstrap
     ) -> BootstrapResponse:
         """Create a tenant with optional bootstrap (workspace + admin user + membership).
-        
+
         If bootstrap payload is provided, creates:
         1. Tenant
         2. First workspace
         3. First admin user
         4. Membership linking admin user to workspace with ADMIN role
-        
+
         All operations run in a single transaction for atomicity.
         """
         try:
@@ -92,6 +102,24 @@ class BootstrapService:
                     role="ADMIN",
                 )
                 self.db.add(membership)
+                await self.db.flush()
+
+                default_org = Organization(
+                    tenant_id=tenant.id,
+                    workspace_id=workspace.id,
+                    name=workspace.name,
+                    description="Default organization created during tenant bootstrap",
+                    master_user_id=admin_user.id,
+                )
+                self.db.add(default_org)
+                await self.db.flush()
+
+                default_org_membership = OrganizationMembership(
+                    organization_id=default_org.id,
+                    user_id=admin_user.id,
+                    role="MASTER",
+                )
+                self.db.add(default_org_membership)
                 await self.db.flush()
 
                 workspace_id = workspace.id

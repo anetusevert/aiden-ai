@@ -318,7 +318,57 @@ class TestAuthMe:
         assert me_data["role"] == "ADMIN"
         assert me_data["email"] == "admin@metest.com"
         assert me_data["full_name"] == "Test Admin"
+        assert me_data["avatar_url"] is None
         assert me_data["auth_mode"] == "cookie"
+
+    @pytest.mark.asyncio
+    async def test_auth_avatar_update_persists(
+        self,
+        async_client: AsyncClient,
+        clean_db,
+    ):
+        """PUT /auth/me/avatar persists avatar data for the current user."""
+        bootstrap = await async_client.post(
+            "/tenants",
+            json={
+                "name": "Avatar Test Tenant",
+                "primary_jurisdiction": "UAE",
+                "data_residency_policy": "UAE",
+                "bootstrap": {
+                    "admin_user": {
+                        "email": "admin@avatartest.com",
+                        "full_name": "Avatar Admin",
+                        "password": "Testpass123",
+                    },
+                    "workspace": {"name": "Main"},
+                },
+            },
+        )
+        data = bootstrap.json()
+
+        login = await async_client.post(
+            "/auth/dev-login",
+            json={
+                "tenant_id": data["tenant_id"],
+                "workspace_id": data["workspace_id"],
+                "email": "admin@avatartest.com",
+            },
+        )
+        cookies = {"access_token": login.cookies["access_token"]}
+        avatar_url = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB"
+
+        update_response = await async_client.put(
+            "/auth/me/avatar",
+            cookies=cookies,
+            json={"avatar_url": avatar_url},
+        )
+        assert update_response.status_code == 200
+        update_data = update_response.json()
+        assert update_data["avatar_url"] == avatar_url
+
+        me_response = await async_client.get("/auth/me", cookies=cookies)
+        assert me_response.status_code == 200
+        assert me_response.json()["avatar_url"] == avatar_url
 
     @pytest.mark.asyncio
     async def test_auth_me_requires_token(

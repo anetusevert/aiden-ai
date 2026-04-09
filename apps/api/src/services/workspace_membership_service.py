@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.models import User, Workspace, WorkspaceMembership
-from src.utils.passwords import hash_password, normalize_email
 from src.schemas import WorkspaceMembershipCreate
+from src.services.organization_access_service import ensure_workspace_org_access
+from src.utils.passwords import hash_password, normalize_email
 
 
 class MembershipServiceError(Exception):
@@ -64,7 +65,7 @@ class WorkspaceMembershipService:
         data: WorkspaceMembershipCreate,
     ) -> WorkspaceMembership:
         """Create a new membership in a workspace.
-        
+
         The user must belong to the same tenant as the workspace.
         """
         # Verify user exists and belongs to the same tenant
@@ -88,10 +89,20 @@ class WorkspaceMembershipService:
         try:
             await self.db.commit()
             await self.db.refresh(membership)
+            await ensure_workspace_org_access(
+                self.db,
+                tenant_id=workspace.tenant_id,
+                workspace_id=workspace.id,
+                workspace_name=workspace.name,
+                user_id=data.user_id,
+                workspace_role=data.role,
+            )
             return membership
-        except IntegrityError:
+        except IntegrityError as err:
             await self.db.rollback()
-            raise DuplicateMembershipError("User is already a member of this workspace")
+            raise DuplicateMembershipError(
+                "User is already a member of this workspace"
+            ) from err
 
     async def invite_member_by_email(
         self,
@@ -102,7 +113,7 @@ class WorkspaceMembershipService:
         initial_password: str | None = None,
     ) -> tuple[WorkspaceMembership, User, bool]:
         """Invite a member by email, creating user if needed.
-        
+
         Returns:
             Tuple of (membership, user, user_created)
             - user_created: True if a new user was created, False if existing
@@ -134,7 +145,7 @@ class WorkspaceMembershipService:
             self.db.add(user)
             await self.db.flush()  # Get user ID
             user_created = True
-        
+
         # Check if already a member
         existing = await self.db.execute(
             select(WorkspaceMembership).where(
@@ -146,7 +157,7 @@ class WorkspaceMembershipService:
             raise DuplicateMembershipError(
                 f"User {email} is already a member of this workspace"
             )
-        
+
         # Create membership
         membership = WorkspaceMembership(
             tenant_id=workspace.tenant_id,
@@ -158,7 +169,15 @@ class WorkspaceMembershipService:
         await self.db.commit()
         await self.db.refresh(membership)
         await self.db.refresh(user)
-        
+        await ensure_workspace_org_access(
+            self.db,
+            tenant_id=workspace.tenant_id,
+            workspace_id=workspace.id,
+            workspace_name=workspace.name,
+            user_id=user.id,
+            workspace_role=role,
+        )
+
         return membership, user, user_created
 
     async def get_membership(
@@ -236,7 +255,7 @@ class WorkspaceMembershipService:
         new_role: str,
     ) -> WorkspaceMembership:
         """Update a membership's role.
-        
+
         Raises LastAdminError if this would leave the workspace without admins.
         """
         membership = await self.get_membership_by_id(
@@ -244,7 +263,7 @@ class WorkspaceMembershipService:
         )
         if not membership:
             raise MembershipNotFoundError("Membership not found")
-        
+
         # Check if demoting the last admin
         if membership.role == "ADMIN" and new_role != "ADMIN":
             admin_count = await self.count_admins(workspace_id, tenant_id)
@@ -252,7 +271,7 @@ class WorkspaceMembershipService:
                 raise LastAdminError(
                     "Cannot change role: this is the last admin in the workspace"
                 )
-        
+
         membership.role = new_role
         await self.db.commit()
         await self.db.refresh(membership)
@@ -265,7 +284,7 @@ class WorkspaceMembershipService:
         tenant_id: str,
     ) -> WorkspaceMembership:
         """Remove a membership from workspace.
-        
+
         Raises LastAdminError if this would leave the workspace without admins.
         Returns the deleted membership for audit logging.
         """
@@ -274,7 +293,7 @@ class WorkspaceMembershipService:
         )
         if not membership:
             raise MembershipNotFoundError("Membership not found")
-        
+
         # Check if removing the last admin
         if membership.role == "ADMIN":
             admin_count = await self.count_admins(workspace_id, tenant_id)
@@ -282,7 +301,7 @@ class WorkspaceMembershipService:
                 raise LastAdminError(
                     "Cannot remove: this is the last admin in the workspace"
                 )
-        
+
         await self.db.delete(membership)
         await self.db.commit()
         return membership

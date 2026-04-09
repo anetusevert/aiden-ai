@@ -67,5 +67,12 @@ class CurrentUserResponse(BaseModel):
     role: str
     email: str | None = None
     full_name: str | None = None
+    avatar_url: str | None = None
     is_platform_admin: bool = False
     auth_mode: Literal["cookie", "bearer"] = "cookie"
+
+
+class AvatarUpdateRequest(BaseModel):
+    """Update the authenticated user's avatar."""
+
+    avatar_url: str | None = None

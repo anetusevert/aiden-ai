@@ -3,6 +3,8 @@
 import pytest
 from httpx import AsyncClient
 
+from tests.helpers import bootstrap_and_login
+
 
 class TestBootstrap:
     """Tests for tenant bootstrap functionality."""
@@ -216,6 +218,62 @@ class TestBootstrap:
         # No bootstrap entities created
         assert data["workspace_id"] is None
         assert data["admin_user_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_bootstrap_admin_can_access_clients_api(
+        self,
+        async_client: AsyncClient,
+        clean_db,
+    ):
+        """Bootstrap should provision enough org access for client routes."""
+        data, token = await bootstrap_and_login(async_client)
+        response = await async_client.get(
+            "/api/v1/clients",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["items"] == []
+        assert payload["total"] == 0
+
+    @pytest.mark.asyncio
+    async def test_clients_api_self_heals_missing_org_membership(
+        self,
+        async_client: AsyncClient,
+        clean_db,
+        tenant_factory,
+        workspace_factory,
+        user_factory,
+        membership_factory,
+    ):
+        """Legacy workspace-only users should regain access through auto-heal."""
+        tenant = await tenant_factory(name="Legacy Tenant")
+        workspace = await workspace_factory(tenant, name="Legacy Workspace")
+        user = await user_factory(tenant, email="legacy-admin@test.com")
+        await membership_factory(workspace, user, role="ADMIN")
+
+        login_response = await async_client.post(
+            "/auth/dev-login",
+            json={
+                "tenant_id": tenant.id,
+                "workspace_id": workspace.id,
+                "email": user.email,
+            },
+        )
+        assert login_response.status_code == 200
+        token = login_response.cookies.get("access_token")
+        assert token
+
+        response = await async_client.get(
+            "/api/v1/clients",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["items"] == []
+        assert payload["total"] == 0
 
 
 class TestPrivilegeEscalation:

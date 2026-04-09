@@ -14,6 +14,7 @@ from src.database import get_db
 from src.dependencies.auth import RequestContext, require_admin
 from src.models.case import Case
 from src.models.client import Client
+from src.services.organization_access_service import ensure_workspace_org_access
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +30,14 @@ class SeedResponse(BaseModel):
 
 
 async def _get_org_id(ctx: RequestContext, db: AsyncSession) -> str:
-    from src.models.organization import OrganizationMembership
-
-    result = await db.execute(
-        select(OrganizationMembership.organization_id)
-        .where(OrganizationMembership.user_id == ctx.user.id)
-        .limit(1)
+    org_id = await ensure_workspace_org_access(
+        db,
+        tenant_id=ctx.tenant.id,
+        workspace_id=ctx.workspace.id if ctx.workspace else "",
+        workspace_name=ctx.workspace.name if ctx.workspace else None,
+        user_id=ctx.user.id,
+        workspace_role=ctx.role or "ADMIN",
     )
-    org_id = result.scalar_one_or_none()
     if not org_id:
         raise HTTPException(status_code=400, detail="User is not a member of any organization")
     return org_id

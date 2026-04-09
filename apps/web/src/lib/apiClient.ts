@@ -129,6 +129,7 @@ export interface CurrentUserResponse {
   role: string;
   email: string | null;
   full_name: string | null;
+  avatar_url?: string | null;
   is_platform_admin: boolean;
   auth_mode?: 'cookie' | 'bearer';
 }
@@ -1079,6 +1080,21 @@ class ApiClient {
       method: 'GET',
       headers: this.getHeaders(),
     });
+  }
+
+  async updateMyAvatar(avatarUrl: string | null): Promise<CurrentUserResponse> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<CurrentUserResponse>(
+      `${baseUrl}/auth/me/avatar`,
+      {
+        method: 'PUT',
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ avatar_url: avatarUrl }),
+      }
+    );
   }
 
   async logout(): Promise<void> {

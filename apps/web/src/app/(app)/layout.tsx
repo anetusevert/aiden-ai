@@ -8,7 +8,6 @@ import { Rail1 } from '@/components/nav/Rail1';
 import { Rail2Panel } from '@/components/nav/Rail2Panel';
 import { TopBar } from '@/components/TopBar';
 import { DevModeBanner } from '@/components/DevModeBanner';
-import { StubProviderBanner } from '@/components/StubProviderBanner';
 import { AminInfoPanel } from '@/components/amin/AminInfoPanel';
 import { AminMinimized } from '@/components/amin/AminMinimized';
 import { AminFloatingMessage } from '@/components/amin/AminFloatingMessage';
@@ -148,7 +147,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 }
               >
                 <DevModeBanner />
-                <StubProviderBanner />
                 <Rail1 />
                 <Rail2Panel soul={soul} />
                 <main className="ha-main">

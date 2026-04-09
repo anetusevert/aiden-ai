@@ -1,21 +1,25 @@
 """Cases router — CRUD for legal cases, documents, notes, timeline, and active case management."""
 
-import asyncio
 import logging
 from datetime import date, datetime, timedelta
 from typing import Annotated, Any
-from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
-from src.dependencies.auth import RequestContext, require_admin, require_editor, require_viewer
+from src.dependencies.auth import (
+    RequestContext,
+    require_admin,
+    require_editor,
+    require_viewer,
+)
 from src.models.case import Case, CaseDocument, CaseEvent, CaseNote
 from src.models.client import Client
 from src.models.office import OfficeDocument
+from src.services.organization_access_service import ensure_workspace_org_access
 
 logger = logging.getLogger(__name__)
 
@@ -191,13 +195,14 @@ class ActiveCaseResponse(BaseModel):
 # ── Helpers ───────────────────────────────────────────────────────
 
 async def _get_org_id_from_user(ctx: RequestContext, db: AsyncSession) -> str:
-    from src.models.organization import OrganizationMembership
-    result = await db.execute(
-        select(OrganizationMembership.organization_id)
-        .where(OrganizationMembership.user_id == ctx.user.id)
-        .limit(1)
+    org_id = await ensure_workspace_org_access(
+        db,
+        tenant_id=ctx.tenant.id,
+        workspace_id=ctx.workspace.id if ctx.workspace else "",
+        workspace_name=ctx.workspace.name if ctx.workspace else None,
+        user_id=ctx.user.id,
+        workspace_role=ctx.role or "VIEWER",
     )
-    org_id = result.scalar_one_or_none()
     if not org_id:
         raise HTTPException(status_code=400, detail="User is not a member of any organization")
     return org_id
