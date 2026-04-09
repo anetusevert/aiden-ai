@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/AuthContext';
 
 const DISMISS_KEY = 'aiden_stub_banner_dismissed';
 
@@ -20,12 +21,20 @@ interface LLMStatus {
  * generic/deterministic answers instead of real LLM outputs.
  */
 export function StubProviderBanner() {
+  const { user } = useAuth();
   const [llmStatus, setLlmStatus] = useState<LLMStatus | null>(null);
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const canManageLlmSettings =
+    user?.role === 'ADMIN' || user?.is_platform_admin === true;
 
   useEffect(() => {
     setMounted(true);
+
+    if (!canManageLlmSettings) {
+      setVisible(false);
+      return;
+    }
 
     const dismissed = sessionStorage.getItem(DISMISS_KEY);
     if (dismissed) {
@@ -54,14 +63,14 @@ export function StubProviderBanner() {
     };
 
     fetchStatus();
-  }, []);
+  }, [canManageLlmSettings]);
 
   const handleDismiss = () => {
     setVisible(false);
     sessionStorage.setItem(DISMISS_KEY, 'true');
   };
 
-  if (!mounted || !visible || !llmStatus) {
+  if (!mounted || !canManageLlmSettings || !visible || !llmStatus) {
     return null;
   }
 
