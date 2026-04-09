@@ -12851,6 +12851,72 @@ textarea:focus-visible {
   border-color: rgba(255, 255, 255, 0.28);
 }
 
+.app-shell .r2-client-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px var(--space-4);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.app-shell .r2-client-row:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
+}
+
+.app-shell .r2-client-row-active {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 2px 0 0 0 #ffffff;
+}
+
+.app-shell .r2-client-row-active:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-shell .r2-client-row .r2-link-icon {
+  margin-top: 2px;
+}
+
+.app-shell .r2-client-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.app-shell .r2-client-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .r2-client-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.625rem;
+  color: var(--text-muted);
+}
+
+.app-shell .r2-client-meta > :first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .r2-client-meta .r2-count-badge {
+  margin-left: auto;
+}
+
 .app-shell .r2-case-row {
   display: flex;
   align-items: center;

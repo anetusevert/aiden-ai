@@ -165,7 +165,7 @@ export function ClientsPanel() {
           <Link
             key={client.id}
             href={`/clients/${client.id}`}
-            className="r2-link r2-link-stacked"
+            className={`r2-client-row${pathname === `/clients/${client.id}` ? ' r2-client-row-active' : ''}`}
             onClick={e => {
               e.preventDefault();
               navigateTo(`/clients/${client.id}`);
@@ -174,10 +174,20 @@ export function ClientsPanel() {
             <span className="r2-link-icon">
               <TypeIcon type={client.client_type} />
             </span>
-            <span className="r2-link-text">{client.display_name}</span>
-            {client.case_count > 0 && (
-              <span className="r2-count-badge">{client.case_count} cases</span>
-            )}
+            <span className="r2-client-info">
+              <span className="r2-client-name">{client.display_name}</span>
+              <span className="r2-client-meta">
+                <span>
+                  {typeLabels[client.client_type] ?? client.client_type}
+                </span>
+                {client.case_count > 0 && (
+                  <span className="r2-count-badge">
+                    {client.case_count}{' '}
+                    {client.case_count === 1 ? 'case' : 'cases'}
+                  </span>
+                )}
+              </span>
+            </span>
           </Link>
         ))}
       </div>
