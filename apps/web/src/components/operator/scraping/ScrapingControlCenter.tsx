@@ -1051,156 +1051,162 @@ export default function ScrapingControlCenter() {
         </aside>
       </div>
 
-      <section className={`${styles.surface} ${styles.historySurface}`}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2>Run history</h2>
-            <p>
-              Recent manual and scheduled harvesting runs for{' '}
-              {selectedSource ? selectedSource.display_name : 'all sources'}.
-            </p>
+      <div className={styles.lowerGrid}>
+        <section className={`${styles.surface} ${styles.historySurface}`}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>Run history</h2>
+              <p>
+                Recent manual and scheduled harvesting runs for{' '}
+                {selectedSource ? selectedSource.display_name : 'all sources'}.
+              </p>
+            </div>
+            {selectedSource ? (
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => setSelectedSourceId('all')}
+              >
+                Clear focus
+              </Button>
+            ) : null}
           </div>
-          {selectedSource ? (
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => setSelectedSourceId('all')}
-            >
-              Clear focus
-            </Button>
-          ) : null}
-        </div>
 
-        {jobsLoading ? (
-          <div className={styles.tableSkeleton}>
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} variant="text" width="100%" />
-            ))}
-          </div>
-        ) : filteredJobs.length === 0 ? (
-          <div className={styles.emptyStateSmall}>
-            <p>No runs yet for this selection.</p>
-          </div>
-        ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Source</th>
-                  <th>Status</th>
-                  <th>Trigger</th>
-                  <th>Started</th>
-                  <th>Duration</th>
-                  <th>Result</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {filteredJobs.map(job => {
-                  const duration = jobDurationSeconds(job);
-                  return (
-                    <tr
-                      key={job.id}
-                      className={
-                        highlightJobId === job.id ? styles.highlightRow : ''
-                      }
-                    >
-                      <td>
-                        {sourceNameById.get(job.source_id) ??
-                          job.connector_name}
-                      </td>
-                      <td>
-                        <Badge
-                          variant={getJobBadgeVariant(job.status)}
-                          size="sm"
-                        >
-                          {jobStatusLabel(job.status)}
-                        </Badge>
-                      </td>
-                      <td>
-                        {job.triggered_by === 'scheduler'
-                          ? 'Scheduled'
-                          : 'Manual'}
-                      </td>
-                      <td>
-                        {job.started_at ? formatTimestamp(job.started_at) : '-'}
-                      </td>
-                      <td>
-                        {duration != null
-                          ? formatDuration(duration)
-                          : job.status === 'pending' || job.status === 'running'
-                            ? 'In progress'
+          {jobsLoading ? (
+            <div className={styles.tableSkeleton}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} variant="text" width="100%" />
+              ))}
+            </div>
+          ) : filteredJobs.length === 0 ? (
+            <div className={styles.emptyStateSmall}>
+              <p>No runs yet for this selection.</p>
+            </div>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Trigger</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                    <th>Result</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredJobs.map(job => {
+                    const duration = jobDurationSeconds(job);
+                    return (
+                      <tr
+                        key={job.id}
+                        className={
+                          highlightJobId === job.id ? styles.highlightRow : ''
+                        }
+                      >
+                        <td>
+                          {sourceNameById.get(job.source_id) ??
+                            job.connector_name}
+                        </td>
+                        <td>
+                          <Badge
+                            variant={getJobBadgeVariant(job.status)}
+                            size="sm"
+                          >
+                            {jobStatusLabel(job.status)}
+                          </Badge>
+                        </td>
+                        <td>
+                          {job.triggered_by === 'scheduler'
+                            ? 'Scheduled'
+                            : 'Manual'}
+                        </td>
+                        <td>
+                          {job.started_at
+                            ? formatTimestamp(job.started_at)
                             : '-'}
-                      </td>
-                      <td>
-                        {job.items_upserted} upserted / {job.items_failed}{' '}
-                        failed
-                      </td>
-                      <td>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          onClick={() => setJobDetailId(job.id)}
-                        >
-                          Inspect
-                        </Button>
-                      </td>
-                    </tr>
+                        </td>
+                        <td>
+                          {duration != null
+                            ? formatDuration(duration)
+                            : job.status === 'pending' ||
+                                job.status === 'running'
+                              ? 'In progress'
+                              : '-'}
+                        </td>
+                        <td>
+                          {job.items_upserted} upserted / {job.items_failed}{' '}
+                          failed
+                        </td>
+                        <td>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => setJobDetailId(job.id)}
+                          >
+                            Inspect
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className={`${styles.surface} ${styles.footprintSurface}`}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>Jurisdiction footprint</h2>
+              <p>
+                Current legal corpus distribution across harvested
+                jurisdictions.
+              </p>
+            </div>
+          </div>
+          {statsLoading ? (
+            <Skeleton variant="text" width="100%" />
+          ) : stats &&
+            Object.keys(stats.instruments_by_jurisdiction).length > 0 ? (
+            <div className={styles.jurisdictionList}>
+              {Object.entries(stats.instruments_by_jurisdiction)
+                .sort(([, left], [, right]) => right - left)
+                .map(([jurisdiction, count]) => {
+                  const percentage =
+                    stats.total_instruments > 0
+                      ? (count / stats.total_instruments) * 100
+                      : 0;
+                  return (
+                    <div key={jurisdiction} className={styles.jurisdictionRow}>
+                      <span className={styles.jurisdictionLabel}>
+                        {jurisdiction}
+                      </span>
+                      <div className={styles.jurisdictionTrack}>
+                        <div
+                          className={styles.jurisdictionFill}
+                          style={{ width: `${Math.max(percentage, 2)}%` }}
+                        />
+                      </div>
+                      <span className={styles.jurisdictionValue}>
+                        {count.toLocaleString()}
+                      </span>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className={styles.surface}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2>Jurisdiction footprint</h2>
-            <p>
-              Current legal corpus distribution across harvested jurisdictions.
-            </p>
-          </div>
-        </div>
-        {statsLoading ? (
-          <Skeleton variant="text" width="100%" />
-        ) : stats &&
-          Object.keys(stats.instruments_by_jurisdiction).length > 0 ? (
-          <div className={styles.jurisdictionList}>
-            {Object.entries(stats.instruments_by_jurisdiction)
-              .sort(([, left], [, right]) => right - left)
-              .map(([jurisdiction, count]) => {
-                const percentage =
-                  stats.total_instruments > 0
-                    ? (count / stats.total_instruments) * 100
-                    : 0;
-                return (
-                  <div key={jurisdiction} className={styles.jurisdictionRow}>
-                    <span className={styles.jurisdictionLabel}>
-                      {jurisdiction}
-                    </span>
-                    <div className={styles.jurisdictionTrack}>
-                      <div
-                        className={styles.jurisdictionFill}
-                        style={{ width: `${Math.max(percentage, 2)}%` }}
-                      />
-                    </div>
-                    <span className={styles.jurisdictionValue}>
-                      {count.toLocaleString()}
-                    </span>
-                  </div>
-                );
-              })}
-          </div>
-        ) : (
-          <div className={styles.emptyStateSmall}>
-            <p>No harvested jurisdiction data yet.</p>
-          </div>
-        )}
-      </section>
+            </div>
+          ) : (
+            <div className={styles.emptyStateSmall}>
+              <p>No harvested jurisdiction data yet.</p>
+            </div>
+          )}
+        </section>
+      </div>
 
       <ScrapingSourceModal
         mode="create"
