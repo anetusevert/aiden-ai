@@ -55,8 +55,9 @@ async def _execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResul
 legal_research_tool = Tool(
     name="legal_research",
     description=(
-        "Conduct in-depth legal research on a topic. Analyzes relevant laws, regulations, "
-        "and precedents to produce a structured research memo with citations."
+        "Deep legal research with citation. Searches internal corpus and knowledge base. "
+        "Specify jurisdiction and domain. After completion, call show_context_pane with "
+        "card_type='research_card' to display findings. Always include article citations."
     ),
     parameters={
         "type": "object",

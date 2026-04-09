@@ -7,9 +7,10 @@ title auto-generation, and twin learning.
 import asyncio
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Any, AsyncIterator
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.conversation import Conversation, Message
@@ -33,6 +34,15 @@ from src.services.agent.twin_manager import TwinManager
 logger = logging.getLogger(__name__)
 
 MAX_TOOL_ROUNDS = 5
+
+
+def _is_same_day(iso_str: str | None, now: datetime) -> bool:
+    if not iso_str:
+        return False
+    try:
+        return datetime.fromisoformat(iso_str).date() == now.date()
+    except (TypeError, ValueError):
+        return False
 
 
 class AminAgent:
@@ -97,6 +107,16 @@ class AminAgent:
             self.db.add(user_msg)
             await self.db.flush()
 
+            user_msg_count_result = await self.db.execute(
+                select(func.count())
+                .select_from(Message)
+                .where(
+                    Message.conversation_id == conversation_id,
+                    Message.role == "user",
+                )
+            )
+            is_first_message = (user_msg_count_result.scalar() or 0) == 1
+
             # 1b. Load workspace LLM config (DB overrides for provider settings)
             try:
                 from src.models.workspace import Workspace
@@ -117,6 +137,22 @@ class AminAgent:
 
             # 3. Build system prompt
             system_prompt = build_system_prompt(soul, twin, screen_context_text, case_context_text)
+
+            if is_first_message:
+                heartbeat_tool = self._registry.get_by_name("check_heartbeat")
+                if heartbeat_tool is not None:
+                    heartbeat_result = await heartbeat_tool.execute({}, self._tool_context)
+                    heartbeat_data = heartbeat_result.data or {}
+                    now = datetime.now(timezone.utc)
+                    already_sent_today = _is_same_day(
+                        heartbeat_data.get("last_daily_briefing"), now
+                    )
+                    if (
+                        heartbeat_data.get("is_first_session_today")
+                        and heartbeat_data.get("is_morning")
+                        and not already_sent_today
+                    ):
+                        system_prompt = "RUN MORNING BRIEF NOW: " + system_prompt
 
             # 4. Load conversation history
             result = await self.db.execute(

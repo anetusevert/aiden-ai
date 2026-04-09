@@ -1,6 +1,7 @@
 """API routers for Aiden.ai."""
 
 from src.routers.admin_settings import router as admin_settings_router
+from src.routers.agent import router as agent_router
 from src.routers.audit import router as audit_router
 from src.routers.auth import router as auth_router
 from src.routers.cases import router as cases_router
@@ -35,6 +36,7 @@ from src.routers.wopi import router as wopi_router
 
 __all__ = [
     "admin_settings_router",
+    "agent_router",
     "audit_router",
     "auth_router",
     "cases_router",

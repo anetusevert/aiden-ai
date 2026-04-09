@@ -54,6 +54,8 @@ LANGUAGE_NAMES: dict[str, str] = {
 
 MALE_VOICES = {"onyx", "echo", "fable"}
 
+SOUL_FILE_ORDER = ["SOUL.md", "IDENTITY.md", "AGENTS.md", "STYLE.md", "HEARTBEAT.md"]
+
 
 def get_safe_voice(prefs: dict) -> str:
     """Return the user's saved voice, falling back to 'onyx' if invalid or female."""
@@ -79,6 +81,48 @@ def _build_language_directive(twin: UserTwin | None) -> str:
         f"Do not use English under any circumstances. "
         f"This is a non-negotiable language setting chosen by the user.\n\n"
     )
+
+
+def build_conversation_mode_context(screen_ctx: dict[str, Any] | None = None) -> str:
+    """Inject conversation mode awareness into the system prompt."""
+    del screen_ctx
+    return """
+## Current Session Context
+
+### Deep Listening Mode
+You distinguish three conversation states:
+1. **Direct address** — User is talking to you. Message begins with "Amin", addresses
+   you directly, or follows naturally from previous exchange. Respond fully.
+2. **Thinking aloud** — User is processing their own thoughts. Short, fragmented message,
+   no question mark, no direct address. Respond briefly or with a single clarifying prompt.
+3. **Ambient dictation** — User appears to be speaking to someone else (references third
+   party by name, topic is logistical/social, message reads as a statement not addressed
+   to you). Do NOT respond unless legally significant content is mentioned.
+
+Signals for ambient dictation (do not respond if any are present):
+- Message addresses a human name that is not your name
+- Content is social ("Yes, let's meet at 3"), logistical ("Please send it to him")
+- Message is mid-sentence or appears to be a transcribed fragment
+
+When in doubt: respond briefly, with a one-sentence prompt, not a full answer.
+
+### Urgency vs. Impact
+When helping prioritize tasks, always assess:
+- Urgency: Is there a hard deadline? Is someone waiting?
+- Impact: Does this affect a major matter, a key client, a regulatory requirement?
+High urgency + high impact = address immediately in the response.
+High urgency + low impact = note it, deal with it quickly.
+Low urgency + high impact = explicitly schedule it, don't let it slip.
+Low urgency + low impact = suggest deferring.
+""".strip()
+
+
+def _build_soul_prompt(soul: dict[str, str] | None) -> str:
+    if soul:
+        sections = [soul.get(filename, "") for filename in SOUL_FILE_ORDER if soul.get(filename, "")]
+        if sections:
+            return "\n\n---\n\n".join(sections)
+    return get_soul_system_prompt()
 
 
 async def build_case_context(user_id: str, db) -> str:
@@ -156,11 +200,15 @@ def build_system_prompt(
     """
     language_directive = _build_language_directive(twin)
 
-    soul_prompt = get_soul_system_prompt()
+    soul_prompt = _build_soul_prompt(soul)
     parts: list[str] = [language_directive + soul_prompt]
 
+    conversation_mode = build_conversation_mode_context()
+    if conversation_mode:
+        parts.append(conversation_mode)
+
     if case_context_text:
-        parts.insert(1, "## Active Case\n" + case_context_text)
+        parts.append("## Active Case\n" + case_context_text)
 
     if twin is not None:
         twin_section = build_twin_context(twin)

@@ -14,6 +14,7 @@ from sqlalchemy import and_, func, select
 logger = logging.getLogger(__name__)
 
 DREAM_CYCLE_INTERVAL_SECONDS = 1800  # 30 minutes
+DREAM_CONSOLIDATION_INTERVAL_SECONDS = 21600  # 6 hours
 SCRAPING_CHECK_INTERVAL_SECONDS = 300  # 5 minutes
 NEWS_FETCH_INTERVAL_SECONDS = 3600  # 60 minutes
 
@@ -23,6 +24,7 @@ class AminScheduler:
 
     def __init__(self) -> None:
         self._task: asyncio.Task[None] | None = None
+        self._dream_consolidation_task: asyncio.Task[None] | None = None
         self._scraping_task: asyncio.Task[None] | None = None
         self._news_task: asyncio.Task[None] | None = None
         self._running = False
@@ -33,11 +35,15 @@ class AminScheduler:
             return
         self._running = True
         self._task = asyncio.create_task(self._run_loop())
+        self._dream_consolidation_task = asyncio.create_task(
+            self._dream_consolidation_loop()
+        )
         self._scraping_task = asyncio.create_task(self._scraping_loop())
         self._news_task = asyncio.create_task(self._news_fetch_loop())
         logger.info(
-            "AminScheduler started (dream=%ds, scraping=%ds, news=%ds)",
+            "AminScheduler started (dream=%ds, consolidation=%ds, scraping=%ds, news=%ds)",
             DREAM_CYCLE_INTERVAL_SECONDS,
+            DREAM_CONSOLIDATION_INTERVAL_SECONDS,
             SCRAPING_CHECK_INTERVAL_SECONDS,
             NEWS_FETCH_INTERVAL_SECONDS,
         )
@@ -45,7 +51,12 @@ class AminScheduler:
     async def stop(self) -> None:
         """Stop the background scheduler."""
         self._running = False
-        for task in (self._task, self._scraping_task, self._news_task):
+        for task in (
+            self._task,
+            self._dream_consolidation_task,
+            self._scraping_task,
+            self._news_task,
+        ):
             if task:
                 task.cancel()
                 try:
@@ -53,6 +64,7 @@ class AminScheduler:
                 except asyncio.CancelledError:
                     pass
         self._task = None
+        self._dream_consolidation_task = None
         self._scraping_task = None
         self._news_task = None
         logger.info("AminScheduler stopped")
@@ -104,6 +116,60 @@ class AminScheduler:
                 except Exception as e:
                     logger.error("Dream cycle failed for user %s: %s", user_id, e)
                     await db.rollback()
+
+    async def _dream_consolidation_loop(self) -> None:
+        """Run deeper consolidation for users with larger unconsolidated queues."""
+        await asyncio.sleep(20)
+
+        while self._running:
+            try:
+                await self._run_dream_consolidation()
+            except Exception as e:
+                logger.error(
+                    "Dream consolidation loop error: %s", e, exc_info=True
+                )
+
+            try:
+                await asyncio.sleep(DREAM_CONSOLIDATION_INTERVAL_SECONDS)
+            except asyncio.CancelledError:
+                break
+
+    async def _run_dream_consolidation(self) -> None:
+        """Auto-trigger twin consolidation for users with enough observations."""
+        try:
+            from src.database import async_session_maker
+            from src.models.twin import TwinObservation
+            from src.services.agent.twin_manager import TwinManager
+        except ImportError as e:
+            logger.warning("Cannot import dream consolidation deps: %s", e)
+            return
+
+        async with async_session_maker() as db:
+            result = await db.execute(
+                select(TwinObservation.user_id, func.count().label("obs_count"))
+                .where(TwinObservation.consolidated.is_(False))
+                .group_by(TwinObservation.user_id)
+                .having(func.count() > 10)
+            )
+            users_to_consolidate = list(result.all())
+
+        for user_id, obs_count in users_to_consolidate:
+            try:
+                async with async_session_maker() as db:
+                    await TwinManager.run_llm_dream_cycle(db, user_id)
+                    await db.commit()
+                logger.info(
+                    "Dream consolidation completed for user %s (%s observations)",
+                    user_id,
+                    obs_count,
+                )
+            except Exception as e:
+                logger.error(
+                    "Dream consolidation failed for user %s: %s",
+                    user_id,
+                    e,
+                    exc_info=True,
+                )
 
     # --------------------------------------------------------------------- #
     # Scraping loop

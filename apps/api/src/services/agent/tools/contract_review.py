@@ -55,8 +55,9 @@ async def _execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResul
 contract_review_tool = Tool(
     name="contract_review",
     description=(
-        "Review a contract or legal document for risks, compliance issues, and problematic clauses. "
-        "Produces a structured risk assessment."
+        "Clause-by-clause contract analysis with risk scoring. Returns: risk score "
+        "(0-100), clause analysis list with severity (low/medium/high/critical), and recommendations. "
+        "After completion, call show_context_pane with card_type='risk_card' to display results."
     ),
     parameters={
         "type": "object",

@@ -690,7 +690,7 @@ export default function WorkflowExecutePage() {
       onTick: tick => setRunProgress(tick.progress),
     });
 
-    const output = getWorkflowSimulatedOutput(workflow.id, currentStep);
+    const output = getWorkflowSimulatedOutput(workflowId, currentStep);
     setStepResults(prev => ({
       ...prev,
       [currentStep]: { kind: 'simulated', data: output },
@@ -700,15 +700,15 @@ export default function WorkflowExecutePage() {
   }
 
   async function handleRun(file?: File) {
-    if (isLive && workflow.id === 'RESEARCH_LEGAL_MEMO') {
+    if (isLive && workflowId === 'RESEARCH_LEGAL_MEMO') {
       await runResearchFlow();
       return;
     }
-    if (isLive && workflow.id === 'CORPORATE_CONTRACTS') {
+    if (isLive && workflowId === 'CORPORATE_CONTRACTS') {
       await runContractFlow(file);
       return;
     }
-    if (isLive && workflow.id === 'ARBITRATION_CLAUSE') {
+    if (isLive && workflowId === 'ARBITRATION_CLAUSE') {
       await runRedlinesFlow();
       return;
     }
@@ -1219,13 +1219,13 @@ export default function WorkflowExecutePage() {
       );
     }
 
-    if (isLive && workflow.id === 'RESEARCH_LEGAL_MEMO') {
+    if (isLive && workflowId === 'RESEARCH_LEGAL_MEMO') {
       return renderResearchView();
     }
-    if (isLive && workflow.id === 'CORPORATE_CONTRACTS') {
+    if (isLive && workflowId === 'CORPORATE_CONTRACTS') {
       return renderContractView();
     }
-    if (isLive && workflow.id === 'ARBITRATION_CLAUSE') {
+    if (isLive && workflowId === 'ARBITRATION_CLAUSE') {
       return renderRedlinesView();
     }
     return renderDemoView();

@@ -187,6 +187,19 @@ class CaseEventResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CaseEventCreate(BaseModel):
+    type: str
+    title: str
+    description: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CaseResearchCreate(BaseModel):
+    query: str
+    jurisdiction: str | None = None
+    result: dict[str, Any] | None = None
+
+
 class ActiveCaseResponse(BaseModel):
     case_id: str
     case_title: str
@@ -829,6 +842,92 @@ async def get_timeline(
         }
         for e in events
     ]
+
+
+@router.post(
+    "/{case_id}/events",
+    response_model=CaseEventResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_case_event(
+    case_id: str,
+    body: CaseEventCreate,
+    ctx: Annotated[RequestContext, Depends(require_editor())],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    case = await db.get(Case, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    event = CaseEvent(
+        case_id=case_id,
+        event_type=body.type,
+        title=body.title,
+        description=body.description,
+        created_by=ctx.user.id,
+        metadata_=body.metadata,
+    )
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+
+    return {
+        "id": event.id,
+        "case_id": event.case_id,
+        "event_type": event.event_type,
+        "title": event.title,
+        "description": event.description,
+        "event_date": event.event_date,
+        "created_by": event.created_by,
+        "metadata_": event.metadata_,
+    }
+
+
+@router.post("/{case_id}/research", status_code=status.HTTP_201_CREATED)
+async def file_research_to_case(
+    case_id: str,
+    body: CaseResearchCreate,
+    ctx: Annotated[RequestContext, Depends(require_editor())],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, str]:
+    case = await db.get(Case, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    summary = (
+        body.result.get("answer_text", "")
+        if isinstance(body.result, dict)
+        else ""
+    )[:500]
+    note_content = (
+        f"Research saved to case.\n\n"
+        f"Query: {body.query}\n"
+        f"Jurisdiction: {body.jurisdiction or 'N/A'}\n\n"
+        f"{summary}"
+    ).strip()
+
+    note = CaseNote(
+        case_id=case_id,
+        content=note_content,
+        is_amin_generated=True,
+        created_by=ctx.user.id,
+    )
+    db.add(note)
+    db.add(
+        CaseEvent(
+            case_id=case_id,
+            event_type="research_saved",
+            title="Research filed to case",
+            description=body.query[:200],
+            created_by=ctx.user.id,
+            metadata_={
+                "jurisdiction": body.jurisdiction,
+            },
+        )
+    )
+    await db.commit()
+
+    return {"status": "saved"}
 
 
 # ── Active Case ───────────────────────────────────────────────────

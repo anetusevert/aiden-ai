@@ -10,6 +10,7 @@ from src.config import settings
 from src.middleware import RequestIdMiddleware
 from src.routers import (
     admin_settings_router,
+    agent_router,
     audit_router,
     auth_router,
     cases_router,
@@ -133,6 +134,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(admin_settings_router)
+app.include_router(agent_router)
 app.include_router(auth_router)
 app.include_router(operator_router)
 app.include_router(tenants_router)

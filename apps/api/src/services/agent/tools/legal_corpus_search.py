@@ -57,8 +57,9 @@ async def _execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResul
 legal_corpus_search_tool = Tool(
     name="search_legal_corpus",
     description=(
-        "Search the global legal corpus for laws, regulations, articles, and regulatory "
-        "guidance across KSA and GCC jurisdictions. Always use this before making legal assertions."
+        "Search the GCC legal corpus. Include jurisdiction (ksa/uae/qatar/bahrain/"
+        "kuwait/oman) and legal domain. Use for: citing specific articles, checking "
+        "regulatory requirements, finding precedents. Always cite the source article in your response."
     ),
     parameters={
         "type": "object",
