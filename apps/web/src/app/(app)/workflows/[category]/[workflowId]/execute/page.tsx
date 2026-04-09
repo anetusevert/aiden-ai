@@ -1,1102 +1,350 @@
 'use client';
 
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { motion, useAnimationFrame } from 'framer-motion';
+import { AminAvatar } from '@/components/amin/AminAvatar';
+import { StepRail } from '@/components/workflows/StepRail';
+import { StepWorkspace } from '@/components/workflows/StepWorkspace';
+import { WorkflowCompletion } from '@/components/workflows/WorkflowCompletion';
 import {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-  type ReactNode,
-} from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigation } from '@/components/NavigationLoader';
-import { useAminContext } from '@/components/amin/AminProvider';
-import { CollaboraEditor } from '@/components/office/CollaboraEditor';
+  apiClient,
+  type ClauseRedlinesResponse,
+  type ContractReviewResponse,
+  type LegalResearchResponse,
+} from '@/lib/apiClient';
+import { reportScreenContext } from '@/lib/screenContext';
+import { runWorkflowSimulation } from '@/lib/workflowSimulator';
 import {
   getWorkflowById,
-  type WorkflowDefinition,
-  type WorkflowStep,
+  getWorkflowDisplayName,
+  getWorkflowJourneySteps,
+  getWorkflowSimulatedOutput,
+  getWorkflowStepEstimate,
+  getWorkflowStepMessage,
+  isLiveWorkflow,
   type WorkflowCategory,
+  type WorkflowSimulatedOutput,
 } from '@/lib/workflowRegistry';
-import {
-  WORKFLOW_CATEGORY_ACCENTS,
-  WORKFLOW_TEMPLATE_MAP,
-  getCategoryDisplayName,
-  getWorkflowHref,
-  renderCategoryIcon,
-} from '@/lib/workflowPresentation';
-import { apiClient, type LegalResearchResponse } from '@/lib/apiClient';
-import { officeApi, type OfficeDocument } from '@/lib/officeApi';
-import { reportScreenContext } from '@/lib/screenContext';
-import {
-  GroupedEvidenceList,
-  renderCitationsWithDifferentiation,
-} from '@/components/EvidenceCard';
-import { toEvidenceItemFromChunk } from '@/lib/evidence';
-import { WorkflowStatusBadge } from '@/components/WorkflowStatusBadge';
-import {
-  motionTokens,
-  glassReveal,
-  glassBackdrop,
-  staggerContainer,
-  staggerItem,
-} from '@/lib/motion';
-import { AminAvatar } from '@/components/amin/AminAvatar';
-import { useAminAvatarState } from '@/hooks/useAminAvatarState';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-type StepType = 'research' | 'document' | 'review' | 'guidance';
-
-interface WorkflowSession {
-  workflowId: string;
-  currentStep: number;
-  completedSteps: number[];
-  attachedDocId: string | null;
-  startedAt: string;
-  notes: Record<number, string>;
-  checkedItems: Record<number, boolean[]>;
-}
-
-// ============================================================================
-// Step type classification
-// ============================================================================
-
-const RESEARCH_KEYWORDS =
-  /\b(research|analyse|analyze|identify|assess|due\s+diligence|analysis|investigate|jurisdictional\s+analysis)\b/i;
-const DOCUMENT_KEYWORDS =
-  /\b(draft|prepare|document|filing|submit|create|template|articles|registration|statement\s+of\s+claim|memorandum|notari)\b/i;
-const REVIEW_KEYWORDS =
-  /\b(review|check|verify|validate|examine|sharia.*review|regulatory\s+review|screen)\b/i;
-
-function classifyStepType(
-  step: WorkflowStep,
-  workflow: WorkflowDefinition
-): StepType {
-  const text = `${step.name} ${step.detail}`;
-
-  if (
-    REVIEW_KEYWORDS.test(text) &&
-    workflow.tools.includes('/contract-review')
-  ) {
-    return 'review';
-  }
-  if (RESEARCH_KEYWORDS.test(text)) return 'research';
-  if (DOCUMENT_KEYWORDS.test(text)) return 'document';
-  return 'guidance';
-}
-
-// ============================================================================
-// Session persistence hook
-// ============================================================================
-
-/** Bump version to drop stale localStorage after backend/schema fixes (no manual clear). */
-const WORKFLOW_EXEC_STORAGE_VERSION = 'v2';
-
-function getSessionKey(workflowId: string) {
-  return `exec_session_${WORKFLOW_EXEC_STORAGE_VERSION}_${workflowId}`;
-}
-
-function getDocKey(workflowId: string) {
-  return `exec_doc_${WORKFLOW_EXEC_STORAGE_VERSION}_${workflowId}`;
-}
-
-function useWorkflowSession(workflowId: string, totalSteps: number) {
-  const [session, setSession] = useState<WorkflowSession>(() => {
-    if (typeof window === 'undefined') {
-      return createFreshSession(workflowId);
-    }
-    try {
-      const stored = localStorage.getItem(getSessionKey(workflowId));
-      if (stored) return JSON.parse(stored) as WorkflowSession;
-    } catch {
-      /* ignore */
-    }
-    return createFreshSession(workflowId);
-  });
-
-  const [showCompletion, setShowCompletion] = useState(false);
-
-  const persist = useCallback(
-    (next: WorkflowSession) => {
-      setSession(next);
-      try {
-        localStorage.setItem(getSessionKey(workflowId), JSON.stringify(next));
-      } catch {
-        /* quota */
-      }
-    },
-    [workflowId]
-  );
-
-  const advanceStep = useCallback(() => {
-    setSession(prev => {
-      const completed = prev.completedSteps.includes(prev.currentStep)
-        ? prev.completedSteps
-        : [...prev.completedSteps, prev.currentStep];
-
-      if (prev.currentStep >= totalSteps - 1) {
-        try {
-          localStorage.removeItem(getSessionKey(workflowId));
-          localStorage.removeItem(getDocKey(workflowId));
-        } catch {
-          /* ignore */
-        }
-        setShowCompletion(true);
-        return { ...prev, completedSteps: completed };
-      }
-
-      const next: WorkflowSession = {
-        ...prev,
-        currentStep: prev.currentStep + 1,
-        completedSteps: completed,
-      };
-      try {
-        localStorage.setItem(getSessionKey(workflowId), JSON.stringify(next));
-      } catch {
-        /* quota */
-      }
-      return next;
-    });
-  }, [totalSteps, workflowId]);
-
-  const goToStep = useCallback(
-    (stepIndex: number) => {
-      persist({ ...session, currentStep: stepIndex });
-    },
-    [persist, session]
-  );
-
-  const setAttachedDoc = useCallback(
-    (docId: string) => {
-      const next = { ...session, attachedDocId: docId };
-      persist(next);
-      try {
-        localStorage.setItem(getDocKey(workflowId), docId);
-      } catch {
-        /* quota */
-      }
-    },
-    [persist, session, workflowId]
-  );
-
-  return {
-    ...session,
-    showCompletion,
-    setShowCompletion,
-    advanceStep,
-    goToStep,
-    setAttachedDoc,
-  };
-}
-
-function createFreshSession(workflowId: string): WorkflowSession {
-  return {
-    workflowId,
-    currentStep: 0,
-    completedSteps: [],
-    attachedDocId: null,
-    startedAt: new Date().toISOString(),
-    notes: {},
-    checkedItems: {},
-  };
-}
-
-// ============================================================================
-// Utility helpers
-// ============================================================================
-
-function extractSubTasks(detail: string, max = 5): string[] {
-  return detail
-    .split(/\.\s+/)
-    .map(s => s.trim().replace(/\.$/, ''))
-    .filter(s => s.length > 10)
-    .slice(0, max);
-}
-
-function extractPrompts(detail: string): string[] {
-  const sentences = detail
-    .split(/\.\s+/)
-    .map(s => s.trim().replace(/\.$/, ''))
-    .filter(s => s.length > 10);
-
-  return sentences.slice(0, 3).map(s => `Help me with: ${s}`);
-}
-
-function suggestResearchQuestion(step: WorkflowStep): string {
-  return `What are the key legal requirements and considerations for: ${step.name}? Context: ${step.detail}`;
-}
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.floor(hours / 24)}d`;
-}
-
-// ============================================================================
-// Step transition animation variants
-// ============================================================================
-
-const stepTransition = {
-  initial: { x: 20, opacity: 0 },
-  animate: {
-    x: 0,
-    opacity: 1,
-    transition: {
-      duration: motionTokens.duration.slow,
-      ease: motionTokens.ease,
-    },
-  },
-  exit: {
-    x: -20,
-    opacity: 0,
-    transition: {
-      duration: motionTokens.duration.fast,
-      ease: motionTokens.ease,
-    },
-  },
-};
-
-const railSlideIn = {
-  initial: { x: -20, opacity: 0 },
-  animate: {
-    x: 0,
-    opacity: 1,
-    transition: {
-      duration: motionTokens.duration.slow,
-      ease: motionTokens.ease,
-    },
-  },
-};
-
-// ============================================================================
-// StepRail
-// ============================================================================
-
-function StepRail({
-  workflow,
-  steps,
-  currentStep,
-  completedSteps,
-  accent,
-  onGoToStep,
-  onExit,
-}: {
-  workflow: WorkflowDefinition;
-  steps: WorkflowStep[];
-  currentStep: number;
-  completedSteps: number[];
-  accent: string;
-  onGoToStep: (idx: number) => void;
-  onExit: () => void;
-}) {
-  const [shakingStep, setShakingStep] = useState<number | null>(null);
-
-  const handleStepClick = (idx: number) => {
-    if (completedSteps.includes(idx)) {
-      onGoToStep(idx);
-    } else if (idx !== currentStep) {
-      setShakingStep(idx);
-      setTimeout(() => setShakingStep(null), 500);
-    }
-  };
-
-  const completedCount = completedSteps.length;
-  const progress = (completedCount / steps.length) * 100;
-
-  return (
-    <motion.aside className="exec-rail" {...railSlideIn}>
-      <button className="exec-rail-exit" onClick={onExit} type="button">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-        Exit
-      </button>
-
-      <span className="exec-rail-title">{workflow.name}</span>
-      <div className="exec-rail-divider" />
-
-      <motion.div
-        className="exec-rail-steps"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        {steps.map((step, idx) => {
-          const isCompleted = completedSteps.includes(idx);
-          const isActive = idx === currentStep;
-          const isUpcoming = !isCompleted && !isActive;
-          const isShaking = shakingStep === idx;
-
-          return (
-            <motion.div key={step.order} variants={staggerItem}>
-              {idx > 0 && (
-                <div
-                  className="exec-rail-line"
-                  style={{
-                    backgroundColor: completedSteps.includes(idx - 1)
-                      ? accent
-                      : 'rgba(255,255,255,0.1)',
-                  }}
-                />
-              )}
-              <button
-                type="button"
-                className={`exec-rail-step ${isShaking ? 'exec-rail-step--shake' : ''}`}
-                data-state={
-                  isCompleted ? 'completed' : isActive ? 'active' : 'upcoming'
-                }
-                onClick={() => handleStepClick(idx)}
-              >
-                <span
-                  className="exec-rail-indicator"
-                  style={
-                    isCompleted
-                      ? { backgroundColor: accent, borderColor: accent }
-                      : isActive
-                        ? { borderColor: 'rgba(255,255,255,0.9)' }
-                        : undefined
-                  }
-                >
-                  {isCompleted && (
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#fff"
-                      strokeWidth="3"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </span>
-                <span className="exec-rail-label">{step.name}</span>
-              </button>
-            </motion.div>
-          );
-        })}
-      </motion.div>
-
-      <div className="exec-rail-footer">
-        <div className="exec-rail-progress">
-          <div
-            className="exec-rail-progress-fill"
-            style={{ width: `${progress}%`, backgroundColor: accent }}
-          />
-        </div>
-        <span className="exec-rail-progress-text">
-          {completedCount} of {steps.length} complete
-        </span>
-      </div>
-    </motion.aside>
-  );
-}
-
-// ============================================================================
-// StepTopBar
-// ============================================================================
-
-function StepTopBar({
-  stepNumber,
-  totalSteps,
-  stepName,
-  canAdvance,
-  isLastStep,
-  onAdvance,
-}: {
-  stepNumber: number;
-  totalSteps: number;
-  stepName: string;
-  canAdvance: boolean;
-  isLastStep: boolean;
-  onAdvance: () => void;
-}) {
-  return (
-    <div className="exec-topbar">
-      <div className="exec-topbar-left">
-        <span className="exec-topbar-counter">
-          Step {stepNumber} of {totalSteps}
-        </span>
-        <span className="exec-topbar-name">{stepName}</span>
-      </div>
-      <button
-        type="button"
-        className={`exec-topbar-advance ${canAdvance ? '' : 'exec-topbar-advance--disabled'}`}
-        disabled={!canAdvance}
-        onClick={onAdvance}
-        title={
-          canAdvance ? undefined : 'Complete the step below before advancing'
-        }
-      >
-        {isLastStep ? 'Complete Workflow' : 'Mark Step Complete'} →
-      </button>
-    </div>
-  );
-}
-
-// ============================================================================
-// ResearchStepContent
-// ============================================================================
-
-function ResearchStepContent({
-  step,
-  onComplete,
-}: {
-  step: WorkflowStep;
-  onComplete: () => void;
-}) {
-  const [question, setQuestion] = useState(() => suggestResearchQuestion(step));
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<LegalResearchResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!question.trim()) return;
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      const response = await apiClient.legalResearch({
-        question,
-        limit: 10,
-        output_language: 'en',
-        evidence_scope: 'both',
-      });
-      setResult(response);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Research failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="exec-research">
-      <div className="exec-research-banner">
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        Researching: {step.name}
-      </div>
-
-      <form onSubmit={handleSubmit} className="exec-research-form">
-        <textarea
-          className="exec-research-textarea"
-          value={question}
-          onChange={e => setQuestion(e.target.value)}
-          placeholder="Enter your research question..."
-          rows={3}
-        />
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={loading || !question.trim()}
-        >
-          {loading ? (
-            <>
-              <span className="spinner spinner-sm" /> Researching...
-            </>
-          ) : (
-            'Submit Research'
-          )}
-        </button>
-      </form>
-
-      {error && <div className="alert alert-error">{error}</div>}
-
-      {loading && !result && (
-        <div className="exec-research-loading">
-          <span className="spinner spinner-lg" />
-          <p>Analyzing documents and generating cited answer...</p>
-        </div>
-      )}
-
-      {result && (
-        <div className="exec-research-results">
-          <div className="exec-research-results-header">
-            <h3>Research Results</h3>
-            <WorkflowStatusBadge status={result.meta.status} />
-          </div>
-
-          <div className="workflow-answer">
-            <div className="workflow-answer-text">
-              {renderCitationsWithDifferentiation(result.answer_text, {})}
-            </div>
-          </div>
-
-          {result.evidence.length > 0 && (
-            <div className="exec-research-evidence">
-              <h4>Evidence ({result.evidence.length})</h4>
-              <GroupedEvidenceList
-                evidence={result.evidence.map(toEvidenceItemFromChunk)}
-                maxItemsPerSection={5}
-                showGlobalLawBanner={true}
-                showMore={true}
-              />
-            </div>
-          )}
-
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onComplete}
-            style={{ marginTop: 'var(--space-4)' }}
-          >
-            Research complete — mark step done
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// DocumentStepContent
-// ============================================================================
-
-function DocumentStepContent({
-  step,
-  workflow,
-  attachedDocId,
-  onDocAttached,
-  isFirstStep,
-}: {
-  step: WorkflowStep;
-  workflow: WorkflowDefinition;
-  attachedDocId: string | null;
-  onDocAttached: (docId: string) => void;
-  isFirstStep: boolean;
-}) {
-  const [docId, setDocId] = useState<string | null>(attachedDocId);
-  const [creating, setCreating] = useState(false);
-  const [showEditor, setShowEditor] = useState(!!attachedDocId);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const autoCreated = useRef(false);
-
-  const templateConfig = useMemo(
-    () =>
-      WORKFLOW_TEMPLATE_MAP[workflow.id] ?? {
-        title: `${workflow.name} — ${step.name}`,
-        doc_type: 'docx' as const,
-      },
-    [workflow.id, workflow.name, step.name]
-  );
-
-  const createDocument = useCallback(async () => {
-    setCreating(true);
-    try {
-      const doc = await officeApi.createDocument({
-        title: templateConfig.title,
-        doc_type: templateConfig.doc_type,
-        template: templateConfig.template,
-      });
-      setDocId(doc.id);
-      onDocAttached(doc.id);
-      setShowEditor(true);
-    } catch {
-      /* toast would go here */
-    } finally {
-      setCreating(false);
-    }
-  }, [onDocAttached, templateConfig]);
-
-  useEffect(() => {
-    if (isFirstStep && !docId && !autoCreated.current) {
-      autoCreated.current = true;
-      void createDocument();
-    }
-  }, [isFirstStep, docId, createDocument]);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    /* For MVP, create a doc then attach the file via the standard upload flow */
-    await createDocument();
-  };
-
-  if (showEditor && docId) {
-    return (
-      <div className="exec-document">
-        <CollaboraEditor
-          docId={docId}
-          title={templateConfig.title}
-          docType={templateConfig.doc_type}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="exec-document">
-      <div className="exec-document-choices">
-        <button
-          type="button"
-          className="exec-document-card"
-          onClick={createDocument}
-          disabled={creating}
-        >
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="12" y1="18" x2="12" y2="12" />
-            <line x1="9" y1="15" x2="15" y2="15" />
-          </svg>
-          <strong>{creating ? 'Creating...' : 'Open Collabora Editor'}</strong>
-          <span>Create a new document with the appropriate template</span>
-        </button>
-
-        <button
-          type="button"
-          className="exec-document-card"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-          <strong>Upload Existing Document</strong>
-          <span>Attach a document you have already prepared</span>
-        </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".docx,.xlsx,.pptx,.pdf"
-          onChange={handleUpload}
-          style={{ display: 'none' }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// ReviewStepContent
-// ============================================================================
-
-function ReviewStepContent({
-  step,
-  workflow,
-  attachedDocId,
-  onComplete,
-}: {
-  step: WorkflowStep;
-  workflow: WorkflowDefinition;
-  attachedDocId: string | null;
-  onComplete: () => void;
-}) {
-  const isContractWorkflow = workflow.tools.includes('/contract-review');
-
-  if (isContractWorkflow && attachedDocId) {
-    return (
-      <div className="exec-guidance">
-        <div className="exec-guidance-objective">
-          <h3>Contract Review: {step.name}</h3>
-          <p>{step.detail}</p>
-        </div>
-        <div className="exec-guidance-actions">
-          <a
-            href={`/contract-review?docId=${attachedDocId}&workflow=${workflow.id}`}
-            className="btn btn-primary"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open Contract Review Tool
-          </a>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={onComplete}
-          >
-            Mark review complete
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return <GuidanceStepContent step={step} onComplete={onComplete} />;
-}
-
-// ============================================================================
-// GuidanceStepContent
-// ============================================================================
-
-function GuidanceStepContent({
-  step,
-  onComplete,
-}: {
-  step: WorkflowStep;
-  onComplete: () => void;
-}) {
-  const { openPanel, sendMessage } = useAminContext();
-  const prompts = useMemo(() => extractPrompts(step.detail), [step.detail]);
-  const subTasks = useMemo(() => extractSubTasks(step.detail), [step.detail]);
-  const [checked, setChecked] = useState<boolean[]>(() =>
-    new Array(subTasks.length).fill(false)
-  );
-
-  const allChecked = subTasks.length > 0 && checked.every(Boolean);
-
-  const toggleCheck = (idx: number) => {
-    setChecked(prev => {
-      const next = [...prev];
-      next[idx] = !next[idx];
-      return next;
-    });
-  };
-
-  const handlePromptClick = (text: string) => {
-    openPanel();
-    sendMessage(text);
-  };
-
-  return (
-    <div className="exec-guidance">
-      <div className="exec-guidance-objective">
-        <h3>{step.name}</h3>
-        <p>{step.detail}</p>
-      </div>
-
-      {prompts.length > 0 && (
-        <div className="exec-guidance-prompts">
-          <span className="exec-guidance-prompts-label">Ask Amin</span>
-          {prompts.map((prompt, i) => (
-            <button
-              key={i}
-              type="button"
-              className="exec-guidance-prompt"
-              onClick={() => handlePromptClick(prompt)}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <button
-        type="button"
-        className="btn btn-outline exec-guidance-open-amin"
-        onClick={openPanel}
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-        Open Amin
-      </button>
-
-      {subTasks.length > 0 && (
-        <div className="exec-guidance-checklist">
-          <span className="exec-guidance-checklist-label">Checklist</span>
-          {subTasks.map((task, i) => (
-            <label key={i} className="exec-guidance-check-item">
-              <input
-                type="checkbox"
-                checked={checked[i]}
-                onChange={() => toggleCheck(i)}
-              />
-              <span>{task}</span>
-            </label>
-          ))}
-        </div>
-      )}
-
-      {allChecked && (
-        <motion.button
-          type="button"
-          className="btn btn-primary"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          onClick={onComplete}
-          style={{ marginTop: 'var(--space-4)' }}
-        >
-          All tasks complete — mark step done
-        </motion.button>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// CompletionModal
-// ============================================================================
-
-function CompletionModal({
-  workflow,
-  completedSteps,
-  startedAt,
-  attachedDocId,
-  category,
-  onClose,
-}: {
-  workflow: WorkflowDefinition;
-  completedSteps: number[];
-  startedAt: string;
-  attachedDocId: string | null;
-  category: string;
-  onClose: () => void;
-}) {
-  const { navigateTo } = useNavigation();
-
-  return (
-    <motion.div className="exec-completion" {...glassBackdrop}>
-      <motion.div className="exec-completion-card" {...glassReveal}>
-        <svg
-          className="exec-completion-check"
-          width="80"
-          height="80"
-          viewBox="0 0 80 80"
-          fill="none"
-        >
-          <circle
-            cx="40"
-            cy="40"
-            r="36"
-            stroke="rgba(255,255,255,0.9)"
-            strokeWidth="3"
-            opacity="0.3"
-          />
-          <path
-            className="exec-completion-check-path"
-            d="M24 42 L34 52 L56 30"
-            stroke="rgba(255,255,255,0.9)"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </svg>
-
-        <h2 className="exec-completion-title">Workflow Complete</h2>
-        <p className="exec-completion-name">{workflow.name}</p>
-        <p className="exec-completion-stats">
-          {completedSteps.length} steps completed &middot; Started{' '}
-          {relativeTime(startedAt)} ago
-        </p>
-
-        <div className="exec-completion-actions">
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => navigateTo(`/workflows/${category}`)}
-          >
-            ← Back to Workflows
-          </button>
-          {attachedDocId && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => navigateTo(`/documents/${attachedDocId}`)}
-            >
-              View Document
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => navigateTo('/research')}
-          >
-            Start New Research
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// ============================================================================
-// Main Page Component
-// ============================================================================
 
 interface ActiveCaseInfo {
   case_id: string;
   case_title: string;
   client_name: string;
-  practice_area: string;
+}
+
+interface CaseListItem {
+  id: string;
+  title: string;
+}
+
+type AminState = 'idle' | 'thinking' | 'speaking' | 'success';
+
+type StepResult =
+  | { kind: 'research'; data: LegalResearchResponse }
+  | { kind: 'contract'; data: ContractReviewResponse; score: number }
+  | { kind: 'redlines'; data: ClauseRedlinesResponse; originalText: string }
+  | { kind: 'simulated'; data: WorkflowSimulatedOutput }
+  | { kind: 'text'; content: string };
+
+function wait(ms: number) {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+function severityScore(severity: string): number {
+  switch (severity) {
+    case 'critical':
+      return 95;
+    case 'high':
+      return 78;
+    case 'medium':
+      return 58;
+    case 'low':
+      return 28;
+    default:
+      return 12;
+  }
+}
+
+function computeRiskScore(findings: ContractReviewResponse['findings']) {
+  if (!findings.length) return 12;
+  const total = findings.reduce(
+    (sum, finding) => sum + severityScore(finding.severity),
+    0
+  );
+  return Math.max(0, Math.min(100, Math.round(total / findings.length)));
+}
+
+function triggerDownload(
+  filename: string,
+  content: string,
+  type = 'text/plain'
+) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function buildFallbackSummary(
+  workflowName: string,
+  stepResults: Record<number, StepResult>
+) {
+  const completed = Object.keys(stepResults).length;
+  return `${workflowName} completed successfully. ${completed} workflow stages were finished with Amin guiding each transition. The final outputs are ready to download or file into a case.`;
+}
+
+function tokenize(text: string) {
+  return text.split(/(\s+)/).filter(Boolean);
+}
+
+function buildDiffSegments(original: string, updated: string) {
+  const left = tokenize(original);
+  const right = tokenize(updated);
+  const dp = Array.from({ length: left.length + 1 }, () =>
+    Array<number>(right.length + 1).fill(0)
+  );
+
+  for (let i = left.length - 1; i >= 0; i -= 1) {
+    for (let j = right.length - 1; j >= 0; j -= 1) {
+      dp[i][j] =
+        left[i] === right[j]
+          ? dp[i + 1][j + 1] + 1
+          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+
+  const segments: Array<{ type: 'same' | 'insert' | 'delete'; text: string }> =
+    [];
+
+  const push = (type: 'same' | 'insert' | 'delete', text: string) => {
+    const last = segments[segments.length - 1];
+    if (last?.type === type) {
+      last.text += text;
+      return;
+    }
+    segments.push({ type, text });
+  };
+
+  let i = 0;
+  let j = 0;
+
+  while (i < left.length && j < right.length) {
+    if (left[i] === right[j]) {
+      push('same', left[i]);
+      i += 1;
+      j += 1;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      push('delete', left[i]);
+      i += 1;
+    } else {
+      push('insert', right[j]);
+      j += 1;
+    }
+  }
+
+  while (i < left.length) {
+    push('delete', left[i]);
+    i += 1;
+  }
+
+  while (j < right.length) {
+    push('insert', right[j]);
+    j += 1;
+  }
+
+  return segments;
 }
 
 export default function WorkflowExecutePage() {
   const params = useParams<{ category: string; workflowId: string }>();
   const searchParams = useSearchParams();
-  const { navigateTo } = useNavigation();
-  const [activeCase, setActiveCase] = useState<ActiveCaseInfo | null>(null);
+  const router = useRouter();
+  const canvasRef = useRef<HTMLDivElement | null>(null);
 
-  const aminAvatarState = useAminAvatarState();
-  const category = params.category as WorkflowCategory;
+  const workflow = useMemo(
+    () => getWorkflowById(params.workflowId),
+    [params.workflowId]
+  );
   const workflowId = params.workflowId;
+  const category = params.category as WorkflowCategory;
+  const steps = useMemo(() => getWorkflowJourneySteps(workflow), [workflow]);
+  const workflowName = getWorkflowDisplayName(workflow);
+  const isLive = isLiveWorkflow(workflow);
+  const caseId = searchParams.get('case');
 
-  const workflow = useMemo(() => getWorkflowById(workflowId), [workflowId]);
-  const steps = useMemo(() => workflow?.steps ?? [], [workflow]);
-  const accent = WORKFLOW_CATEGORY_ACCENTS[category] ?? 'rgba(255,255,255,0.9)';
+  const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [stepResults, setStepResults] = useState<Record<number, StepResult>>(
+    {}
+  );
+  const [running, setRunning] = useState(false);
+  const [runProgress, setRunProgress] = useState(0);
+  const [successFlash, setSuccessFlash] = useState(false);
+  const [particleStep, setParticleStep] = useState<number | null>(null);
+  const [aminState, setAminState] = useState<AminState>('idle');
+  const [aminMessage, setAminMessage] = useState('');
+  const [completionVisible, setCompletionVisible] = useState(false);
+  const [completionSummary, setCompletionSummary] = useState('');
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [activeCase, setActiveCase] = useState<ActiveCaseInfo | null>(null);
+  const [caseOptions, setCaseOptions] = useState<CaseListItem[]>([]);
+  const [selectedCaseId, setSelectedCaseId] = useState(caseId ?? '');
+  const [caseStatusLabel, setCaseStatusLabel] = useState<string | null>(null);
 
-  const {
-    currentStep,
-    completedSteps,
-    attachedDocId,
-    startedAt,
-    showCompletion,
-    setShowCompletion,
-    advanceStep,
-    goToStep,
-    setAttachedDoc,
-  } = useWorkflowSession(workflowId, steps.length);
+  const [researchQuery, setResearchQuery] = useState(
+    searchParams.get('query') ?? ''
+  );
+  const [researchJurisdiction, setResearchJurisdiction] = useState(
+    searchParams.get('jurisdiction') ?? 'KSA'
+  );
+  const [researchResult, setResearchResult] =
+    useState<LegalResearchResponse | null>(null);
 
-  // Fetch active case and set from URL param if present
+  const [uploadedContract, setUploadedContract] = useState<{
+    fileName: string;
+    size: number;
+    documentId: string;
+    versionId: string;
+  } | null>(null);
+  const [contractResult, setContractResult] = useState<{
+    response: ContractReviewResponse;
+    score: number;
+  } | null>(null);
+
+  const [clauseText, setClauseText] = useState('');
+  const [clauseType, setClauseType] = useState(
+    searchParams.get('clauseType') ?? 'liability'
+  );
+  const [clauseJurisdiction, setClauseJurisdiction] = useState(
+    searchParams.get('jurisdiction') ?? 'KSA'
+  );
+  const [clauseResult, setClauseResult] = useState<{
+    response: ClauseRedlinesResponse;
+    originalText: string;
+  } | null>(null);
+
+  useAnimationFrame(time => {
+    if (!canvasRef.current) return;
+    const progress = (time % 30000) / 30000;
+    const gx = 50 + Math.sin(progress * Math.PI * 2) * 35;
+    const gy = 50 + Math.cos(progress * Math.PI * 2) * 35;
+    canvasRef.current.style.setProperty('--gx', `${gx}%`);
+    canvasRef.current.style.setProperty('--gy', `${gy}%`);
+  });
+
   useEffect(() => {
-    const caseIdParam = searchParams.get('case');
-    if (caseIdParam) {
-      fetch(`/api/v1/cases/${caseIdParam}/set-active`, {
-        method: 'POST',
-        credentials: 'include',
-      }).catch(() => {});
-    }
     fetch('/api/v1/cases/active', { credentials: 'include' })
-      .then(r => (r.ok ? r.json() : null))
+      .then(response => (response.ok ? response.json() : null))
       .then(data => {
-        if (data) setActiveCase(data);
+        if (data) {
+          setActiveCase(data);
+          if (!caseId) {
+            setSelectedCaseId(data.case_id);
+          }
+        }
       })
       .catch(() => {});
-  }, [searchParams]);
 
-  // File step completion to case timeline
-  const fileStepToCase = useCallback(
-    (stepName: string) => {
-      if (!activeCase) return;
-      fetch(`/api/v1/cases/${activeCase.case_id}/notes`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: `Workflow step completed: ${stepName} in ${workflow?.name ?? workflowId}`,
-          is_amin_generated: true,
-        }),
-      }).catch(() => {});
-    },
-    [activeCase, workflow?.name, workflowId]
-  );
+    fetch('/api/v1/cases?limit=50&offset=0', { credentials: 'include' })
+      .then(response => (response.ok ? response.json() : null))
+      .then(data => {
+        const items = (data?.items ?? []) as Array<{
+          id: string;
+          title: string;
+        }>;
+        setCaseOptions(items.map(item => ({ id: item.id, title: item.title })));
+      })
+      .catch(() => {});
+  }, [caseId]);
 
-  // Hydrate docId from search params or localStorage
   useEffect(() => {
-    if (attachedDocId) return;
-    const fromUrl = searchParams.get('docId');
-    if (fromUrl) {
-      setAttachedDoc(fromUrl);
-      return;
-    }
-    try {
-      const stored = localStorage.getItem(getDocKey(workflowId));
-      if (stored) setAttachedDoc(stored);
-    } catch {
-      /* ignore */
-    }
-  }, [attachedDocId, searchParams, setAttachedDoc, workflowId]);
-
-  // Report screen context on every step change
-  useEffect(() => {
-    if (!workflow) return;
     const step = steps[currentStep];
-    if (!step) return;
+    if (!workflow || !step) return;
+
+    setAminMessage(getWorkflowStepMessage(workflow.id, currentStep));
+    setAminState('speaking');
+
+    const timer = window.setTimeout(() => {
+      setAminState(current => (current === 'thinking' ? current : 'idle'));
+    }, 1500);
 
     reportScreenContext({
-      route: `/workflows/${category}/${workflowId}/execute`,
-      page_title: `Executing: ${workflow.name}`,
-      document: attachedDocId
-        ? {
-            doc_id: attachedDocId,
-            title: workflow.name,
-            doc_type: 'docx',
-            current_view: 'editor',
-            current_page: null,
-            current_slide: null,
-            current_sheet: null,
-          }
-        : null,
+      route: `/workflows/${category}/${workflow.id}/execute`,
+      page_title: `${workflowName} Execute`,
+      document: null,
       ui_state: {
-        workflow_id: workflowId,
-        workflow_name: workflow.name,
+        page: 'workflow_execute',
+        workflowId: workflow.id,
         category,
-        current_step: currentStep + 1,
-        current_step_name: step.name,
-        current_step_detail: step.detail,
-        completed_steps: completedSteps.length,
-        total_steps: steps.length,
-        attached_doc_id: attachedDocId,
+        currentStep,
+        totalSteps: steps.length,
+        stepName: step.name,
+        caseId: selectedCaseId || null,
       },
     });
+
+    return () => window.clearTimeout(timer);
+  }, [category, currentStep, selectedCaseId, steps, workflow, workflowName]);
+
+  useEffect(() => {
+    if (!completionVisible || !workflow || completionSummary || summaryLoading)
+      return;
+
+    setSummaryLoading(true);
+    setAminState('success');
+    setAminMessage('Workflow complete. I am preparing the final summary.');
+
+    fetch('/api/v1/agent/message', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message:
+          'Summarize what was accomplished in this workflow in 2-3 sentences.',
+        context: {
+          workflow: workflow.id,
+          results: stepResults,
+        },
+      }),
+    })
+      .then(async response => {
+        if (!response.ok) {
+          throw new Error('Summary request failed');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setCompletionSummary(
+          data.summary ??
+            data.content ??
+            buildFallbackSummary(workflowName, stepResults)
+        );
+      })
+      .catch(() => {
+        setCompletionSummary(buildFallbackSummary(workflowName, stepResults));
+      })
+      .finally(() => {
+        setSummaryLoading(false);
+        setAminState('speaking');
+      });
   }, [
+    completionSummary,
+    completionVisible,
+    stepResults,
+    summaryLoading,
     workflow,
-    currentStep,
-    completedSteps,
-    attachedDocId,
-    category,
-    workflowId,
-    steps,
+    workflowName,
   ]);
 
-  // Determine current step type and whether advance is allowed
-  const currentStepDef = steps[currentStep];
-  const stepType =
-    currentStepDef && workflow
-      ? classifyStepType(currentStepDef, workflow)
-      : 'guidance';
-
-  const handleAdvance = useCallback(() => {
-    const stepName = steps[currentStep]?.name ?? `Step ${currentStep + 1}`;
-    fileStepToCase(stepName);
-    advanceStep();
-  }, [advanceStep, currentStep, steps, fileStepToCase]);
-
-  const canAdvance =
-    completedSteps.includes(currentStep) ||
-    stepType === 'research' ||
-    stepType === 'document';
-  const isLastStep = currentStep >= steps.length - 1;
+  useEffect(() => {
+    if (!completionVisible || !caseId || !selectedCaseId || caseStatusLabel)
+      return;
+    void handleFileToCase();
+  }, [caseId, caseStatusLabel, completionVisible, selectedCaseId]);
 
   if (!workflow) {
     return (
@@ -1109,126 +357,948 @@ export default function WorkflowExecutePage() {
     );
   }
 
-  const handleExit = () => {
-    navigateTo(getWorkflowHref(workflow));
-  };
+  const currentStepDef = steps[currentStep];
+  const displayedDiff = clauseResult
+    ? buildDiffSegments(
+        clauseResult.originalText,
+        clauseResult.response.items[0]?.suggested_redline ??
+          clauseResult.originalText
+      )
+    : [];
 
-  const renderStepContent = () => {
+  function updateAmin(
+    message: string,
+    state: AminState = 'speaking',
+    cooldownMs = 1500
+  ) {
+    setAminMessage(message);
+    setAminState(state);
+    if (state !== 'thinking') {
+      window.setTimeout(() => {
+        setAminState(current => (current === 'thinking' ? current : 'idle'));
+      }, cooldownMs);
+    }
+  }
+
+  async function advanceStep(message?: string) {
+    const finishedStep = currentStep;
+    setCompletedSteps(prev =>
+      prev.includes(finishedStep) ? prev : [...prev, finishedStep]
+    );
+    setSuccessFlash(true);
+    setParticleStep(finishedStep);
+    updateAmin(message ?? 'Step complete. Moving to the next one.');
+
+    window.setTimeout(() => setSuccessFlash(false), 400);
+    window.setTimeout(() => setParticleStep(null), 450);
+
+    await wait(800);
+
+    if (finishedStep >= steps.length - 1) {
+      setCompletionVisible(true);
+      return;
+    }
+
+    setCurrentStep(finishedStep + 1);
+  }
+
+  async function runResearchFlow() {
+    if (currentStep === 0) {
+      if (!researchQuery.trim()) {
+        updateAmin('Add the research question first so I know what to run.');
+        return;
+      }
+      setStepResults(prev => ({
+        ...prev,
+        0: {
+          kind: 'text',
+          content: `Query defined for ${researchJurisdiction}.`,
+        },
+      }));
+      await advanceStep('Query captured. I am ready to run the research.');
+      return;
+    }
+
+    if (currentStep === 1) {
+      setRunning(true);
+      setRunProgress(0);
+      setAminState('thinking');
+      setAminMessage('Working on it...');
+
+      let progressValue = 0;
+      const timer = window.setInterval(() => {
+        progressValue = Math.min(96, progressValue + 4);
+        setRunProgress(progressValue);
+      }, 300);
+
+      try {
+        const response = await apiClient.legalResearch({
+          question: researchQuery,
+          limit: 10,
+          output_language: 'en',
+          evidence_scope: 'both',
+          filters: {
+            jurisdiction: researchJurisdiction,
+          },
+        });
+        window.clearInterval(timer);
+        setRunProgress(100);
+        setResearchResult(response);
+        setStepResults(prev => ({
+          ...prev,
+          1: { kind: 'research', data: response },
+        }));
+        setRunning(false);
+        await advanceStep(
+          'Research complete. The cited results are ready for review.'
+        );
+      } catch (error) {
+        window.clearInterval(timer);
+        setRunning(false);
+        updateAmin(
+          error instanceof Error
+            ? error.message
+            : 'Research failed unexpectedly.'
+        );
+      }
+      return;
+    }
+
+    if (currentStep === 2) {
+      await advanceStep(
+        'Results reviewed. The research package is ready to file.'
+      );
+      return;
+    }
+
+    if (!selectedCaseId) {
+      updateAmin('Select a case to file this research output.');
+      return;
+    }
+
+    setRunning(true);
+    try {
+      const response = await fetch(`/api/v1/cases/${selectedCaseId}/research`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: researchQuery,
+          jurisdiction: researchJurisdiction,
+          result: researchResult,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Unable to save research to case');
+      }
+      setRunning(false);
+      setCaseStatusLabel('Saved to case');
+      await advanceStep('Saved to case. The workflow is complete.');
+    } catch (error) {
+      setRunning(false);
+      updateAmin(
+        error instanceof Error
+          ? error.message
+          : 'Unable to save research to case.'
+      );
+    }
+  }
+
+  async function runContractFlow(file?: File) {
+    if (currentStep === 0) {
+      if (!file) {
+        updateAmin('Choose a contract file first.');
+        return;
+      }
+
+      setRunning(true);
+      setAminState('thinking');
+      setAminMessage('Working on it...');
+
+      try {
+        const response = await apiClient.uploadDocument(file, {
+          title: file.name.replace(/\.[^.]+$/, ''),
+          document_type: 'contract',
+          jurisdiction: 'KSA',
+          language: 'en',
+          confidentiality: 'internal',
+        });
+        setUploadedContract({
+          fileName: file.name,
+          size: file.size,
+          documentId: response.document.id,
+          versionId: response.version.id,
+        });
+        setStepResults(prev => ({
+          ...prev,
+          0: { kind: 'text', content: `${file.name} uploaded.` },
+        }));
+        setRunning(false);
+        await advanceStep('Contract uploaded. I am ready to analyze it.');
+      } catch (error) {
+        setRunning(false);
+        updateAmin(error instanceof Error ? error.message : 'Upload failed.');
+      }
+      return;
+    }
+
+    if (currentStep === 1) {
+      if (!uploadedContract) {
+        updateAmin('Upload the contract before running analysis.');
+        return;
+      }
+
+      setRunning(true);
+      setRunProgress(0);
+      setAminState('thinking');
+      setAminMessage('Working on it...');
+
+      try {
+        const response = await apiClient.contractReview({
+          document_id: uploadedContract.documentId,
+          version_id: uploadedContract.versionId,
+          review_mode: 'standard',
+          focus_areas: [
+            'liability',
+            'termination',
+            'payment',
+            'confidentiality',
+          ],
+          output_language: 'en',
+          evidence_scope: 'workspace',
+        });
+        const score = computeRiskScore(response.findings);
+        setContractResult({ response, score });
+        setStepResults(prev => ({
+          ...prev,
+          1: { kind: 'contract', data: response, score },
+        }));
+        setRunning(false);
+        setRunProgress(100);
+        await advanceStep(
+          'Analysis complete. Review the findings and risk score.'
+        );
+      } catch (error) {
+        setRunning(false);
+        updateAmin(error instanceof Error ? error.message : 'Analysis failed.');
+      }
+      return;
+    }
+
+    if (currentStep === 2) {
+      await advanceStep('Findings reviewed. The report is ready to export.');
+      return;
+    }
+
+    triggerDownload(
+      `${workflowName.replace(/\s+/g, '-').toLowerCase()}-report.txt`,
+      `Contract Review\n\nSummary\n${contractResult?.response.summary ?? ''}\n\nScore\n${contractResult?.score ?? 0}\n`
+    );
+    await advanceStep('Report exported. The workflow is complete.');
+  }
+
+  async function runRedlinesFlow() {
+    if (currentStep === 0) {
+      if (!clauseText.trim()) {
+        updateAmin(
+          'Paste the clause text first so I can prepare the redlines.'
+        );
+        return;
+      }
+      setStepResults(prev => ({
+        ...prev,
+        0: { kind: 'text', content: `${clauseType} clause captured.` },
+      }));
+      await advanceStep('Clause captured. I am ready to generate redlines.');
+      return;
+    }
+
+    if (currentStep === 1) {
+      setRunning(true);
+      setAminState('thinking');
+      setAminMessage('Working on it...');
+
+      try {
+        const inputFile = new File([clauseText], 'clause-input.txt', {
+          type: 'text/plain',
+        });
+        const document = await apiClient.uploadDocument(inputFile, {
+          title: 'Clause Redlines Input',
+          document_type: 'contract',
+          jurisdiction: clauseJurisdiction,
+          language: 'en',
+          confidentiality: 'internal',
+        });
+
+        const response = await apiClient.clauseRedlines({
+          document_id: document.document.id,
+          version_id: document.version.id,
+          jurisdiction: clauseJurisdiction as 'KSA' | 'UAE',
+          clause_types:
+            clauseType === 'other'
+              ? undefined
+              : [
+                  clauseType as
+                    | 'liability'
+                    | 'indemnity'
+                    | 'termination'
+                    | 'payment'
+                    | 'confidentiality'
+                    | 'governing_law',
+                ],
+          output_language: 'en',
+          evidence_scope: 'workspace',
+        });
+
+        setClauseResult({ response, originalText: clauseText });
+        setStepResults(prev => ({
+          ...prev,
+          1: { kind: 'redlines', data: response, originalText: clauseText },
+        }));
+        setRunning(false);
+        await advanceStep(
+          'Redlines generated. Review the side-by-side changes.'
+        );
+      } catch (error) {
+        setRunning(false);
+        updateAmin(error instanceof Error ? error.message : 'Redlines failed.');
+      }
+      return;
+    }
+
+    if (currentStep === 2) {
+      await advanceStep(
+        'Changes reviewed. The clause package is ready to export.'
+      );
+      return;
+    }
+
+    triggerDownload(
+      `${workflowName.replace(/\s+/g, '-').toLowerCase()}-export.txt`,
+      `Original Clause\n${clauseResult?.originalText ?? ''}\n\nRedlined Clause\n${clauseResult?.response.items[0]?.suggested_redline ?? ''}`
+    );
+    await advanceStep('Export complete. The workflow is complete.');
+  }
+
+  async function runDemoFlow() {
+    setRunning(true);
+    setRunProgress(0);
+    setAminState('thinking');
+    setAminMessage('Working on it...');
+
+    await runWorkflowSimulation({
+      onTick: tick => setRunProgress(tick.progress),
+    });
+
+    const output = getWorkflowSimulatedOutput(workflow.id, currentStep);
+    setStepResults(prev => ({
+      ...prev,
+      [currentStep]: { kind: 'simulated', data: output },
+    }));
+    setRunning(false);
+    await advanceStep('Step complete. Moving to the next one.');
+  }
+
+  async function handleRun(file?: File) {
+    if (isLive && workflow.id === 'RESEARCH_LEGAL_MEMO') {
+      await runResearchFlow();
+      return;
+    }
+    if (isLive && workflow.id === 'CORPORATE_CONTRACTS') {
+      await runContractFlow(file);
+      return;
+    }
+    if (isLive && workflow.id === 'ARBITRATION_CLAUSE') {
+      await runRedlinesFlow();
+      return;
+    }
+    await runDemoFlow();
+  }
+
+  async function handleFileToCase() {
+    if (!selectedCaseId) {
+      setCaseStatusLabel('Select a case first.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/v1/cases/${selectedCaseId}/events`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'workflow_completed',
+          title: workflowName,
+          description:
+            completionSummary ||
+            buildFallbackSummary(workflowName, stepResults),
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Unable to file workflow to case');
+      }
+      const selectedCase = caseOptions.find(
+        option => option.id === selectedCaseId
+      );
+      setCaseStatusLabel(
+        `Filed to case ${selectedCase?.title ?? selectedCaseId} ✓`
+      );
+    } catch (error) {
+      setCaseStatusLabel(
+        error instanceof Error ? error.message : 'Unable to file workflow.'
+      );
+    }
+  }
+
+  function renderProgress() {
+    if (!running) return null;
+    return (
+      <div className="workflow-run-progress">
+        <div className="workflow-run-progress-bar">
+          <motion.div
+            className="workflow-run-progress-fill"
+            animate={{ width: `${runProgress}%` }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          />
+        </div>
+        <span>{Math.round(runProgress)}%</span>
+      </div>
+    );
+  }
+
+  function renderResearchView() {
     if (!currentStepDef) return null;
 
-    switch (stepType) {
-      case 'research':
-        return (
-          <ResearchStepContent
-            step={currentStepDef}
-            onComplete={handleAdvance}
-          />
-        );
-      case 'document':
-        return (
-          <DocumentStepContent
-            step={currentStepDef}
-            workflow={workflow}
-            attachedDocId={attachedDocId}
-            onDocAttached={setAttachedDoc}
-            isFirstStep={currentStep === 0}
-          />
-        );
-      case 'review':
-        return (
-          <ReviewStepContent
-            step={currentStepDef}
-            workflow={workflow}
-            attachedDocId={attachedDocId}
-            onComplete={handleAdvance}
-          />
-        );
-      case 'guidance':
-      default:
-        return (
-          <GuidanceStepContent
-            step={currentStepDef}
-            onComplete={handleAdvance}
-          />
-        );
+    if (currentStep === 0) {
+      return (
+        <div className="workflow-live-step-card">
+          <h2>{currentStepDef.name}</h2>
+          <p>{currentStepDef.detail}</p>
+          <div className="form-group">
+            <label className="form-label">Research question</label>
+            <textarea
+              className="form-textarea workflow-launch-textarea"
+              rows={4}
+              value={researchQuery}
+              onChange={event => setResearchQuery(event.target.value)}
+              placeholder="What should Amin research?"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Jurisdiction</label>
+            <select
+              className="form-select"
+              value={researchJurisdiction}
+              onChange={event => setResearchJurisdiction(event.target.value)}
+            >
+              <option value="KSA">KSA</option>
+              <option value="UAE">UAE</option>
+              <option value="Qatar">Qatar</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            className="workflow-run-button"
+            onClick={() => void handleRun()}
+            disabled={running}
+          >
+            Run this step
+          </button>
+        </div>
+      );
     }
-  };
+
+    if (currentStep === 1) {
+      return (
+        <div className="workflow-live-step-card">
+          <h2>{currentStepDef.name}</h2>
+          <p>{currentStepDef.detail}</p>
+          {renderProgress()}
+          <button
+            type="button"
+            className="workflow-run-button"
+            onClick={() => void handleRun()}
+            disabled={running}
+          >
+            {running ? 'Running Research...' : 'Run this step'}
+          </button>
+        </div>
+      );
+    }
+
+    if (currentStep === 2 && researchResult) {
+      return (
+        <div className="workflow-live-step-card workflow-scroll-card">
+          <div className="workflow-results-header-v2">
+            <h2>Research Results</h2>
+            <span>{researchResult.evidence.length} sources</span>
+          </div>
+          <div className="workflow-answer-text">
+            {researchResult.answer_text}
+          </div>
+          <div className="workflow-results-grid">
+            {researchResult.evidence.map(item => (
+              <div key={item.chunk_id} className="workflow-result-card">
+                <strong>
+                  {item.source_label || item.document_title || 'Source'}
+                </strong>
+                <p>{item.snippet}</p>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="workflow-run-button"
+            onClick={() => void handleRun()}
+          >
+            Continue
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="workflow-live-step-card">
+        <h2>{currentStepDef.name}</h2>
+        <p>{currentStepDef.detail}</p>
+        {!selectedCaseId ? (
+          <div className="workflow-completion-case-select">
+            <label className="form-label">
+              Select a case to file this research
+            </label>
+            <select
+              className="form-select"
+              value={selectedCaseId}
+              onChange={event => setSelectedCaseId(event.target.value)}
+            >
+              <option value="">Select a case</option>
+              {caseOptions.map(option => (
+                <option key={option.id} value={option.id}>
+                  {option.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        {caseStatusLabel ? (
+          <div className="workflow-inline-note">{caseStatusLabel}</div>
+        ) : null}
+        <button
+          type="button"
+          className="workflow-run-button"
+          onClick={() => void handleRun()}
+          disabled={running}
+        >
+          {running ? 'Saving...' : 'Run this step'}
+        </button>
+      </div>
+    );
+  }
+
+  function renderContractView() {
+    if (!currentStepDef) return null;
+
+    if (currentStep === 0) {
+      return (
+        <div className="workflow-live-step-card">
+          <h2>{currentStepDef.name}</h2>
+          <p>{currentStepDef.detail}</p>
+          <label className="workflow-upload-dropzone">
+            <input
+              type="file"
+              accept=".pdf,.docx"
+              onChange={event => {
+                const file = event.target.files?.[0];
+                if (file) void handleRun(file);
+              }}
+            />
+            <span>Drag and drop a contract or click to upload</span>
+          </label>
+          {uploadedContract ? (
+            <div className="workflow-inline-note">
+              {uploadedContract.fileName} ·{' '}
+              {(uploadedContract.size / 1024).toFixed(1)} KB
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (currentStep === 1) {
+      return (
+        <div className="workflow-live-step-card">
+          <h2>{currentStepDef.name}</h2>
+          <p>{currentStepDef.detail}</p>
+          {renderProgress()}
+          <button
+            type="button"
+            className="workflow-run-button"
+            onClick={() => void handleRun()}
+            disabled={running}
+          >
+            {running ? 'Running Analysis...' : 'Run this step'}
+          </button>
+        </div>
+      );
+    }
+
+    if (currentStep === 2 && contractResult) {
+      const scoreTone =
+        contractResult.score <= 30
+          ? 'emerald'
+          : contractResult.score <= 70
+            ? 'amber'
+            : 'red';
+
+      return (
+        <div className="workflow-live-step-card workflow-scroll-card">
+          <div className="workflow-risk-score" data-tone={scoreTone}>
+            <span>Risk Score</span>
+            <strong>{contractResult.score}</strong>
+          </div>
+          <div className="workflow-results-grid">
+            {contractResult.response.findings.map(finding => (
+              <div key={finding.finding_id} className="workflow-result-card">
+                <div className="workflow-result-card-head">
+                  <strong>{finding.title}</strong>
+                  <span className="workflow-severity-chip">
+                    {finding.severity}
+                  </span>
+                </div>
+                <p>{finding.issue}</p>
+                <small>{finding.recommendation}</small>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="workflow-run-button"
+            onClick={() => void handleRun()}
+          >
+            Continue
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="workflow-live-step-card">
+        <h2>{currentStepDef.name}</h2>
+        <p>{currentStepDef.detail}</p>
+        <div className="workflow-inline-actions">
+          <button
+            type="button"
+            className="workflow-template-button"
+            onClick={() =>
+              triggerDownload(
+                `${workflowName.replace(/\s+/g, '-').toLowerCase()}-report.txt`,
+                `Contract Review\n\n${contractResult?.response.summary ?? ''}`
+              )
+            }
+          >
+            Download Report
+          </button>
+          {selectedCaseId ? (
+            <button
+              type="button"
+              className="workflow-template-button"
+              onClick={() => void handleFileToCase()}
+            >
+              File to Case
+            </button>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          className="workflow-run-button"
+          onClick={() => void handleRun()}
+        >
+          Complete Export
+        </button>
+      </div>
+    );
+  }
+
+  function renderRedlinesView() {
+    if (!currentStepDef) return null;
+
+    if (currentStep === 0) {
+      return (
+        <div className="workflow-live-step-card">
+          <h2>{currentStepDef.name}</h2>
+          <p>{currentStepDef.detail}</p>
+          <div className="form-group">
+            <label className="form-label">Clause text</label>
+            <textarea
+              className="form-textarea workflow-launch-textarea"
+              rows={6}
+              value={clauseText}
+              onChange={event => setClauseText(event.target.value)}
+              placeholder="Paste the clause text here."
+            />
+          </div>
+          <div className="workflow-inline-form">
+            <div className="form-group">
+              <label className="form-label">Clause type</label>
+              <select
+                className="form-select"
+                value={clauseType}
+                onChange={event => setClauseType(event.target.value)}
+              >
+                <option value="liability">Liability</option>
+                <option value="indemnity">Indemnity</option>
+                <option value="termination">Termination</option>
+                <option value="payment">Payment</option>
+                <option value="confidentiality">Confidentiality</option>
+                <option value="governing_law">Governing Law</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Jurisdiction</label>
+              <select
+                className="form-select"
+                value={clauseJurisdiction}
+                onChange={event => setClauseJurisdiction(event.target.value)}
+              >
+                <option value="KSA">KSA</option>
+                <option value="UAE">UAE</option>
+              </select>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="workflow-run-button"
+            onClick={() => void handleRun()}
+            disabled={running}
+          >
+            Run this step
+          </button>
+        </div>
+      );
+    }
+
+    if (currentStep === 1) {
+      return (
+        <div className="workflow-live-step-card">
+          <h2>{currentStepDef.name}</h2>
+          <p>{currentStepDef.detail}</p>
+          {renderProgress()}
+          <button
+            type="button"
+            className="workflow-run-button"
+            onClick={() => void handleRun()}
+            disabled={running}
+          >
+            {running ? 'Generating Redlines...' : 'Run this step'}
+          </button>
+        </div>
+      );
+    }
+
+    if (currentStep === 2 && clauseResult) {
+      return (
+        <div className="workflow-live-step-card workflow-scroll-card">
+          <div className="workflow-redline-grid">
+            <div className="workflow-redline-pane">
+              <span>Original</span>
+              <div className="workflow-redline-text">
+                {clauseResult.originalText}
+              </div>
+            </div>
+            <div className="workflow-redline-pane">
+              <span>Redlined</span>
+              <div className="workflow-redline-text">
+                {displayedDiff.map((segment, index) => (
+                  <span
+                    key={`${segment.type}-${index}`}
+                    className={`workflow-redline-segment workflow-redline-segment-${segment.type}`}
+                  >
+                    {segment.text}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="workflow-inline-note">
+            {clauseResult.response.items[0]?.rationale ??
+              clauseResult.response.summary}
+          </div>
+          <button
+            type="button"
+            className="workflow-run-button"
+            onClick={() => void handleRun()}
+          >
+            Continue
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="workflow-live-step-card">
+        <h2>{currentStepDef.name}</h2>
+        <p>{currentStepDef.detail}</p>
+        <button
+          type="button"
+          className="workflow-run-button"
+          onClick={() => void handleRun()}
+        >
+          Export Package
+        </button>
+      </div>
+    );
+  }
+
+  function renderDemoView() {
+    const result = stepResults[currentStep];
+
+    return (
+      <div className="workflow-live-step-card">
+        <div className="workflow-demo-chip">Demo mode</div>
+        <h2>{currentStepDef?.name}</h2>
+        <p>{currentStepDef?.detail}</p>
+        {renderProgress()}
+        {result?.kind === 'simulated' ? (
+          <div className="workflow-simulated-output">
+            {result.data.type === 'text' || result.data.type === 'document' ? (
+              <pre>{result.data.content}</pre>
+            ) : null}
+            {result.data.type === 'list' ? (
+              <div className="workflow-results-grid">
+                {result.data.content.map(item => (
+                  <div key={item.label} className="workflow-result-card">
+                    <strong>{item.label}</strong>
+                    <p>{item.detail}</p>
+                    <small>{item.status}</small>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {result.data.type === 'score' ? (
+              <div className="workflow-risk-score" data-tone="emerald">
+                <span>{result.data.label}</span>
+                <strong>{result.data.score}</strong>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        <button
+          type="button"
+          className="workflow-run-button"
+          onClick={() => void handleRun()}
+          disabled={running}
+        >
+          {running ? 'Running Step...' : 'Run this step'}
+        </button>
+      </div>
+    );
+  }
+
+  function renderStepContent() {
+    if (completionVisible) {
+      return (
+        <WorkflowCompletion
+          workflowName={workflowName}
+          summary={completionSummary}
+          isGeneratingSummary={summaryLoading}
+          onBack={() => router.push('/workflows')}
+          onDownload={() =>
+            triggerDownload(
+              `${workflowName.replace(/\s+/g, '-').toLowerCase()}-summary.txt`,
+              completionSummary ||
+                buildFallbackSummary(workflowName, stepResults)
+            )
+          }
+          onFileToCase={() => void handleFileToCase()}
+          caseStatusLabel={caseStatusLabel}
+          caseOptions={!caseId ? caseOptions : []}
+          selectedCaseId={selectedCaseId}
+          onCaseChange={setSelectedCaseId}
+        />
+      );
+    }
+
+    if (isLive && workflow.id === 'RESEARCH_LEGAL_MEMO') {
+      return renderResearchView();
+    }
+    if (isLive && workflow.id === 'CORPORATE_CONTRACTS') {
+      return renderContractView();
+    }
+    if (isLive && workflow.id === 'ARBITRATION_CLAUSE') {
+      return renderRedlinesView();
+    }
+    return renderDemoView();
+  }
 
   return (
-    <div
-      className="exec-canvas"
-      style={{ '--workflow-accent': accent } as React.CSSProperties}
-    >
+    <div ref={canvasRef} className="workflow-execute-canvas">
       <StepRail
-        workflow={workflow}
-        steps={steps}
+        steps={steps.map((step, index) => ({
+          title: step.name,
+          estimate: getWorkflowStepEstimate(workflowId, index),
+        }))}
         currentStep={currentStep}
         completedSteps={completedSteps}
-        accent={accent}
-        onGoToStep={goToStep}
-        onExit={handleExit}
+        onStepSelect={stepIndex => {
+          if (completedSteps.includes(stepIndex) || stepIndex === currentStep) {
+            setCurrentStep(stepIndex);
+          }
+        }}
+        particleStep={particleStep}
       />
 
-      <div className="exec-workspace">
-        {activeCase && (
-          <div className="exec-case-banner">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <rect x="2" y="7" width="20" height="14" rx="2" />
-              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-            </svg>
-            <span>
-              Working on: <strong>{activeCase.case_title}</strong> |{' '}
-              {activeCase.client_name}
-            </span>
+      <div className="workflow-execute-main">
+        <div className="workflow-execute-topline">
+          <div>
+            <span className="workflow-page-kicker">{workflowName}</span>
+            <h1>{currentStepDef?.name ?? workflowName}</h1>
           </div>
-        )}
-        <div
-          style={{
-            position: 'absolute',
-            top: activeCase ? 48 : 12,
-            right: 16,
-            zIndex: 10,
-          }}
-        >
-          <AminAvatar size={40} state={aminAvatarState} showWaveform={false} />
+          {activeCase ? (
+            <div className="workflow-inline-note">
+              {activeCase.case_title} · {activeCase.client_name}
+            </div>
+          ) : null}
         </div>
-        <StepTopBar
-          stepNumber={currentStep + 1}
-          totalSteps={steps.length}
-          stepName={currentStepDef?.name ?? ''}
-          canAdvance={canAdvance}
-          isLastStep={isLastStep}
-          onAdvance={handleAdvance}
-        />
 
-        <div className="exec-content">
-          <AnimatePresence mode="wait">
-            <motion.div key={currentStep} {...stepTransition}>
-              {renderStepContent()}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+        <StepWorkspace
+          stepKey={
+            completionVisible ? 'completion' : `${workflowId}-${currentStep}`
+          }
+          successFlash={successFlash}
+        >
+          {renderStepContent()}
+        </StepWorkspace>
       </div>
 
-      <AnimatePresence>
-        {showCompletion && (
-          <CompletionModal
-            workflow={workflow}
-            completedSteps={completedSteps}
-            startedAt={startedAt}
-            attachedDocId={attachedDocId}
-            category={category}
-            onClose={() => setShowCompletion(false)}
+      <aside className="workflow-execute-amin" data-state={aminState}>
+        <div className="workflow-execute-amin-head">
+          <AminAvatar
+            size={56}
+            state={
+              aminState === 'success'
+                ? 'success'
+                : aminState === 'thinking'
+                  ? 'thinking'
+                  : aminState === 'speaking'
+                    ? 'speaking'
+                    : 'idle'
+            }
+            showWaveform={aminState === 'speaking'}
           />
-        )}
-      </AnimatePresence>
+          <div>
+            <span className="workflow-page-kicker">Amin</span>
+            <strong>{aminState === 'thinking' ? 'Thinking' : 'Guiding'}</strong>
+          </div>
+        </div>
+        <div className="workflow-execute-amin-body">
+          {aminState === 'thinking' ? (
+            <p className="workflow-completion-typing">Working on it...</p>
+          ) : (
+            <p>{aminMessage}</p>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }

@@ -135,6 +135,33 @@ async def _get_org_id_from_user(ctx: RequestContext, db: AsyncSession) -> str:
     return org_id
 
 
+def _client_to_response(client: Client, *, case_count: int = 0) -> ClientResponse:
+    return ClientResponse(
+        id=client.id,
+        org_id=client.org_id,
+        client_type=client.client_type,
+        display_name=client.display_name,
+        display_name_ar=client.display_name_ar,
+        email=client.email,
+        phone=client.phone,
+        address=client.address,
+        notes=client.notes,
+        is_active=client.is_active,
+        national_id=client.national_id,
+        nationality=client.nationality,
+        date_of_birth=client.date_of_birth.isoformat() if client.date_of_birth else None,
+        trade_name=client.trade_name,
+        cr_number=client.cr_number,
+        vat_number=client.vat_number,
+        sector=client.sector,
+        incorporation_country=client.incorporation_country,
+        org_type=client.org_type,
+        created_at=client.created_at,
+        updated_at=client.updated_at,
+        case_count=case_count,
+    )
+
+
 # ── Smart Onboarding ──────────────────────────────────────────────
 
 class ExtractedClientData(BaseModel):
@@ -288,8 +315,7 @@ async def list_clients(
             select(func.count()).select_from(Case).where(Case.client_id == c.id)
         )
         case_count = case_count_result.scalar() or 0
-        item = ClientResponse.model_validate(c)
-        item.case_count = case_count
+        item = _client_to_response(c, case_count=case_count)
         items.append(item)
 
     return {"items": items, "total": total}
@@ -336,9 +362,7 @@ async def create_client(
     await db.commit()
     await db.refresh(client)
 
-    resp = ClientResponse.model_validate(client)
-    resp.case_count = 0
-    return resp
+    return _client_to_response(client, case_count=0)
 
 
 @router.get("/{client_id}", response_model=ClientDetailResponse)
@@ -374,10 +398,8 @@ async def get_client(
         for c in cases
     ]
 
-    resp = ClientDetailResponse.model_validate(client)
-    resp.case_count = len(cases)
-    resp.cases = case_briefs
-    return resp
+    base = _client_to_response(client, case_count=len(cases))
+    return ClientDetailResponse(**base.model_dump(), cases=case_briefs)
 
 
 @router.patch("/{client_id}", response_model=ClientResponse)
@@ -413,9 +435,7 @@ async def update_client(
     case_count_result = await db.execute(
         select(func.count()).select_from(Case).where(Case.client_id == client.id)
     )
-    resp = ClientResponse.model_validate(client)
-    resp.case_count = case_count_result.scalar() or 0
-    return resp
+    return _client_to_response(client, case_count=case_count_result.scalar() or 0)
 
 
 @router.delete("/{client_id}", status_code=status.HTTP_200_OK)
