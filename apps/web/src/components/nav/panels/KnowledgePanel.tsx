@@ -9,6 +9,7 @@ export function KnowledgePanel() {
   const pathname = usePathname();
   const { navigateTo } = useNavigation();
   const { user } = useAuth();
+  const isPlatformAdmin = user?.is_platform_admin === true;
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/');
@@ -29,30 +30,32 @@ export function KnowledgePanel() {
       <div className="r2-header">KNOWLEDGE BASE</div>
 
       <div className="r2-link-list">
-        <Link
-          href="/operator/knowledge-base"
-          className={`r2-link${isActive('/operator/knowledge-base') ? ' r2-link-active' : ''}`}
-          onClick={e => {
-            e.preventDefault();
-            navigateTo('/operator/knowledge-base');
-          }}
-        >
-          <span className="r2-link-icon">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <ellipse cx="12" cy="5" rx="9" ry="3" />
-              <path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3" />
-              <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
-            </svg>
-          </span>
-          <span className="r2-link-text">Sources & Jobs</span>
-        </Link>
+        {isPlatformAdmin ? (
+          <Link
+            href="/operator/knowledge-base"
+            className={`r2-link${isActive('/operator/knowledge-base') ? ' r2-link-active' : ''}`}
+            onClick={e => {
+              e.preventDefault();
+              navigateTo('/operator/knowledge-base');
+            }}
+          >
+            <span className="r2-link-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                <path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3" />
+                <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+              </svg>
+            </span>
+            <span className="r2-link-text">Scraping Control Center</span>
+          </Link>
+        ) : null}
 
         <Link
           href="/documents"

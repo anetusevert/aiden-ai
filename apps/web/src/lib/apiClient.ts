@@ -695,7 +695,7 @@ export interface MemberRoleUpdateRequest {
 }
 
 // ============================================================================
-// Operator — Knowledge base scraping (platform admin)
+// Operator — Knowledge base scraping
 // ============================================================================
 
 export interface ScrapingSourceResponse {
@@ -713,12 +713,7 @@ export interface ScrapingSourceResponse {
   updated_at: string;
 }
 
-export type ScrapingJobStatus =
-  | 'pending'
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+export type ScrapingJobStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export interface ScrapingJobResponse {
   id: string;

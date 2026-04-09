@@ -74,7 +74,7 @@ class HarvesterService:
 
         Raises:
             HTTPException 404: source not found or disabled.
-            HTTPException 409: a job is already running for this source.
+            HTTPException 409: a job is already queued or running for this source.
         """
         result = await db.execute(
             select(ScrapingSource).where(ScrapingSource.id == source_id)
@@ -85,18 +85,22 @@ class HarvesterService:
         if not source.enabled:
             raise HTTPException(status_code=400, detail="Scraping source is disabled")
 
-        running = await db.execute(
+        active_job = await db.execute(
             select(ScrapingJob).where(
                 and_(
                     ScrapingJob.source_id == source_id,
-                    ScrapingJob.status == "running",
+                    ScrapingJob.status.in_(["pending", "running"]),
                 )
             )
         )
-        if running.scalar_one_or_none() is not None:
+        existing_job = active_job.scalar_one_or_none()
+        if existing_job is not None:
             raise HTTPException(
                 status_code=409,
-                detail="A job is already running for this source",
+                detail=(
+                    "A scraping job is already queued or running for this source. "
+                    "Wait for it to finish before triggering another run."
+                ),
             )
 
         job = ScrapingJob(

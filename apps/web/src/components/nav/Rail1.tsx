@@ -224,6 +224,7 @@ export function Rail1() {
   const aminAvatarState = useAminAvatarState();
   const { toggleAminPanel, aminStatus } = useAminContext();
   const isAdmin = user?.role === 'ADMIN';
+  const isPlatformAdmin = user?.is_platform_admin === true;
 
   const SECTION_ROUTES: Record<NavSection, string> = {
     home: '/home',
@@ -232,7 +233,7 @@ export function Rail1() {
     workflows: '/workflows/litigation',
     documents: '/documents',
     intelligence: '/news',
-    admin: '/operator/knowledge-base',
+    admin: isPlatformAdmin ? '/operator/knowledge-base' : '/members',
   };
 
   const handleLogout = async () => {

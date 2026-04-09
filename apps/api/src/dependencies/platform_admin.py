@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.database import get_db
 from src.dependencies.auth import AuthCredentials, get_auth_credentials, get_jwt_payload
-from src.models import Tenant, User, WorkspaceMembership
+from src.models import Tenant, User
 from src.utils.jwt import JWTPayload
 
 
@@ -40,8 +40,8 @@ class PlatformAdminContext:
 class ScrapingAdminContext:
     """Context for scraping operator access.
 
-    Allows either a platform admin or a workspace admin from the active
-    workspace so the scraping console can be tested from a normal admin seat.
+    Scraping controls operate on the shared legal-harvesting pipeline and are
+    therefore restricted to platform administrators.
     """
 
     user: User
@@ -213,85 +213,13 @@ async def get_scraping_admin_operator_context(
     jwt_payload: Annotated[JWTPayload | None, Depends(get_jwt_payload)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ScrapingAdminContext:
-    """Allow scraping access for platform admins or current-workspace admins."""
-    result = await db.execute(
-        select(User).where(
-            User.id == auth.user_id,
-            User.tenant_id == auth.tenant_id,
-        )
-    )
-    user = result.scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User not found or does not belong to tenant",
-        )
-
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive",
-        )
-
-    if jwt_payload and user.token_version != jwt_payload.token_version:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "error_code": "token_revoked",
-                "message": "Your session has been revoked. Please sign in again.",
-            },
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    result = await db.execute(select(Tenant).where(Tenant.id == auth.tenant_id))
-    tenant = result.scalar_one_or_none()
-
-    if not tenant:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Tenant not found",
-        )
-
-    if user.is_platform_admin:
-        return ScrapingAdminContext(user=user, tenant=tenant, workspace_role=None)
-
-    if auth.workspace_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "error_code": "workspace_admin_required",
-                "message": "This operation requires workspace administrator privileges.",
-            },
-        )
-
-    membership_result = await db.execute(
-        select(WorkspaceMembership).where(
-            WorkspaceMembership.tenant_id == auth.tenant_id,
-            WorkspaceMembership.workspace_id == auth.workspace_id,
-            WorkspaceMembership.user_id == auth.user_id,
-        )
-    )
-    membership = membership_result.scalar_one_or_none()
-
-    if membership is None or membership.role != "ADMIN":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "error_code": "workspace_admin_required",
-                "message": "This operation requires workspace administrator privileges.",
-            },
-        )
-
-    return ScrapingAdminContext(
-        user=user,
-        tenant=tenant,
-        workspace_role=membership.role,
-    )
+    """Require platform admin access for scraping operator routes."""
+    ctx = await get_platform_admin_operator_context(auth, jwt_payload, db)
+    return ScrapingAdminContext(user=ctx.user, tenant=ctx.tenant, workspace_role=None)
 
 
 def require_scraping_admin_operator():
-    """Scraping operator dependency for platform admins or workspace admins."""
+    """Scraping operator dependency for platform admins."""
     return get_scraping_admin_operator_context
 
 
