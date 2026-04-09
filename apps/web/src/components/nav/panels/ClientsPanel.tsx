@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useNavigation } from '@/components/NavigationLoader';
+import { resolveApiUrl } from '@/lib/api';
 
 interface ClientItem {
   id: string;
@@ -94,7 +95,7 @@ export function ClientsPanel() {
       if (search) params.set('search', search);
       if (typeFilter) params.set('client_type', typeFilter);
       params.set('limit', '20');
-      const res = await fetch(`/api/v1/clients?${params}`, {
+      const res = await fetch(resolveApiUrl(`/api/v1/clients?${params}`), {
         credentials: 'include',
       });
       if (res.ok) {

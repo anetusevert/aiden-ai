@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
 import { useAuth } from '@/lib/AuthContext';
+import { resolveApiUrl } from '@/lib/api';
 import { reportScreenContext } from '@/lib/screenContext';
 import {
   fadeUp,
@@ -50,6 +51,71 @@ const PA_ABBREV: Record<string, string> = {
   firm_management: 'Mgmt',
 };
 
+async function readResponseDetail(response: Response): Promise<string | null> {
+  try {
+    const data = await response.json();
+    const detail = data?.detail;
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail.trim();
+    }
+
+    if (detail && typeof detail === 'object' && 'message' in detail) {
+      const message = detail.message;
+      if (typeof message === 'string' && message.trim()) {
+        return message.trim();
+      }
+    }
+  } catch {
+    try {
+      const text = await response.text();
+      if (text.trim()) {
+        return text.trim();
+      }
+    } catch {
+      /* */
+    }
+  }
+
+  return null;
+}
+
+async function getSeedErrorMessage(
+  action: string,
+  response: Response
+): Promise<string> {
+  const detail = await readResponseDetail(response);
+  const baseMessage =
+    response.status === 401
+      ? `Could not ${action}. Your session has expired or the API did not accept your login cookie.`
+      : response.status === 403
+        ? `Could not ${action}. Only admins can manage demo data.`
+        : response.status === 404
+          ? `Could not ${action}. The demo-data API route is not reachable from this app.`
+          : `Could not ${action}. Request failed with status ${response.status}.`;
+
+  if (!detail || baseMessage.toLowerCase().includes(detail.toLowerCase())) {
+    return baseMessage;
+  }
+
+  return `${baseMessage} ${detail}`;
+}
+
+function getSeedNotice(
+  action: string | undefined,
+  mode: 'load' | 'wipe'
+): string {
+  if (mode === 'load') {
+    return action === 'already_exists'
+      ? 'Demo cases are already loaded for this workspace.'
+      : 'Demo cases and demo clients were loaded successfully.';
+  }
+
+  return action === 'wiped'
+    ? 'Demo cases and orphaned demo clients were removed.'
+    : 'Demo data request completed.';
+}
+
 export default function CasesPage() {
   const { navigateTo } = useNavigation();
   const { user } = useAuth();
@@ -64,6 +130,8 @@ export default function CasesPage() {
   );
   const [showNewModal, setShowNewModal] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [seedError, setSeedError] = useState<string | null>(null);
+  const [seedNotice, setSeedNotice] = useState<string | null>(null);
 
   const statusFilter = searchParams.get('status') ?? '';
   const priorityFilter = searchParams.get('priority') ?? '';
@@ -73,26 +141,48 @@ export default function CasesPage() {
 
   const handleSeedMockCases = useCallback(async () => {
     setSeedLoading(true);
+    setSeedError(null);
+    setSeedNotice(null);
     try {
-      await fetch('/api/v1/seed/mock-cases', {
+      const response = await fetch(resolveApiUrl('/api/v1/seed/mock-cases'), {
         method: 'POST',
         credentials: 'include',
       });
-    } catch {
-      /* */
+
+      if (!response.ok) {
+        throw new Error(await getSeedErrorMessage('load demo data', response));
+      }
+
+      const data = await response.json().catch(() => null);
+      setSeedNotice(getSeedNotice(data?.action, 'load'));
+    } catch (err) {
+      setSeedError(
+        err instanceof Error ? err.message : 'Could not load demo data.'
+      );
     }
     setSeedLoading(false);
   }, []);
 
   const handleWipeMockCases = useCallback(async () => {
     setSeedLoading(true);
+    setSeedError(null);
+    setSeedNotice(null);
     try {
-      await fetch('/api/v1/seed/mock-cases', {
+      const response = await fetch(resolveApiUrl('/api/v1/seed/mock-cases'), {
         method: 'DELETE',
         credentials: 'include',
       });
-    } catch {
-      /* */
+
+      if (!response.ok) {
+        throw new Error(await getSeedErrorMessage('wipe demo data', response));
+      }
+
+      const data = await response.json().catch(() => null);
+      setSeedNotice(getSeedNotice(data?.action, 'wipe'));
+    } catch (err) {
+      setSeedError(
+        err instanceof Error ? err.message : 'Could not wipe demo data.'
+      );
     }
     setSeedLoading(false);
   }, []);
@@ -144,7 +234,7 @@ export default function CasesPage() {
     if (pa) params.set('practice_area', pa);
     params.set('limit', '100');
     try {
-      const res = await fetch(`/api/v1/cases?${params}`, {
+      const res = await fetch(resolveApiUrl(`/api/v1/cases?${params}`), {
         credentials: 'include',
       });
       if (res.ok) {
@@ -233,6 +323,18 @@ export default function CasesPage() {
           </button>
         </div>
       </div>
+
+      {seedNotice ? (
+        <div style={{ padding: '0 var(--space-4)' }}>
+          <div className="alert alert-success">{seedNotice}</div>
+        </div>
+      ) : null}
+
+      {seedError ? (
+        <div style={{ padding: '0 var(--space-4)' }}>
+          <div className="alert alert-error">{seedError}</div>
+        </div>
+      ) : null}
 
       <div className="page-filters">
         <input
@@ -441,7 +543,9 @@ function NewCaseModal({
   useEffect(() => {
     if (!clientSearch && !preClientId) return;
     const q = clientSearch || '';
-    fetch(`/api/v1/clients?search=${q}&limit=10`, { credentials: 'include' })
+    fetch(resolveApiUrl(`/api/v1/clients?search=${q}&limit=10`), {
+      credentials: 'include',
+    })
       .then(r => (r.ok ? r.json() : { items: [] }))
       .then(d => setClients(d.items ?? []))
       .catch(() => {});

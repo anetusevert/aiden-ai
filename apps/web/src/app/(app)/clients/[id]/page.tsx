@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
+import { resolveApiUrl } from '@/lib/api';
 import { reportScreenContext } from '@/lib/screenContext';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 
@@ -26,7 +27,9 @@ export default function ClientDetailPage() {
   const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
-    fetch(`/api/v1/clients/${params.id}`, { credentials: 'include' })
+    fetch(resolveApiUrl(`/api/v1/clients/${params.id}`), {
+      credentials: 'include',
+    })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         setClient(data);

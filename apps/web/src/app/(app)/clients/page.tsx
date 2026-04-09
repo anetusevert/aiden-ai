@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
 import { useAuth } from '@/lib/AuthContext';
+import { resolveApiUrl } from '@/lib/api';
 import { reportScreenContext } from '@/lib/screenContext';
 import {
   fadeUp,
@@ -40,6 +41,86 @@ const TYPE_LABELS: Record<string, string> = {
   organisation: 'Organisation',
 };
 
+type SeedAction = 'created' | 'already_exists' | 'wiped';
+
+async function readResponseDetail(response: Response): Promise<string | null> {
+  try {
+    const data = await response.json();
+    const detail = data?.detail;
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail.trim();
+    }
+
+    if (detail && typeof detail === 'object' && 'message' in detail) {
+      const message = detail.message;
+      if (typeof message === 'string' && message.trim()) {
+        return message.trim();
+      }
+    }
+  } catch {
+    try {
+      const text = await response.text();
+      if (text.trim()) {
+        return text.trim();
+      }
+    } catch {
+      /* */
+    }
+  }
+
+  return null;
+}
+
+function getStatusMessage(action: string, status: number): string {
+  switch (status) {
+    case 401:
+      return `Could not ${action}. Your session has expired or the API did not accept your login cookie.`;
+    case 403:
+      return `Could not ${action}. Your account does not have permission for this action.`;
+    case 404:
+      return `Could not ${action}. The client API route is not reachable from this app.`;
+    case 422:
+      return `Could not ${action}. Please check the form values and try again.`;
+    default:
+      return `Could not ${action}. Request failed with status ${status}.`;
+  }
+}
+
+async function getRequestErrorMessage(
+  action: string,
+  response: Response
+): Promise<string> {
+  const baseMessage = getStatusMessage(action, response.status);
+  const detail = await readResponseDetail(response);
+
+  if (!detail) {
+    return baseMessage;
+  }
+
+  if (baseMessage.toLowerCase().includes(detail.toLowerCase())) {
+    return baseMessage;
+  }
+
+  return `${baseMessage} ${detail}`;
+}
+
+function getSeedNotice(
+  action: SeedAction | string,
+  mode: 'load' | 'wipe'
+): string {
+  if (mode === 'load') {
+    if (action === 'already_exists') {
+      return 'Demo cases are already loaded for this workspace.';
+    }
+    return 'Demo cases and demo clients were loaded successfully.';
+  }
+
+  return action === 'wiped'
+    ? 'Demo cases and orphaned demo clients were removed.'
+    : 'Demo data request completed.';
+}
+
 export default function ClientsPage() {
   const { navigateTo } = useNavigation();
   const { user } = useAuth();
@@ -54,31 +135,59 @@ export default function ClientsPage() {
   );
   const [showNewModal, setShowNewModal] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'ADMIN';
 
   const handleSeedMockDemo = useCallback(async () => {
     setSeedLoading(true);
+    setError(null);
+    setNotice(null);
     try {
-      await fetch('/api/v1/seed/mock-cases', {
+      const response = await fetch(resolveApiUrl('/api/v1/seed/mock-cases'), {
         method: 'POST',
         credentials: 'include',
       });
-    } catch {
-      /* */
+
+      if (!response.ok) {
+        throw new Error(
+          await getRequestErrorMessage('load demo data', response)
+        );
+      }
+
+      const data = await response.json().catch(() => null);
+      setNotice(getSeedNotice(data?.action, 'load'));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not load demo data.'
+      );
     }
     setSeedLoading(false);
   }, []);
 
   const handleWipeMockDemo = useCallback(async () => {
     setSeedLoading(true);
+    setError(null);
+    setNotice(null);
     try {
-      await fetch('/api/v1/seed/mock-cases', {
+      const response = await fetch(resolveApiUrl('/api/v1/seed/mock-cases'), {
         method: 'DELETE',
         credentials: 'include',
       });
-    } catch {
-      /* */
+
+      if (!response.ok) {
+        throw new Error(
+          await getRequestErrorMessage('wipe demo data', response)
+        );
+      }
+
+      const data = await response.json().catch(() => null);
+      setNotice(getSeedNotice(data?.action, 'wipe'));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not wipe demo data.'
+      );
     }
     setSeedLoading(false);
   }, []);
@@ -117,16 +226,20 @@ export default function ClientsPage() {
     if (ct) params.set('client_type', ct);
     params.set('limit', '50');
     try {
-      const res = await fetch(`/api/v1/clients?${params}`, {
+      const res = await fetch(resolveApiUrl(`/api/v1/clients?${params}`), {
         credentials: 'include',
       });
-      if (res.ok) {
-        const data = await res.json();
-        setClients(data.items ?? []);
-        setTotal(data.total ?? 0);
+
+      if (!res.ok) {
+        throw new Error(await getRequestErrorMessage('load clients', res));
       }
-    } catch {
-      /* */
+
+      const data = await res.json();
+      setClients(data.items ?? []);
+      setTotal(data.total ?? 0);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load clients.');
     }
     setLoading(false);
   }, [searchParams]);
@@ -230,6 +343,18 @@ export default function ClientsPage() {
           ))}
         </div>
       </div>
+
+      {notice ? (
+        <div style={{ padding: '0 var(--space-4)' }}>
+          <div className="alert alert-success">{notice}</div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div style={{ padding: '0 var(--space-4)' }}>
+          <div className="alert alert-error">{error}</div>
+        </div>
+      ) : null}
 
       <div style={{ flex: 1, overflow: 'auto', padding: 'var(--space-4)' }}>
         {loading && (
@@ -350,9 +475,11 @@ function NewClientModal({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileUpload = async (file: File) => {
     setUploading(true);
+    setError(null);
     setUploadProgress(10);
     const interval = setInterval(
       () => setUploadProgress(p => Math.min(p + 15, 85)),
@@ -361,33 +488,44 @@ function NewClientModal({
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/v1/clients/extract-from-document', {
-        method: 'POST',
-        credentials: 'include',
-        body: fd,
-      });
+      const res = await fetch(
+        resolveApiUrl('/api/v1/clients/extract-from-document'),
+        {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        }
+      );
       clearInterval(interval);
       setUploadProgress(100);
-      if (res.ok) {
-        const data = await res.json();
-        const newForm: Record<string, string> = {};
-        for (const [k, v] of Object.entries(data)) {
-          if (v && typeof v === 'string') newForm[k] = v;
-        }
-        if (data.client_type) setType(data.client_type);
-        setForm(newForm);
-        setTimeout(() => {
-          setUploading(false);
-          setStep(1);
-        }, 500);
-      } else {
+
+      if (!res.ok) {
         setUploading(false);
         setUploadProgress(0);
+        setError(await getRequestErrorMessage('extract client details', res));
+        return;
       }
-    } catch {
+
+      const data = await res.json();
+      const newForm: Record<string, string> = {};
+      for (const [k, v] of Object.entries(data)) {
+        if (v && typeof v === 'string') newForm[k] = v;
+      }
+      if (data.client_type) setType(data.client_type);
+      setForm(newForm);
+      setTimeout(() => {
+        setUploading(false);
+        setStep(1);
+      }, 500);
+    } catch (err) {
       clearInterval(interval);
       setUploading(false);
       setUploadProgress(0);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Could not extract client details from the document.'
+      );
     }
   };
 
@@ -402,25 +540,36 @@ function NewClientModal({
     setForm(prev => ({ ...prev, [key]: val }));
 
   const handleCreate = async () => {
+    if (!type) {
+      setError('Choose a client type before creating the client.');
+      return;
+    }
+
     setSaving(true);
+    setError(null);
     try {
       const body = {
         client_type: type,
         display_name: form.display_name || '',
         ...form,
       };
-      const res = await fetch('/api/v1/clients', {
+      const res = await fetch(resolveApiUrl('/api/v1/clients'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (res.ok) {
-        const data = await res.json();
-        onCreated(data.id);
+
+      if (!res.ok) {
+        throw new Error(await getRequestErrorMessage('create the client', res));
       }
-    } catch {
-      /* */
+
+      const data = await res.json();
+      onCreated(data.id);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not create the client.'
+      );
     }
     setSaving(false);
   };
@@ -438,6 +587,12 @@ function NewClientModal({
             ×
           </button>
         </div>
+
+        {error ? (
+          <div style={{ padding: '0 var(--space-4)' }}>
+            <div className="alert alert-error">{error}</div>
+          </div>
+        ) : null}
 
         {step === 0 && (
           <div className="modal-body">

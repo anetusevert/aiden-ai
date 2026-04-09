@@ -118,6 +118,36 @@ export function getApiBaseUrl(): string {
 }
 
 /**
+ * Resolve an endpoint against the configured API base URL.
+ *
+ * This keeps `/api/...` routes working in both modes:
+ * - same-origin mode: baseUrl is `/api`, so `/api/v1/foo` stays `/api/v1/foo`
+ * - cross-origin mode: baseUrl is `https://host`, so `/api/v1/foo` becomes
+ *   `https://host/api/v1/foo`
+ */
+export function resolveApiUrl(
+  endpoint: string,
+  mode?: 'client' | 'server'
+): string {
+  const resolvedMode = mode || (isServer() ? 'server' : 'client');
+  const baseUrl =
+    resolvedMode === 'server' ? getServerApiBaseUrl() : getClientApiBaseUrl();
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
+  const normalizedEndpoint = endpoint.startsWith('/')
+    ? endpoint
+    : `/${endpoint}`;
+
+  if (
+    normalizedBaseUrl.endsWith('/api') &&
+    normalizedEndpoint.startsWith('/api/')
+  ) {
+    return `${normalizedBaseUrl}${normalizedEndpoint.slice(4)}`;
+  }
+
+  return `${normalizedBaseUrl}${normalizedEndpoint}`;
+}
+
+/**
  * Get API configuration info for debugging/verification.
  */
 export function getApiConfig(): {
@@ -183,15 +213,7 @@ export async function apiFetch<T>(
   options: RequestInit = {},
   mode?: 'client' | 'server'
 ): Promise<T> {
-  const resolvedMode = mode || (isServer() ? 'server' : 'client');
-  const baseUrl =
-    resolvedMode === 'server' ? getServerApiBaseUrl() : getClientApiBaseUrl();
-
-  // Ensure endpoint starts with /
-  const normalizedEndpoint = endpoint.startsWith('/')
-    ? endpoint
-    : `/${endpoint}`;
-  const url = `${baseUrl}${normalizedEndpoint}`;
+  const url = resolveApiUrl(endpoint, mode);
 
   const response = await fetch(url, {
     ...options,
