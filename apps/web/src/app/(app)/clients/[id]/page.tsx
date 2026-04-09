@@ -19,24 +19,155 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: '#64748b',
 };
 
+interface ClientDetailError {
+  title: string;
+  message: string;
+}
+
+async function readResponseDetail(response: Response): Promise<string | null> {
+  try {
+    const data = await response.json();
+    const detail = data?.detail;
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail.trim();
+    }
+
+    if (detail && typeof detail === 'object' && 'message' in detail) {
+      const message = detail.message;
+      if (typeof message === 'string' && message.trim()) {
+        return message.trim();
+      }
+    }
+  } catch {
+    try {
+      const text = await response.text();
+      if (text.trim()) {
+        return text.trim();
+      }
+    } catch {
+      /* */
+    }
+  }
+
+  return null;
+}
+
+function getClientDetailError(
+  status: number,
+  detail: string | null
+): ClientDetailError {
+  if (status === 401) {
+    return {
+      title: 'Session expired',
+      message:
+        'Your login session is no longer valid for the API. Sign in again and retry the client detail page.',
+    };
+  }
+
+  if (status === 403) {
+    return {
+      title: 'Access denied',
+      message:
+        detail ||
+        'Your account is authenticated, but it does not have permission to load this client.',
+    };
+  }
+
+  if (status === 404) {
+    if (detail === 'Client not found') {
+      return {
+        title: 'Client not found',
+        message:
+          'This client does not exist or is not visible to your current organisation.',
+      };
+    }
+
+    return {
+      title: 'Client API route not found',
+      message:
+        'The deployed API returned 404 for the client detail route. Check `NEXT_PUBLIC_API_BASE_URL` and confirm the API is serving `/api/v1/clients/{client_id}`.',
+    };
+  }
+
+  if (status >= 500) {
+    return {
+      title: 'API error',
+      message:
+        detail ||
+        `The API returned status ${status} while loading this client detail page.`,
+    };
+  }
+
+  return {
+    title: 'Client request failed',
+    message:
+      detail || `The API returned status ${status} while loading this client.`,
+  };
+}
+
+function getClientNetworkError(requestUrl: string): ClientDetailError {
+  const isCrossOrigin = /^https?:\/\//.test(requestUrl);
+  return {
+    title: 'Client request blocked',
+    message: isCrossOrigin
+      ? 'The browser could not read the API response. On Railway, this usually means `CORS_ORIGINS_STR` does not include the deployed web origin exactly, or `NEXT_PUBLIC_API_BASE_URL` points at the wrong API host.'
+      : 'The browser could not reach the API. Check your network connection and the deployed API route.',
+  };
+}
+
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
   const { navigateTo } = useNavigation();
   const [client, setClient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [error, setError] = useState<ClientDetailError | null>(null);
+  const clientUrl = resolveApiUrl(`/api/v1/clients/${params.id}`);
 
   useEffect(() => {
-    fetch(resolveApiUrl(`/api/v1/clients/${params.id}`), {
-      credentials: 'include',
-    })
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        setClient(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [params.id]);
+    let cancelled = false;
+
+    const loadClient = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(clientUrl, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          const detail = await readResponseDetail(response);
+          if (!cancelled) {
+            setClient(null);
+            setError(getClientDetailError(response.status, detail));
+          }
+          return;
+        }
+
+        const data = await response.json();
+        if (!cancelled) {
+          setClient(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setClient(null);
+          setError(getClientNetworkError(clientUrl));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadClient();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clientUrl]);
 
   useEffect(() => {
     if (!client) return;
@@ -49,7 +180,7 @@ export default function ClientDetailPage() {
   }, [client, params.id]);
 
   const handleCaseClick = (caseItem: any) => {
-    fetch(`/api/v1/cases/${caseItem.id}/set-active`, {
+    fetch(resolveApiUrl(`/api/v1/cases/${caseItem.id}/set-active`), {
       method: 'POST',
       credentials: 'include',
     }).catch(() => {});
@@ -118,20 +249,42 @@ export default function ClientDetailPage() {
   if (!client)
     return (
       <div className="page-empty">
-        <div className="page-empty-icon">
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-        </div>
-        <h3>Client not found</h3>
+        {error ? (
+          <div style={{ maxWidth: 560 }}>
+            <div className="alert alert-error" style={{ marginBottom: 16 }}>
+              <strong>{error.title}</strong>
+              <div>{error.message}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="page-empty-icon">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </div>
+        )}
+        <h3>{error?.title ?? 'Client not found'}</h3>
+        {error ? (
+          <p>{error.message}</p>
+        ) : (
+          <p>This client could not be found.</p>
+        )}
+        <button
+          type="button"
+          className="btn btn-outline"
+          onClick={() => navigateTo('/clients')}
+          style={{ marginTop: 12 }}
+        >
+          Back to Clients
+        </button>
       </div>
     );
 

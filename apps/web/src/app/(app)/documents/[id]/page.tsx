@@ -8,6 +8,7 @@ import {
   DocumentWithVersionsAndIndexing,
   DocumentVersionSummaryWithIndexing,
 } from '@/lib/apiClient';
+import { resolveApiUrl } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
@@ -58,15 +59,18 @@ export default function DocumentDetailPage() {
     setAttachingToCase(true);
     setAttachResult(null);
     try {
-      const res = await fetch(`/api/v1/cases/${activeCase.case_id}/documents`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_id: documentId,
-          document_role: 'general',
-        }),
-      });
+      const res = await fetch(
+        resolveApiUrl(`/api/v1/cases/${activeCase.case_id}/documents`),
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            document_id: documentId,
+            document_role: 'general',
+          }),
+        }
+      );
       if (res.ok) {
         setAttachResult({
           ok: true,

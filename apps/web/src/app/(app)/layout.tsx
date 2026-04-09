@@ -22,6 +22,7 @@ import { AnimatePresence } from 'framer-motion';
 import { I18nProvider } from '@/components/I18nProvider';
 import { useScreenContext } from '@/hooks/useScreenContext';
 import { useTranslations } from 'next-intl';
+import { resolveApiUrl } from '@/lib/api';
 import { setActiveCaseContext } from '@/lib/screenContext';
 
 function AppShellLoading() {
@@ -101,7 +102,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetch('/api/v1/cases/active', { credentials: 'include' })
+    fetch(resolveApiUrl('/api/v1/cases/active'), { credentials: 'include' })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         if (data)

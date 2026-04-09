@@ -43,6 +43,14 @@ const TYPE_LABELS: Record<string, string> = {
 
 type SeedAction = 'created' | 'already_exists' | 'wiped';
 
+interface SeedResponsePayload {
+  action?: SeedAction | 'refreshed';
+  cases_count?: number;
+  clients_count?: number;
+  documents_count?: number;
+  notes_count?: number;
+}
+
 async function readResponseDetail(response: Response): Promise<string | null> {
   try {
     const data = await response.json();
@@ -106,18 +114,27 @@ async function getRequestErrorMessage(
 }
 
 function getSeedNotice(
-  action: SeedAction | string,
+  payload: SeedResponsePayload | null,
   mode: 'load' | 'wipe'
 ): string {
+  const action = payload?.action;
+  const clientsCount = payload?.clients_count ?? 0;
+  const casesCount = payload?.cases_count ?? 0;
+  const documentsCount = payload?.documents_count ?? 0;
+  const notesCount = payload?.notes_count ?? 0;
+
   if (mode === 'load') {
     if (action === 'already_exists') {
       return 'Demo cases are already loaded for this workspace.';
     }
-    return 'Demo cases and demo clients were loaded successfully.';
+    if (action === 'refreshed') {
+      return `Riyadh demo data was refreshed: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.`;
+    }
+    return `Riyadh demo data loaded: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.`;
   }
 
   return action === 'wiped'
-    ? 'Demo cases and orphaned demo clients were removed.'
+    ? `Riyadh demo data removed: ${casesCount} cases, ${clientsCount} clients, ${documentsCount} documents, and ${notesCount} notes.`
     : 'Demo data request completed.';
 }
 
@@ -157,7 +174,7 @@ export default function ClientsPage() {
       }
 
       const data = await response.json().catch(() => null);
-      setNotice(getSeedNotice(data?.action, 'load'));
+      setNotice(getSeedNotice(data, 'load'));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Could not load demo data.'
@@ -183,7 +200,7 @@ export default function ClientsPage() {
       }
 
       const data = await response.json().catch(() => null);
-      setNotice(getSeedNotice(data?.action, 'wipe'));
+      setNotice(getSeedNotice(data, 'wipe'));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Could not wipe demo data.'

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
+import { resolveApiUrl } from '@/lib/api';
 import { useAminContext } from '@/components/amin/AminProvider';
 import { AminAvatar } from '@/components/amin/AminAvatar';
 import type { AminAvatarState } from '@/components/amin/AminAvatar';
@@ -636,7 +637,7 @@ export default function HomePage() {
   );
 
   useEffect(() => {
-    fetch('/api/v1/cases/dashboard', { credentials: 'include' })
+    fetch(resolveApiUrl('/api/v1/cases/dashboard'), { credentials: 'include' })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         if (data) setDashboard(data);
@@ -650,7 +651,7 @@ export default function HomePage() {
 
   const handleCaseClick = useCallback(
     (c: CaseBrief) => {
-      fetch(`/api/v1/cases/${c.id}/set-active`, {
+      fetch(resolveApiUrl(`/api/v1/cases/${c.id}/set-active`), {
         method: 'POST',
         credentials: 'include',
       }).catch(() => {});

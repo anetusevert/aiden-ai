@@ -27,6 +27,14 @@ interface CaseBrief {
   urgent: boolean;
 }
 
+interface SeedResponsePayload {
+  action?: 'created' | 'already_exists' | 'refreshed' | 'wiped';
+  cases_count?: number;
+  clients_count?: number;
+  documents_count?: number;
+  notes_count?: number;
+}
+
 const PRIORITY_COLORS: Record<string, string> = {
   high: '#ef4444',
   medium: '#f59e0b',
@@ -102,17 +110,27 @@ async function getSeedErrorMessage(
 }
 
 function getSeedNotice(
-  action: string | undefined,
+  payload: SeedResponsePayload | null,
   mode: 'load' | 'wipe'
 ): string {
+  const action = payload?.action;
+  const clientsCount = payload?.clients_count ?? 0;
+  const casesCount = payload?.cases_count ?? 0;
+  const documentsCount = payload?.documents_count ?? 0;
+  const notesCount = payload?.notes_count ?? 0;
+
   if (mode === 'load') {
-    return action === 'already_exists'
-      ? 'Demo cases are already loaded for this workspace.'
-      : 'Demo cases and demo clients were loaded successfully.';
+    if (action === 'already_exists') {
+      return 'Demo cases are already loaded for this workspace.';
+    }
+    if (action === 'refreshed') {
+      return `Riyadh demo data was refreshed: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.`;
+    }
+    return `Riyadh demo data loaded: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.`;
   }
 
   return action === 'wiped'
-    ? 'Demo cases and orphaned demo clients were removed.'
+    ? `Riyadh demo data removed: ${casesCount} cases, ${clientsCount} clients, ${documentsCount} documents, and ${notesCount} notes.`
     : 'Demo data request completed.';
 }
 
@@ -154,7 +172,7 @@ export default function CasesPage() {
       }
 
       const data = await response.json().catch(() => null);
-      setSeedNotice(getSeedNotice(data?.action, 'load'));
+      setSeedNotice(getSeedNotice(data, 'load'));
     } catch (err) {
       setSeedError(
         err instanceof Error ? err.message : 'Could not load demo data.'
@@ -178,7 +196,7 @@ export default function CasesPage() {
       }
 
       const data = await response.json().catch(() => null);
-      setSeedNotice(getSeedNotice(data?.action, 'wipe'));
+      setSeedNotice(getSeedNotice(data, 'wipe'));
     } catch (err) {
       setSeedError(
         err instanceof Error ? err.message : 'Could not wipe demo data.'
@@ -254,7 +272,7 @@ export default function CasesPage() {
   }, [fetchCases]);
 
   const handleCaseClick = (c: CaseBrief) => {
-    fetch(`/api/v1/cases/${c.id}/set-active`, {
+    fetch(resolveApiUrl(`/api/v1/cases/${c.id}/set-active`), {
       method: 'POST',
       credentials: 'include',
     }).catch(() => {});
@@ -555,7 +573,7 @@ function NewCaseModal({
     if (!form.client_id || !form.title) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/v1/cases', {
+      const res = await fetch(resolveApiUrl('/api/v1/cases'), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

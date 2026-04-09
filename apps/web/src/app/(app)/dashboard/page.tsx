@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
 import { useAuth } from '@/lib/AuthContext';
+import { resolveApiUrl } from '@/lib/api';
 import { reportScreenContext } from '@/lib/screenContext';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 
@@ -89,7 +90,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/v1/cases/dashboard', { credentials: 'include' })
+    fetch(resolveApiUrl('/api/v1/cases/dashboard'), { credentials: 'include' })
       .then(r => {
         if (!r.ok) throw new Error('Dashboard fetch failed');
         return r.json();
@@ -106,7 +107,7 @@ export default function DashboardPage() {
 
   const handleCaseClick = useCallback(
     (c: CaseBrief) => {
-      fetch(`/api/v1/cases/${c.id}/set-active`, {
+      fetch(resolveApiUrl(`/api/v1/cases/${c.id}/set-active`), {
         method: 'POST',
         credentials: 'include',
       }).catch(() => {});

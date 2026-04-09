@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
+import { resolveApiUrl } from '@/lib/api';
 import { reportScreenContext } from '@/lib/screenContext';
 import { fadeUp, staggerContainer, staggerItem } from '@/lib/motion';
 import { officeApi } from '@/lib/officeApi';
@@ -31,6 +32,7 @@ const EVENT_ICONS: Record<string, string> = {
 export default function CaseDetailPage() {
   const params = useParams<{ id: string }>();
   const { navigateTo } = useNavigation();
+  const caseApiUrl = resolveApiUrl(`/api/v1/cases/${params.id}`);
   const [caseData, setCaseData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('documents');
@@ -50,7 +52,7 @@ export default function CaseDetailPage() {
         doc_type: 'docx',
         template: 'legal_memo',
       });
-      await fetch(`/api/v1/cases/${params.id}/documents`, {
+      await fetch(resolveApiUrl(`/api/v1/cases/${params.id}/documents`), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -65,19 +67,19 @@ export default function CaseDetailPage() {
   };
 
   useEffect(() => {
-    fetch(`/api/v1/cases/${params.id}/set-active`, {
+    fetch(resolveApiUrl(`/api/v1/cases/${params.id}/set-active`), {
       method: 'POST',
       credentials: 'include',
     }).catch(() => {});
 
-    fetch(`/api/v1/cases/${params.id}`, { credentials: 'include' })
+    fetch(caseApiUrl, { credentials: 'include' })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         setCaseData(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [params.id]);
+  }, [caseApiUrl, params.id]);
 
   useEffect(() => {
     if (!caseData) return;
@@ -95,21 +97,27 @@ export default function CaseDetailPage() {
   }, [caseData, params.id]);
 
   const loadDocuments = useCallback(() => {
-    fetch(`/api/v1/cases/${params.id}/documents`, { credentials: 'include' })
+    fetch(resolveApiUrl(`/api/v1/cases/${params.id}/documents`), {
+      credentials: 'include',
+    })
       .then(r => (r.ok ? r.json() : []))
       .then(setDocuments)
       .catch(() => {});
   }, [params.id]);
 
   const loadNotes = useCallback(() => {
-    fetch(`/api/v1/cases/${params.id}/notes`, { credentials: 'include' })
+    fetch(resolveApiUrl(`/api/v1/cases/${params.id}/notes`), {
+      credentials: 'include',
+    })
       .then(r => (r.ok ? r.json() : []))
       .then(setNotes)
       .catch(() => {});
   }, [params.id]);
 
   const loadTimeline = useCallback(() => {
-    fetch(`/api/v1/cases/${params.id}/timeline`, { credentials: 'include' })
+    fetch(resolveApiUrl(`/api/v1/cases/${params.id}/timeline`), {
+      credentials: 'include',
+    })
       .then(r => (r.ok ? r.json() : []))
       .then(setTimeline)
       .catch(() => {});
@@ -125,7 +133,7 @@ export default function CaseDetailPage() {
     if (!newNote.trim()) return;
     setAddingNote(true);
     try {
-      await fetch(`/api/v1/cases/${params.id}/notes`, {
+      await fetch(resolveApiUrl(`/api/v1/cases/${params.id}/notes`), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -140,10 +148,13 @@ export default function CaseDetailPage() {
   };
 
   const handleDetachDoc = async (docId: string) => {
-    await fetch(`/api/v1/cases/${params.id}/documents/${docId}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
+    await fetch(
+      resolveApiUrl(`/api/v1/cases/${params.id}/documents/${docId}`),
+      {
+        method: 'DELETE',
+        credentials: 'include',
+      }
+    );
     loadDocuments();
   };
 

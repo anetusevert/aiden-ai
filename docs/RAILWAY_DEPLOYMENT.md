@@ -70,6 +70,10 @@ Deploy the Aiden.ai monorepo on Railway as a multi-service project.
 
 > Railway injects `PORT` automatically. The startup script (`start.sh`) uses
 > `${PORT:-8000}` so this is handled without configuration.
+>
+> `CORS_ORIGINS_STR` must contain the exact browser origin for the deployed web
+> app, with scheme and host only. Do not add a trailing slash, and do not
+> replace the web origin with the API origin.
 
 ## Step 4: Add the Web Service
 
@@ -89,6 +93,11 @@ Deploy the Aiden.ai monorepo on Railway as a multi-service project.
 | `API_INTERNAL_BASE_URL` | `http://aiden-api.railway.internal:8000` |
 | `NEXT_PUBLIC_COLLABORA_URL` | `https://<collabora-domain>.railway.app` |
 | `NEXT_PUBLIC_COLLABORA_ENABLED` | `true` |
+
+> `NEXT_PUBLIC_API_BASE_URL` must be the API origin only, for example
+> `https://aiden-api-production-xxxx.up.railway.app`. Do not append `/api` or a
+> trailing slash because the web app already appends `/api/v1/...` routes at
+> runtime.
 
 ## Step 5: Add the Collabora Service
 
@@ -133,6 +142,21 @@ update the placeholder `<...-domain>` values in all environment variables:
 For internal (service-to-service) communication, use Railway's private
 networking: `http://<service-name>.railway.internal:<port>`.
 
+### Cross-Origin Contract
+
+For the default Railway setup, the web app and API run on different public
+origins. Keep that contract consistent:
+
+1. The web service must set `NEXT_PUBLIC_API_BASE_URL=https://<api-domain>.railway.app`.
+2. The API service must set `CORS_ORIGINS_STR=https://<web-domain>.railway.app,...`.
+3. `NEXT_PUBLIC_API_BASE_URL` must not include `/api` because the frontend
+   already requests `/api/v1/...`.
+4. `CORS_ORIGINS_STR` must include the web origin exactly, with no trailing
+   slash, or the browser will block credentialed requests before the UI can read
+   the real response.
+5. After changing either variable, redeploy both services so the API CORS policy
+   and the web bundle pick up the same origin pair.
+
 ## Verification
 
 After deployment, verify the API health endpoint:
@@ -151,6 +175,20 @@ Expected response:
   "llm_model": "gpt-4o"
 }
 ```
+
+Then verify browser-origin access from the deployed web domain:
+
+```bash
+curl -i "https://<api-domain>.railway.app/api/v1/clients" \
+  -H "Origin: https://<web-domain>.railway.app"
+```
+
+Expected result:
+
+- The response includes `access-control-allow-origin: https://<web-domain>.railway.app`
+- The response includes `access-control-allow-credentials: true`
+- A `404` for a specific client id should come from the API body, not from the
+  browser blocking the response
 
 ## Security Checklist
 
@@ -181,3 +219,4 @@ in the deploy logs.
 | Collabora iframe fails to load | CORS or aliasgroup1 mismatch | Ensure `aliasgroup1` matches the API public URL |
 | Cookies not attaching | Mixed HTTP/HTTPS or domain mismatch | Ensure `COOKIE_SECURE=true` and all URLs use HTTPS |
 | WOPI callbacks fail | Collabora can't reach API | Use Railway internal URL for `WOPI_INTERNAL_URL` |
+| Client detail page shows a blocked fetch or fake "Client not found" state | `NEXT_PUBLIC_API_BASE_URL` points at the wrong host, includes `/api`, or `CORS_ORIGINS_STR` is missing the web origin | Set `NEXT_PUBLIC_API_BASE_URL` to the API origin only and include the exact web origin in `CORS_ORIGINS_STR`, then redeploy API and web |
