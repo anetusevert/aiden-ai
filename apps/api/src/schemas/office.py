@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-OfficeDocType = Literal["docx", "xlsx", "pptx"]
+OfficeDocType = Literal["docx", "xlsx", "pptx", "pdf"]
 
 
 class OfficeDocumentCreate(BaseModel):

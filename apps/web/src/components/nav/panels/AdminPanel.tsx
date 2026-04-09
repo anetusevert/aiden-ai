@@ -152,6 +152,32 @@ export function AdminPanel() {
         <div className="r2-section-label">SYSTEM</div>
         <div className="r2-link-list">
           <Link
+            href="/settings/demo-data"
+            className={`r2-link${isActive('/settings/demo-data') ? ' r2-link-active' : ''}`}
+            onClick={e => {
+              e.preventDefault();
+              navigateTo('/settings/demo-data');
+            }}
+          >
+            <span className="r2-link-icon">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path d="M4 19h16" />
+                <path d="M5 17V7l7-4 7 4v10" />
+                <path d="M9 11h6" />
+                <path d="M9 15h4" />
+              </svg>
+            </span>
+            <span className="r2-link-text">Demo Data</span>
+          </Link>
+
+          <Link
             href="/settings"
             className={`r2-link${isActive('/settings') ? ' r2-link-active' : ''}`}
             onClick={e => {

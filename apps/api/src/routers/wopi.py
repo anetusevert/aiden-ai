@@ -55,7 +55,7 @@ async def check_file_info(
         "UserId": str(token.user_id),
         "UserFriendlyName": user.full_name if user and user.full_name else "HeyAmin User",
         "UserCanWrite": token.can_write,
-        "SupportsUpdate": True,
+        "SupportsUpdate": token.can_write,
         "SupportsLocks": False,
         "LastModifiedTime": _wopi_timestamp(document.updated_at),
     }

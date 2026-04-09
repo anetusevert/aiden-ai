@@ -21,26 +21,6 @@ export interface WorkflowStep {
   estimatedDuration?: string;
 }
 
-export type WorkflowSimulatedOutput =
-  | {
-      type: 'text' | 'document';
-      content: string;
-    }
-  | {
-      type: 'list';
-      content: Array<{
-        label: string;
-        status: string;
-        detail: string;
-      }>;
-    }
-  | {
-      type: 'score';
-      score: number;
-      label: string;
-      items: string[];
-    };
-
 export interface WorkflowDefinition {
   id: string;
   name: string;
@@ -2195,12 +2175,6 @@ export function getGroupedWorkflows(): Record<
   return groups;
 }
 
-export const LIVE_WORKFLOW_IDS = new Set<string>([
-  'RESEARCH_LEGAL_MEMO',
-  'CORPORATE_CONTRACTS',
-  'ARBITRATION_CLAUSE',
-]);
-
 export const WORKFLOW_DISPLAY_OVERRIDES: Record<string, string> = {
   RESEARCH_LEGAL_MEMO: 'Research',
   CORPORATE_CONTRACTS: 'Contract Review',
@@ -2223,27 +2197,6 @@ export const WORKFLOW_TEMPLATE_ELIGIBILITY = new Set<string>([
   'RESEARCH_LEGAL_MEMO',
   'RESEARCH_DUE_DILIGENCE',
 ]);
-
-export const LIVE_WORKFLOW_STEP_MESSAGES: Record<string, string[]> = {
-  RESEARCH_LEGAL_MEMO: [
-    'Define the legal question, jurisdiction, and depth so I can scope the research correctly.',
-    'I will run evidence-backed research and surface the most relevant authorities for your query.',
-    'Review the findings and citations, then decide which points should be preserved in the final output.',
-    'I will package the result so it can be stored against the right matter and reused later.',
-  ],
-  CORPORATE_CONTRACTS: [
-    'Upload the contract you want reviewed so I can anchor the analysis to the right document version.',
-    'I will analyze key risk areas, rank findings, and produce a practical summary for counsel review.',
-    'Review the highlighted risks, severity levels, and recommendations before finalizing the report.',
-    'Export the review package so it can be shared, downloaded, or filed to the relevant case.',
-  ],
-  ARBITRATION_CLAUSE: [
-    'Paste the clause or upload the relevant section, then choose the clause type and target jurisdiction.',
-    'I will generate jurisdiction-aware redlines and explain why each proposed change improves the clause.',
-    'Compare the original and redlined text side by side, then confirm the final wording you want to keep.',
-    'Export the approved redline package for sharing or filing into the matter record.',
-  ],
-};
 
 export const WORKFLOW_STEP_OVERRIDES: Record<string, WorkflowStep[]> = {
   RESEARCH_LEGAL_MEMO: [
@@ -2361,116 +2314,13 @@ function buildDefaultStepMessage(step: WorkflowStep): string {
     : `${step.name}: I will guide you through this part of the workflow.`;
 }
 
-function buildDefaultSimulatedOutput(
-  workflow: WorkflowDefinition,
-  step: WorkflowStep
-): WorkflowSimulatedOutput {
-  if (/report|memo|opinion|brief|draft/i.test(step.name)) {
-    return {
-      type: 'document',
-      content: `${getWorkflowDisplayName(workflow)}\n\n${step.name}\n\n${step.detail}\n\nPrepared for beta demonstration.`,
-    };
-  }
-
-  if (/review|analysis|assessment|screen|check/i.test(step.name)) {
-    return {
-      type: 'list',
-      content: [
-        {
-          label: `${step.name} scope confirmed`,
-          status: 'ready',
-          detail: workflow.description,
-        },
-        {
-          label: 'Key issue surfaced',
-          status: 'flagged',
-          detail: step.detail,
-        },
-        {
-          label: 'Recommended next move',
-          status: 'prepared',
-          detail:
-            'Amin prepared the next action so the workflow can advance smoothly.',
-        },
-      ],
-    };
-  }
-
-  return {
-    type: 'text',
-    content: `${step.name} completed.\n\n${step.detail}\n\nAmin prepared a realistic demo output for this stage.`,
-  };
-}
-
-export const WORKFLOW_SIMULATED_OUTPUTS: Record<
-  string,
-  Record<number, WorkflowSimulatedOutput>
-> = {
-  RESEARCH_DUE_DILIGENCE: {
-    1: {
-      type: 'list',
-      content: [
-        {
-          label: 'Company Registration',
-          status: 'verified',
-          detail: 'CR No. 1010xxxxxx - Active',
-        },
-        {
-          label: 'Court Records',
-          status: 'clear',
-          detail: 'No pending litigation found',
-        },
-        {
-          label: 'Sanctions Check',
-          status: 'clear',
-          detail: 'Not listed on OFAC, UN, or KSA lists',
-        },
-        {
-          label: 'UBO Verification',
-          status: 'pending',
-          detail: '2 beneficial owners identified',
-        },
-      ],
-    },
-  },
-  COMPLIANCE_PDPL: {
-    1: {
-      type: 'document',
-      content:
-        'LEGAL OPINION\n\nRe: Regulatory compliance position\n\n1. EXECUTIVE SUMMARY\nThe current posture is broadly aligned, subject to targeted remediation.\n\n2. KEY REQUIREMENTS\n- Governance ownership confirmed\n- Documentation update required\n- Monitoring cadence recommended\n',
-    },
-  },
-  COMPLIANCE_SAUDIZATION: {
-    1: {
-      type: 'score',
-      score: 87,
-      label: 'Compliance Score',
-      items: [
-        'VAT registration verified',
-        'Labour law compliance: 3 gaps found',
-        'Policy acknowledgements up to date',
-        'Escalation controls documented',
-      ],
-    },
-  },
-};
-
 export const WORKFLOW_STEP_MESSAGES: Record<string, string[]> =
   WORKFLOW_REGISTRY.reduce<Record<string, string[]>>((acc, workflow) => {
-    acc[workflow.id] =
-      LIVE_WORKFLOW_STEP_MESSAGES[workflow.id] ??
-      getWorkflowJourneySteps(workflow).map(step =>
-        buildDefaultStepMessage(step)
-      );
+    acc[workflow.id] = getWorkflowJourneySteps(workflow).map(step =>
+      buildDefaultStepMessage(step)
+    );
     return acc;
   }, {});
-
-export function isLiveWorkflow(
-  workflow: WorkflowDefinition | string | undefined
-): boolean {
-  const workflowId = typeof workflow === 'string' ? workflow : workflow?.id;
-  return workflowId ? LIVE_WORKFLOW_IDS.has(workflowId) : false;
-}
 
 export function getWorkflowDisplayName(
   workflow: WorkflowDefinition | string | undefined
@@ -2530,23 +2380,4 @@ export function getWorkflowStepEstimate(
     workflow?.steps[stepIndex]?.estimatedDuration ??
     DEFAULT_WORKFLOW_STEP_ESTIMATE
   );
-}
-
-export function getWorkflowSimulatedOutput(
-  workflowId: string,
-  stepIndex: number
-): WorkflowSimulatedOutput {
-  const predefined = WORKFLOW_SIMULATED_OUTPUTS[workflowId]?.[stepIndex];
-  if (predefined) return predefined;
-
-  const workflow = getWorkflowById(workflowId);
-  const step = workflow?.steps[stepIndex];
-  if (!workflow || !step) {
-    return {
-      type: 'text',
-      content: 'Demo output prepared.',
-    };
-  }
-
-  return buildDefaultSimulatedOutput(workflow, step);
 }

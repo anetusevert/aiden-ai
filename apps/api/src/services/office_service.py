@@ -31,6 +31,7 @@ OFFICE_CONTENT_TYPES = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "pdf": "application/pdf",
 }
 
 
@@ -226,7 +227,7 @@ class OfficeService:
 
     async def download_document(self, document: OfficeDocument) -> tuple[bytes, str]:
         data, content_type = self.storage_client.get_object(document.storage_key)
-        return data, content_type
+        return data, content_type or OFFICE_CONTENT_TYPES[document.doc_type]
 
     async def generate_wopi_token(
         self,

@@ -1,4 +1,4 @@
-"""Helpers for loading and wiping the Riyadh demo dataset."""
+"""Helpers for loading and wiping the KSA demo dataset."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from src.dependencies.auth import RequestContext
 from src.models.case import Case, CaseDocument, CaseEvent, CaseNote
 from src.models.client import Client
 from src.models.office import OfficeDocument
+from src.services.demo_seed_fixtures import KSA_DEMO_CLIENTS
 from src.services.document_generator import create_document as generate_document
 from src.services.office_service import OFFICE_CONTENT_TYPES, OfficeService
 from src.storage.s3 import S3StorageError
@@ -22,7 +23,7 @@ from src.storage.s3 import S3StorageError
 logger = logging.getLogger(__name__)
 
 MOCK_REF_PREFIX = "MOCK-"
-RIYADH_DEMO_VERSION = "riyadh-practice-v1"
+KSA_DEMO_VERSION = "ksa-law-practice-v2"
 DEMO_METADATA_KEY = "demo_seed"
 DEMO_STORAGE_PREFIX = "office-demo"
 
@@ -938,8 +939,8 @@ def _event_timestamp(opened_at: date, day_offset: int, hour: int = 10) -> dateti
 
 def _demo_metadata(extra: dict[str, Any] | None = None) -> dict[str, Any]:
     metadata: dict[str, Any] = {
-        DEMO_METADATA_KEY: RIYADH_DEMO_VERSION,
-        "demo_dataset": "riyadh_law_practice",
+        DEMO_METADATA_KEY: KSA_DEMO_VERSION,
+        "demo_dataset": "ksa_law_practice",
     }
     if extra:
         metadata.update(extra)
@@ -1064,7 +1065,7 @@ async def seed_demo_dataset(
     today = date.today()
     document_seeding_available = True
 
-    for client_fixture in RIYADH_DEMO_CLIENTS:
+    for client_fixture in KSA_DEMO_CLIENTS:
         client = Client(
             id=str(uuid4()),
             org_id=org_id,
@@ -1201,6 +1202,15 @@ async def seed_demo_dataset(
                         title=document_fixture["title"],
                         doc_type=document_fixture["doc_type"],
                         template=document_fixture["template"],
+                        context={
+                            "client_name": client.display_name,
+                            "client_name_ar": client.display_name_ar,
+                            "matter": case.title,
+                            "matter_title_ar": case.title_ar,
+                            "court_name": case.court_name,
+                            "counterparty": case.opposing_party,
+                            **document_fixture.get("context", {}),
+                        },
                         metadata=_demo_metadata(
                             {
                                 "case_id": case.id,
@@ -1263,9 +1273,15 @@ async def _create_demo_document(
     title: str,
     doc_type: str,
     template: str,
+    context: dict[str, Any],
     metadata: dict[str, Any],
 ) -> OfficeDocument:
-    file_bytes = generate_document(doc_type=doc_type, template=template, title=title)
+    file_bytes = generate_document(
+        doc_type=doc_type,
+        template=template,
+        title=title,
+        context=context,
+    )
     doc_id = str(uuid4())
     storage_key = f"{DEMO_STORAGE_PREFIX}/{org_id}/{doc_id}.{doc_type}"
 

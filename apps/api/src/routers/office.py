@@ -182,7 +182,7 @@ async def create_wopi_token(
     token = await service.generate_wopi_token(
         document,
         user_id=ctx.user.id,
-        can_write=ctx.has_role("EDITOR"),
+        can_write=ctx.has_role("EDITOR") and document.doc_type != "pdf",
     )
     return WopiTokenResponse(
         token=token.token,
@@ -210,6 +210,8 @@ async def amin_edit_office_document(
         )
     except OfficeDocumentNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     return OfficeDocumentAminEditResponse(
         success=True,

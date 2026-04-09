@@ -14221,24 +14221,8 @@ textarea:focus-visible {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.workflow-execute-amin {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 20px;
-  align-self: start;
-  min-height: 180px;
-}
-
 .workflow-execute-amin[data-state='thinking'] {
   animation: workflowAminPulse 1.8s ease-in-out infinite;
-}
-
-.workflow-execute-amin-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .workflow-completion-card {
@@ -14285,6 +14269,232 @@ textarea:focus-visible {
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.3),
     0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+.workflow-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.workflow-amin-output {
+  max-height: 340px;
+  overflow: auto;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.workflow-amin-output h1,
+.workflow-amin-output h2,
+.workflow-amin-output h3 {
+  margin: 12px 0 6px;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.workflow-amin-output p {
+  margin: 0 0 8px;
+}
+
+.workflow-amin-output ul,
+.workflow-amin-output ol {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.workflow-amin-output code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.82rem;
+}
+
+.workflow-amin-output pre {
+  overflow: auto;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.workflow-amin-working {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+@keyframes workflowDotPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.workflow-amin-working-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  animation: workflowDotPulse 1.2s ease-in-out infinite;
+}
+
+.workflow-tool-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workflow-tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.workflow-tool-chip small {
+  color: rgba(255, 255, 255, 0.48);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-tool-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.workflow-tool-chip[data-status='running'] .workflow-tool-chip-dot {
+  background: #f59e0b;
+  animation: workflowDotPulse 1s ease-in-out infinite;
+}
+
+.workflow-tool-chip[data-status='complete'] .workflow-tool-chip-dot {
+  background: #22c55e;
+}
+
+.workflow-tool-chip[data-status='error'] .workflow-tool-chip-dot {
+  background: #ef4444;
+}
+
+.workflow-execute-amin {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  border-radius: 20px;
+  align-self: start;
+  min-height: 180px;
+  max-height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.workflow-execute-amin-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.workflow-execute-amin-chat {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workflow-chat-msg {
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.workflow-chat-msg p {
+  margin: 0 0 4px;
+}
+
+.workflow-chat-msg-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.48);
+  margin-bottom: 2px;
+}
+
+.workflow-chat-msg-user {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.workflow-chat-msg-streaming {
+  opacity: 0.8;
+}
+
+.workflow-execute-amin-input {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  align-items: flex-end;
+}
+
+.workflow-chat-textarea {
+  flex: 1;
+  resize: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.workflow-chat-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.workflow-chat-send {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.workflow-chat-send:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.workflow-chat-send:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 @media (max-width: 1200px) {

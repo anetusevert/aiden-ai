@@ -10,7 +10,6 @@ import {
   getWorkflowDisplayName,
   getWorkflowEstimatedDuration,
   getWorkflowJourneySteps,
-  isLiveWorkflow,
 } from '@/lib/workflowRegistry';
 import { getWorkflowHref } from '@/lib/workflowPresentation';
 import { reportScreenContext } from '@/lib/screenContext';
@@ -80,7 +79,7 @@ export default function WorkflowCategoryPage() {
     window.dispatchEvent(
       new CustomEvent('amin:context', {
         detail: {
-          message: `You're browsing ${meta.name} workflows. ${workflows.length} available - the ones marked Live connect to real AI engines.`,
+          message: `You're browsing ${meta.name} workflows. ${workflows.length} available — all powered by Amin's AI.`,
         },
       })
     );
@@ -147,9 +146,6 @@ export default function WorkflowCategoryPage() {
           >
             <div className="workflow-category-card-top">
               <h2>{getWorkflowDisplayName(workflow)}</h2>
-              {isLiveWorkflow(workflow) ? (
-                <span className="workflow-live-badge">Live</span>
-              ) : null}
             </div>
             <p>{workflow.description}</p>
             <div className="workflow-category-card-meta">

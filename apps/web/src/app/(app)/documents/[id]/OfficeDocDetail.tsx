@@ -17,9 +17,30 @@ function formatBytes(bytes: number) {
 
 function renderPreview(document: OfficeDocument) {
   const metadata = document.metadata_ ?? {};
-  const previewText = metadata.preview_text;
+  const previewText =
+    typeof metadata.preview_text === 'string'
+      ? metadata.preview_text
+      : Array.isArray(metadata.preview_paragraphs)
+        ? metadata.preview_paragraphs.join('\n\n')
+        : null;
   const sheets = metadata.sheet_names;
   const slides = metadata.slide_titles;
+
+  if (document.doc_type === 'pdf') {
+    return (
+      <iframe
+        title={`${document.title} preview`}
+        src={`${officeApi.getDownloadUrl(document.id)}#toolbar=0`}
+        style={{
+          width: '100%',
+          minHeight: 560,
+          border: '1px solid rgba(148, 163, 184, 0.2)',
+          borderRadius: 12,
+          background: '#fff',
+        }}
+      />
+    );
+  }
 
   if (typeof previewText === 'string' && previewText.trim()) {
     return <pre className="document-preview-text">{previewText}</pre>;
@@ -112,12 +133,19 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
 
   const pageMeta = useMemo(() => {
     if (!document) return [];
-    return [
+    const metadata = document.metadata_ ?? {};
+    const baseMeta: Array<[string, string]> = [
       ['Type', document.doc_type.toUpperCase()],
       ['Size', formatBytes(document.size_bytes)],
       ['Updated', new Date(document.updated_at).toLocaleString()],
     ];
+    if (typeof metadata.page_count === 'number') {
+      baseMeta.push(['Pages', String(metadata.page_count)]);
+    }
+    return baseMeta;
   }, [document]);
+
+  const canEdit = document?.doc_type !== 'pdf';
 
   async function handleSaveTitle() {
     if (!document || draftTitle.trim() === document.title) return;
@@ -186,20 +214,23 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
               <div>
                 <h1 className="page-title">{document.title}</h1>
                 <p className="page-subtitle">
-                  Live office document with Collabora editing and Amin context
-                  awareness.
+                  {canEdit
+                    ? 'Live office document with Collabora editing and Amin context awareness.'
+                    : 'Presentation PDF with browser-native preview and download support.'}
                 </p>
               </div>
               <div className="document-actions">
                 <button className="btn btn-outline" onClick={askAmin}>
                   Ask Amin
                 </button>
-                <button
-                  className="btn btn-outline"
-                  onClick={() => setMode('edit')}
-                >
-                  Open in Editor
-                </button>
+                {canEdit ? (
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => setMode('edit')}
+                  >
+                    Open in Editor
+                  </button>
+                ) : null}
                 <a
                   className="btn btn-primary"
                   href={officeApi.getDownloadUrl(document.id)}
@@ -243,7 +274,7 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
             </div>
           </div>
         </div>
-      ) : (
+      ) : canEdit ? (
         <div className="document-editor-shell">
           <div className="document-editor-header">
             <input
@@ -286,6 +317,10 @@ export function OfficeDocDetail({ docId }: { docId: string }) {
                 .catch(() => {});
             }}
           />
+        </div>
+      ) : (
+        <div className="alert alert-error">
+          PDF documents are view-only in this workspace.
         </div>
       )}
     </motion.div>

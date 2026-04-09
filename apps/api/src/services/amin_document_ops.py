@@ -26,6 +26,9 @@ async def execute_instruction(
     context: dict[str, Any] | None = None,
 ) -> tuple[bytes, list[dict[str, Any]], str]:
     """Plan and apply Office operations from a natural-language instruction."""
+    if doc_type == "pdf":
+        raise ValueError("PDF documents are view-only and cannot be edited by Amin.")
+
     document_state = extract_document_state(file_bytes, doc_type)
     ops = await _plan_operations(
         instruction=instruction,
@@ -46,6 +49,8 @@ def extract_document_state(file_bytes: bytes, doc_type: str) -> dict[str, Any]:
         return _extract_xlsx_state(file_bytes)
     if doc_type == "pptx":
         return _extract_pptx_state(file_bytes)
+    if doc_type == "pdf":
+        return _extract_pdf_state(file_bytes)
     raise ValueError(f"Unsupported office document type: {doc_type}")
 
 
@@ -67,6 +72,9 @@ def extract_document_metadata(file_bytes: bytes, doc_type: str) -> dict[str, Any
             "preview_paragraphs": [
                 item.get("text", "") for item in paragraphs if item.get("text")
             ][:12],
+            "preview_text": "\n\n".join(
+                item.get("text", "") for item in paragraphs if item.get("text")
+            )[:1800],
         }
     if doc_type == "xlsx":
         sheets = state.get("sheets", [])
@@ -76,11 +84,25 @@ def extract_document_metadata(file_bytes: bytes, doc_type: str) -> dict[str, Any
             "sheet_names": [sheet.get("name") for sheet in sheets],
             "preview_sheet": first_sheet,
         }
-    slides = state.get("slides", [])
+    if doc_type == "pptx":
+        slides = state.get("slides", [])
+        return {
+            "slide_count": len(slides),
+            "slide_titles": [
+                slide.get("title") or f"Slide {idx + 1}"
+                for idx, slide in enumerate(slides)
+            ],
+            "preview_slides": slides[:8],
+        }
+
+    pages = state.get("pages", [])
+    preview_text = "\n\n".join(
+        page.get("text", "") for page in pages if page.get("text")
+    )[:1800]
     return {
-        "slide_count": len(slides),
-        "slide_titles": [slide.get("title") or f"Slide {idx + 1}" for idx, slide in enumerate(slides)],
-        "preview_slides": slides[:8],
+        "page_count": state.get("page_count", len(pages)),
+        "preview_pages": pages[:6],
+        "preview_text": preview_text,
     }
 
 
@@ -424,6 +446,30 @@ def _extract_pptx_state(file_bytes: bytes) -> dict[str, Any]:
     return {"slide_count": len(slides), "slides": slides}
 
 
+def _extract_pdf_state(file_bytes: bytes) -> dict[str, Any]:
+    try:
+        import fitz
+
+        pdf = fitz.open(stream=file_bytes, filetype="pdf")
+        pages: list[dict[str, Any]] = []
+        for index, page in enumerate(pdf, start=1):
+            text = page.get_text("text").strip()
+            pages.append(
+                {
+                    "index": index - 1,
+                    "page_number": index,
+                    "text": text[:2000],
+                }
+            )
+        pdf.close()
+        return {
+            "page_count": len(pages),
+            "pages": pages[:20],
+        }
+    except ImportError:
+        return _extract_pdf_state_fallback(file_bytes)
+
+
 def _apply_pptx_operations(file_bytes: bytes, ops: list[dict[str, Any]]) -> bytes:
     presentation = Presentation(BytesIO(file_bytes))
     for op in ops:
@@ -554,8 +600,32 @@ def _fallback_document_answer(
     if doc_type == "xlsx":
         sheet_names = ", ".join(state.get("sheet_names", []))
         return f"The workbook contains these sheets: {sheet_names or 'none detected'}. Question asked: {question}"
-    slide_titles = ", ".join(
-        slide.get("title") or f"Slide {idx + 1}"
-        for idx, slide in enumerate(state.get("slides", [])[:6])
+    if doc_type == "pptx":
+        slide_titles = ", ".join(
+            slide.get("title") or f"Slide {idx + 1}"
+            for idx, slide in enumerate(state.get("slides", [])[:6])
+        )
+        return f"The presentation currently includes these slides: {slide_titles or 'none detected'}. Question asked: {question}"
+
+    preview = " | ".join(
+        page.get("text", "")[:180]
+        for page in state.get("pages", [])[:3]
+        if page.get("text")
     )
-    return f"The presentation currently includes these slides: {slide_titles or 'none detected'}. Question asked: {question}"
+    return f"The PDF includes {state.get('page_count', 0)} pages. Visible preview: {preview or 'no readable text extracted'}."
+
+
+def _extract_pdf_state_fallback(file_bytes: bytes) -> dict[str, Any]:
+    raw_text = file_bytes.decode("latin-1", errors="ignore")
+    matches = re.findall(r"\(([^()]*)\)\s*Tj", raw_text)
+    joined = "\n".join(match.strip() for match in matches if match.strip())[:4000]
+    return {
+        "page_count": 1,
+        "pages": [
+            {
+                "index": 0,
+                "page_number": 1,
+                "text": joined,
+            }
+        ],
+    }

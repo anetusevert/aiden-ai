@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
-import { useAuth } from '@/lib/AuthContext';
 import { resolveApiUrl } from '@/lib/api';
 import { reportScreenContext } from '@/lib/screenContext';
 import {
@@ -41,46 +40,6 @@ const TYPE_LABELS: Record<string, string> = {
   organisation: 'Organisation',
 };
 
-type SeedAction = 'created' | 'already_exists' | 'wiped';
-
-interface SeedResponsePayload {
-  action?: SeedAction | 'refreshed';
-  cases_count?: number;
-  clients_count?: number;
-  documents_count?: number;
-  notes_count?: number;
-  warnings?: string[];
-}
-
-async function readResponseDetail(response: Response): Promise<string | null> {
-  try {
-    const data = await response.json();
-    const detail = data?.detail;
-
-    if (typeof detail === 'string' && detail.trim()) {
-      return detail.trim();
-    }
-
-    if (detail && typeof detail === 'object' && 'message' in detail) {
-      const message = detail.message;
-      if (typeof message === 'string' && message.trim()) {
-        return message.trim();
-      }
-    }
-  } catch {
-    try {
-      const text = await response.text();
-      if (text.trim()) {
-        return text.trim();
-      }
-    } catch {
-      /* */
-    }
-  }
-
-  return null;
-}
-
 function getStatusMessage(action: string, status: number): string {
   switch (status) {
     case 401:
@@ -101,7 +60,33 @@ async function getRequestErrorMessage(
   response: Response
 ): Promise<string> {
   const baseMessage = getStatusMessage(action, response.status);
-  const detail = await readResponseDetail(response);
+  let detail: string | null = null;
+
+  try {
+    const data = await response.json();
+    const responseDetail = data?.detail;
+
+    if (typeof responseDetail === 'string' && responseDetail.trim()) {
+      detail = responseDetail.trim();
+    } else if (
+      responseDetail &&
+      typeof responseDetail === 'object' &&
+      'message' in responseDetail &&
+      typeof responseDetail.message === 'string' &&
+      responseDetail.message.trim()
+    ) {
+      detail = responseDetail.message.trim();
+    }
+  } catch {
+    try {
+      const text = await response.text();
+      if (text.trim()) {
+        detail = text.trim();
+      }
+    } catch {
+      /* */
+    }
+  }
 
   if (!detail) {
     return baseMessage;
@@ -114,37 +99,8 @@ async function getRequestErrorMessage(
   return `${baseMessage} ${detail}`;
 }
 
-function getSeedNotice(
-  payload: SeedResponsePayload | null,
-  mode: 'load' | 'wipe'
-): string {
-  const action = payload?.action;
-  const clientsCount = payload?.clients_count ?? 0;
-  const casesCount = payload?.cases_count ?? 0;
-  const documentsCount = payload?.documents_count ?? 0;
-  const notesCount = payload?.notes_count ?? 0;
-
-  if (mode === 'load') {
-    if (action === 'already_exists') {
-      return 'Demo cases are already loaded for this workspace.';
-    }
-    const warningSuffix = payload?.warnings?.length
-      ? ` ${payload.warnings[0]}`
-      : '';
-    if (action === 'refreshed') {
-      return `Riyadh demo data was refreshed: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.${warningSuffix}`;
-    }
-    return `Riyadh demo data loaded: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.${warningSuffix}`;
-  }
-
-  return action === 'wiped'
-    ? `Riyadh demo data removed: ${casesCount} cases, ${clientsCount} clients, ${documentsCount} documents, and ${notesCount} notes.`
-    : 'Demo data request completed.';
-}
-
 export default function ClientsPage() {
   const { navigateTo } = useNavigation();
-  const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -155,63 +111,7 @@ export default function ClientsPage() {
     () => searchParams.get('search') ?? ''
   );
   const [showNewModal, setShowNewModal] = useState(false);
-  const [seedLoading, setSeedLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const isAdmin = user?.role === 'ADMIN';
-
-  const handleSeedMockDemo = useCallback(async () => {
-    setSeedLoading(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const response = await fetch(resolveApiUrl('/api/v1/seed/mock-cases'), {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          await getRequestErrorMessage('load demo data', response)
-        );
-      }
-
-      const data = await response.json().catch(() => null);
-      setNotice(getSeedNotice(data, 'load'));
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Could not load demo data.'
-      );
-    }
-    setSeedLoading(false);
-  }, []);
-
-  const handleWipeMockDemo = useCallback(async () => {
-    setSeedLoading(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const response = await fetch(resolveApiUrl('/api/v1/seed/mock-cases'), {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          await getRequestErrorMessage('wipe demo data', response)
-        );
-      }
-
-      const data = await response.json().catch(() => null);
-      setNotice(getSeedNotice(data, 'wipe'));
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Could not wipe demo data.'
-      );
-    }
-    setSeedLoading(false);
-  }, []);
 
   useEffect(() => {
     reportScreenContext({
@@ -295,40 +195,6 @@ export default function ClientsPage() {
       <div className="page-header">
         <h1 className="page-title">Clients</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {isAdmin && (
-            <>
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={seedLoading}
-                onClick={async () => {
-                  await handleSeedMockDemo();
-                  fetchClients();
-                }}
-                style={{ fontSize: 12, height: 32, padding: '0 12px' }}
-              >
-                {seedLoading ? '...' : 'Load Demo Data'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={seedLoading}
-                onClick={async () => {
-                  await handleWipeMockDemo();
-                  fetchClients();
-                }}
-                style={{
-                  fontSize: 12,
-                  height: 32,
-                  padding: '0 12px',
-                  color: '#ef4444',
-                  borderColor: 'rgba(239,68,68,0.3)',
-                }}
-              >
-                {seedLoading ? '...' : 'Wipe Demo Data'}
-              </button>
-            </>
-          )}
           <button
             type="button"
             className="btn btn-primary"
@@ -364,12 +230,6 @@ export default function ClientsPage() {
           ))}
         </div>
       </div>
-
-      {notice ? (
-        <div style={{ padding: '0 var(--space-4)' }}>
-          <div className="alert alert-success">{notice}</div>
-        </div>
-      ) : null}
 
       {error ? (
         <div style={{ padding: '0 var(--space-4)' }}>

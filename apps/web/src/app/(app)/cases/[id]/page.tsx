@@ -522,6 +522,9 @@ export default function CaseDetailPage() {
                 {documents.map(d => (
                   <div key={d.id} className="doc-row">
                     <span className="doc-row-title">{d.document_title}</span>
+                    <span className="badge badge-sm">
+                      {String(d.document_type || '').toUpperCase() || 'FILE'}
+                    </span>
                     <span className="badge badge-sm">{d.document_role}</span>
                     <span className="doc-row-date">
                       {new Date(d.attached_at).toLocaleDateString()}

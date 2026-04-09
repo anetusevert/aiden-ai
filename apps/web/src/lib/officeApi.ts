@@ -2,7 +2,7 @@
 
 import { resolveApiUrl } from '@/lib/api';
 
-export type OfficeDocType = 'docx' | 'xlsx' | 'pptx';
+export type OfficeDocType = 'docx' | 'xlsx' | 'pptx' | 'pdf';
 
 export interface OfficeDocument {
   id: string;

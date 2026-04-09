@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '@/components/NavigationLoader';
-import { useAuth } from '@/lib/AuthContext';
 import { resolveApiUrl } from '@/lib/api';
 import { reportScreenContext } from '@/lib/screenContext';
 import {
@@ -25,15 +24,6 @@ interface CaseBrief {
   next_deadline_description: string | null;
   client_display_name: string;
   urgent: boolean;
-}
-
-interface SeedResponsePayload {
-  action?: 'created' | 'already_exists' | 'refreshed' | 'wiped';
-  cases_count?: number;
-  clients_count?: number;
-  documents_count?: number;
-  notes_count?: number;
-  warnings?: string[];
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -60,87 +50,8 @@ const PA_ABBREV: Record<string, string> = {
   firm_management: 'Mgmt',
 };
 
-async function readResponseDetail(response: Response): Promise<string | null> {
-  try {
-    const data = await response.json();
-    const detail = data?.detail;
-
-    if (typeof detail === 'string' && detail.trim()) {
-      return detail.trim();
-    }
-
-    if (detail && typeof detail === 'object' && 'message' in detail) {
-      const message = detail.message;
-      if (typeof message === 'string' && message.trim()) {
-        return message.trim();
-      }
-    }
-  } catch {
-    try {
-      const text = await response.text();
-      if (text.trim()) {
-        return text.trim();
-      }
-    } catch {
-      /* */
-    }
-  }
-
-  return null;
-}
-
-async function getSeedErrorMessage(
-  action: string,
-  response: Response
-): Promise<string> {
-  const detail = await readResponseDetail(response);
-  const baseMessage =
-    response.status === 401
-      ? `Could not ${action}. Your session has expired or the API did not accept your login cookie.`
-      : response.status === 403
-        ? `Could not ${action}. Only admins can manage demo data.`
-        : response.status === 404
-          ? `Could not ${action}. The demo-data API route is not reachable from this app.`
-          : `Could not ${action}. Request failed with status ${response.status}.`;
-
-  if (!detail || baseMessage.toLowerCase().includes(detail.toLowerCase())) {
-    return baseMessage;
-  }
-
-  return `${baseMessage} ${detail}`;
-}
-
-function getSeedNotice(
-  payload: SeedResponsePayload | null,
-  mode: 'load' | 'wipe'
-): string {
-  const action = payload?.action;
-  const clientsCount = payload?.clients_count ?? 0;
-  const casesCount = payload?.cases_count ?? 0;
-  const documentsCount = payload?.documents_count ?? 0;
-  const notesCount = payload?.notes_count ?? 0;
-
-  if (mode === 'load') {
-    if (action === 'already_exists') {
-      return 'Demo cases are already loaded for this workspace.';
-    }
-    const warningSuffix = payload?.warnings?.length
-      ? ` ${payload.warnings[0]}`
-      : '';
-    if (action === 'refreshed') {
-      return `Riyadh demo data was refreshed: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.${warningSuffix}`;
-    }
-    return `Riyadh demo data loaded: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.${warningSuffix}`;
-  }
-
-  return action === 'wiped'
-    ? `Riyadh demo data removed: ${casesCount} cases, ${clientsCount} clients, ${documentsCount} documents, and ${notesCount} notes.`
-    : 'Demo data request completed.';
-}
-
 export default function CasesPage() {
   const { navigateTo } = useNavigation();
-  const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -151,63 +62,10 @@ export default function CasesPage() {
     () => searchParams.get('search') ?? ''
   );
   const [showNewModal, setShowNewModal] = useState(false);
-  const [seedLoading, setSeedLoading] = useState(false);
-  const [seedError, setSeedError] = useState<string | null>(null);
-  const [seedNotice, setSeedNotice] = useState<string | null>(null);
 
   const statusFilter = searchParams.get('status') ?? '';
   const priorityFilter = searchParams.get('priority') ?? '';
   const paFilter = searchParams.get('practice_area') ?? '';
-
-  const isAdmin = user?.role === 'ADMIN';
-
-  const handleSeedMockCases = useCallback(async () => {
-    setSeedLoading(true);
-    setSeedError(null);
-    setSeedNotice(null);
-    try {
-      const response = await fetch(resolveApiUrl('/api/v1/seed/mock-cases'), {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(await getSeedErrorMessage('load demo data', response));
-      }
-
-      const data = await response.json().catch(() => null);
-      setSeedNotice(getSeedNotice(data, 'load'));
-    } catch (err) {
-      setSeedError(
-        err instanceof Error ? err.message : 'Could not load demo data.'
-      );
-    }
-    setSeedLoading(false);
-  }, []);
-
-  const handleWipeMockCases = useCallback(async () => {
-    setSeedLoading(true);
-    setSeedError(null);
-    setSeedNotice(null);
-    try {
-      const response = await fetch(resolveApiUrl('/api/v1/seed/mock-cases'), {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(await getSeedErrorMessage('wipe demo data', response));
-      }
-
-      const data = await response.json().catch(() => null);
-      setSeedNotice(getSeedNotice(data, 'wipe'));
-    } catch (err) {
-      setSeedError(
-        err instanceof Error ? err.message : 'Could not wipe demo data.'
-      );
-    }
-    setSeedLoading(false);
-  }, []);
 
   useEffect(() => {
     reportScreenContext({
@@ -302,40 +160,6 @@ export default function CasesPage() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {isAdmin && (
-            <>
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={seedLoading}
-                onClick={async () => {
-                  await handleSeedMockCases();
-                  fetchCases();
-                }}
-                style={{ fontSize: 12, height: 32, padding: '0 12px' }}
-              >
-                {seedLoading ? '...' : 'Load Demo Data'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline"
-                disabled={seedLoading}
-                onClick={async () => {
-                  await handleWipeMockCases();
-                  fetchCases();
-                }}
-                style={{
-                  fontSize: 12,
-                  height: 32,
-                  padding: '0 12px',
-                  color: '#ef4444',
-                  borderColor: 'rgba(239,68,68,0.3)',
-                }}
-              >
-                {seedLoading ? '...' : 'Wipe Demo Data'}
-              </button>
-            </>
-          )}
           <button
             type="button"
             className="btn btn-primary"
@@ -345,18 +169,6 @@ export default function CasesPage() {
           </button>
         </div>
       </div>
-
-      {seedNotice ? (
-        <div style={{ padding: '0 var(--space-4)' }}>
-          <div className="alert alert-success">{seedNotice}</div>
-        </div>
-      ) : null}
-
-      {seedError ? (
-        <div style={{ padding: '0 var(--space-4)' }}>
-          <div className="alert alert-error">{seedError}</div>
-        </div>
-      ) : null}
 
       <div className="page-filters">
         <input

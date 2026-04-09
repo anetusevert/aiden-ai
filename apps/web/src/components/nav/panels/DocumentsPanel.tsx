@@ -10,6 +10,7 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   docx: 'DOCX',
   xlsx: 'XLSX',
   pptx: 'PPTX',
+  pdf: 'PDF',
 };
 
 const DOC_TYPE_ICON: Record<string, React.ReactNode> = {
@@ -53,6 +54,21 @@ const DOC_TYPE_ICON: Record<string, React.ReactNode> = {
       <rect x="2" y="3" width="20" height="14" rx="2" />
       <path d="M8 21h8" />
       <path d="M12 17v4" />
+    </svg>
+  ),
+  pdf: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <path d="M7 3h8l4 4v11a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" />
+      <path d="M15 3v5h5" />
+      <path d="M8 13h8" />
+      <path d="M8 17h5" />
     </svg>
   ),
 };

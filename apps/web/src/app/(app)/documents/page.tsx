@@ -20,12 +20,27 @@ const FILTERS: Array<{ key: 'all' | OfficeDocType; label: string }> = [
   { key: 'docx', label: 'Word' },
   { key: 'xlsx', label: 'Excel' },
   { key: 'pptx', label: 'PowerPoint' },
+  { key: 'pdf', label: 'PDF' },
 ];
 
 const TEMPLATE_OPTIONS: Record<OfficeDocType, string[]> = {
   docx: ['blank', 'legal_memo', 'contract', 'nda', 'court_brief'],
-  xlsx: ['blank', 'budget', 'tracker', 'legal_matrix'],
-  pptx: ['blank', 'pitch', 'status_update', 'legal_overview'],
+  xlsx: [
+    'blank',
+    'budget',
+    'tracker',
+    'legal_matrix',
+    'chronology',
+    'fee_schedule',
+    'evidence_index',
+  ],
+  pptx: ['blank', 'pitch', 'status_update', 'legal_overview', 'board_pack'],
+  pdf: [
+    'client_notice',
+    'filing_receipt',
+    'hearing_minutes',
+    'settlement_terms',
+  ],
 };
 
 function formatBytes(bytes: number) {
@@ -41,6 +56,7 @@ function formatDate(value: string) {
 function iconForDocType(docType: OfficeDocType) {
   if (docType === 'docx') return 'DOCX';
   if (docType === 'xlsx') return 'XLSX';
+  if (docType === 'pdf') return 'PDF';
   return 'PPTX';
 }
 
@@ -86,6 +102,7 @@ export default function DocumentsPage() {
   const emptyTitle = useMemo(() => {
     if (newDocType === 'docx') return 'New Legal Memo';
     if (newDocType === 'xlsx') return 'New Legal Tracker';
+    if (newDocType === 'pdf') return 'New Client Notice';
     return 'New Legal Overview';
   }, [newDocType]);
 
@@ -115,8 +132,8 @@ export default function DocumentsPage() {
           <div>
             <h1 className="page-title">Documents</h1>
             <p className="page-subtitle">
-              Create and manage live Word, Excel, and PowerPoint documents with
-              Amin.
+              Create and manage live Word, Excel, PowerPoint, and PDF documents
+              with Amin.
             </p>
           </div>
           <button

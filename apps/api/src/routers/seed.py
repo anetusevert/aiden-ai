@@ -69,7 +69,7 @@ async def seed_mock_cases(
         summary = await seed_demo_dataset(ctx, db, org_id)
         action = "refreshed" if had_existing else "created"
         logger.info(
-            "Loaded Riyadh demo dataset for org %s: %d clients, %d cases, %d documents",
+            "Loaded KSA demo dataset for org %s: %d clients, %d cases, %d documents",
             org_id,
             summary.clients_count,
             summary.cases_count,
@@ -87,7 +87,7 @@ async def seed_mock_cases(
     except HTTPException:
         raise
     except Exception as err:
-        logger.exception("Failed to load Riyadh demo dataset for org %s", org_id)
+        logger.exception("Failed to load KSA demo dataset for org %s", org_id)
         raise HTTPException(
             status_code=500,
             detail=f"Could not load demo data. {err}",
@@ -103,7 +103,7 @@ async def wipe_mock_cases(
     try:
         summary = await wipe_demo_dataset(ctx, db, org_id)
         logger.info(
-            "Wiped Riyadh demo dataset for org %s: %d cases, %d clients, %d documents",
+            "Wiped KSA demo dataset for org %s: %d cases, %d clients, %d documents",
             org_id,
             summary.cases_count,
             summary.clients_count,
@@ -121,7 +121,7 @@ async def wipe_mock_cases(
     except HTTPException:
         raise
     except Exception as err:
-        logger.exception("Failed to wipe Riyadh demo dataset for org %s", org_id)
+        logger.exception("Failed to wipe KSA demo dataset for org %s", org_id)
         raise HTTPException(
             status_code=500,
             detail=f"Could not wipe demo data. {err}",
