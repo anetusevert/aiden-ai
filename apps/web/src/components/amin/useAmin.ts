@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { getApiBaseUrl } from '@/lib/api';
 import { configureScreenContextTransport } from '@/lib/screenContext';
+import type { ContextPanePushEventDetail } from './context-pane/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -311,6 +312,23 @@ export function useAmin() {
               break;
             }
 
+            case 'context_pane_push': {
+              window.dispatchEvent(
+                new CustomEvent<ContextPanePushEventDetail>(
+                  'amin:context_pane',
+                  {
+                    detail: {
+                      card: data.card as ContextPanePushEventDetail['card'],
+                      mode:
+                        (data.pane_mode as ContextPanePushEventDetail['mode']) ??
+                        'top_bar',
+                    },
+                  }
+                )
+              );
+              break;
+            }
+
             case 'collabora_reload':
               window.dispatchEvent(
                 new CustomEvent('collabora-reload', {
@@ -518,6 +536,32 @@ export function useAmin() {
     [activeConversation, apiFetch]
   );
 
+  const sendSystemTrigger = useCallback(
+    async (content: string) => {
+      const trimmed = content.trim();
+      if (!trimmed) return;
+
+      let conversation = activeConversation;
+      if (!conversation) {
+        conversation = await createConversation();
+      }
+
+      if (!conversation) return;
+
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        connectWs(conversation.id);
+        await new Promise(resolve => window.setTimeout(resolve, 350));
+      }
+
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({ type: 'system_trigger', content: trimmed })
+        );
+      }
+    },
+    [activeConversation, connectWs, createConversation]
+  );
+
   const confirmTool = useCallback((toolName: string, approved: boolean) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(
@@ -569,6 +613,7 @@ export function useAmin() {
     unreadCount,
     injectMessage,
     sendMessage,
+    sendSystemTrigger,
     confirmTool,
     createConversation,
     loadConversations,

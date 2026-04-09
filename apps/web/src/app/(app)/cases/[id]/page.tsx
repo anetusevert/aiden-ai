@@ -94,6 +94,17 @@ export default function CaseDetailPage() {
         practice_area: caseData.practice_area,
       },
     });
+
+    window.dispatchEvent(
+      new CustomEvent('amin:context_hint', {
+        detail: {
+          type: 'case_viewed',
+          case_id: params.id,
+          case_title: caseData.title,
+          client_name: caseData.client?.display_name,
+        },
+      })
+    );
   }, [caseData, params.id]);
 
   const loadDocuments = useCallback(() => {

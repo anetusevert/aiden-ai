@@ -674,8 +674,8 @@ function ComparisonCard({ card }: { card: ContextPaneCardData }) {
   const right = getObject(card.data, 'right');
   const leftLabel = left ? getString(left, 'label') : undefined;
   const rightLabel = right ? getString(right, 'label') : undefined;
-  const leftItems = left ? asStringArray(left.items) : [];
-  const rightItems = right ? asStringArray(right.items) : [];
+  const leftItems = left ? asStringArray(left['items']) : [];
+  const rightItems = right ? asStringArray(right['items']) : [];
   const maxRows = Math.max(leftItems.length, rightItems.length);
 
   return (

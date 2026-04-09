@@ -138,7 +138,7 @@ class AminAgent:
             # 3. Build system prompt
             system_prompt = build_system_prompt(soul, twin, screen_context_text, case_context_text)
 
-            if is_first_message:
+            if is_first_message and not user_message.lstrip().startswith("[SYSTEM"):
                 heartbeat_tool = self._registry.get_by_name("check_heartbeat")
                 if heartbeat_tool is not None:
                     heartbeat_result = await heartbeat_tool.execute({}, self._tool_context)

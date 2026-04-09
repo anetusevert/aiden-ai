@@ -7933,6 +7933,42 @@ textarea:focus-visible {
   right: calc(var(--rail1-width) - 4px);
 }
 
+.amin-context-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.amin-context-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.amin-context-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.amin-context-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.amin-context-topbar-pills {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.amin-context-topbar-pills::-webkit-scrollbar {
+  height: 6px;
+}
+
+.amin-context-topbar-pills::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.amin-context-topbar-pills::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
 [dir='rtl'] .rail2 {
   border-right: none;
   border-left: 1px solid var(--sidebar-border);

@@ -12,6 +12,7 @@ import { AminInfoPanel } from '@/components/amin/AminInfoPanel';
 import { AminMinimized } from '@/components/amin/AminMinimized';
 import { AminFloatingMessage } from '@/components/amin/AminFloatingMessage';
 import { AminProvider, useAminContext } from '@/components/amin/AminProvider';
+import { AminContextPane } from '@/components/amin/context-pane/AminContextPane';
 import EntrySequence from '@/components/shell/EntrySequence';
 import {
   NavigationLoaderProvider,
@@ -146,7 +147,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Rail2Panel soul={soul} />
                 <main className="ha-main">
                   <TopBar />
-                  <div className="app-content">{children}</div>
+                  <AminContextPane>
+                    <div className="app-content">{children}</div>
+                  </AminContextPane>
                 </main>
                 <AppShellInner />
               </div>

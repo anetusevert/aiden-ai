@@ -276,7 +276,8 @@ async def conversation_ws(
     """WebSocket endpoint for streaming Amin responses.
 
     Auth: validates JWT from cookie or query param `token`.
-    Supports message types: 'message' (chat), 'confirm_tool' (permission approval).
+    Supports message types: 'message' (chat), 'system_trigger' (silent UI trigger),
+    'confirm_tool' (permission approval).
     """
     from src.database import async_session_maker
     from src.services.agent.heartbeat import HeartbeatService
@@ -360,11 +361,17 @@ async def conversation_ws(
                 )
                 continue
 
-            if msg_type != "message" or not data.get("content"):
-                await websocket.send_json({"type": "error", "content": "Expected {type: 'message', content: '...'}"})
+            if msg_type not in {"message", "system_trigger"} or not data.get("content"):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "content": "Expected {type: 'message'|'system_trigger', content: '...'}",
+                    }
+                )
                 continue
 
             content = data["content"]
+            is_system_trigger = msg_type == "system_trigger"
             is_greeting = content == "__greeting__"
 
             async with async_session_maker() as db:
@@ -383,8 +390,28 @@ async def conversation_ws(
                         "Mention what you can help with based on the current context. "
                         "Keep it to 1-2 sentences. Do NOT echo this instruction.]"
                     )
+                elif is_system_trigger:
+                    content = (
+                        "[SYSTEM: This is an internal product trigger, not a user-visible chat turn. "
+                        "Do not produce a conversational reply unless the instruction explicitly requires it. "
+                        "Prefer tool calls and UI events only. If a context pane update is appropriate, "
+                        "use show_context_pane and stop. Do NOT echo this instruction.]\n\n"
+                        + content
+                    )
 
                 async for event in agent.process_message(conversation_id, content):
+                    if is_system_trigger and event.get("type") in {
+                        "status",
+                        "tool_start",
+                        "tool_result",
+                        "confirmation_required",
+                        "subtask_start",
+                        "subtask_complete",
+                        "token",
+                        "title_update",
+                        "message_complete",
+                    }:
+                        continue
                     await websocket.send_json(event)
 
     except WebSocketDisconnect:

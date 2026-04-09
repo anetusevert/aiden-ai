@@ -81,6 +81,16 @@ export function AminProvider({ children }: { children: ReactNode }) {
   const quietTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quietIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const isFirstCaseViewToday = useCallback(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `amin:first-case-view:${today}`;
+    if (sessionStorage.getItem(key)) {
+      return false;
+    }
+    sessionStorage.setItem(key, '1');
+    return true;
+  }, []);
+
   const openPanel = useCallback(() => {
     setAminOpen(true);
     setPanelSize('expanded');
@@ -301,6 +311,43 @@ export function AminProvider({ children }: { children: ReactNode }) {
       );
     };
   }, [amin]);
+
+  useEffect(() => {
+    const handleContextHint = async (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        type?: string;
+        case_id?: string;
+        case_title?: string;
+        client_name?: string;
+      }>;
+
+      if (customEvent.detail?.type !== 'case_viewed') return;
+
+      const shouldTrigger = aminOpen || isFirstCaseViewToday();
+      if (!shouldTrigger) return;
+
+      const caseTitle = customEvent.detail.case_title ?? 'Untitled case';
+      const clientName = customEvent.detail.client_name ?? 'Unknown client';
+
+      await amin.sendSystemTrigger(
+        `[SYSTEM] The user just opened case: ${caseTitle} (Client: ${clientName}). ` +
+          `Show a case_card in the context pane proactively. ` +
+          `Do not produce a conversational reply unless the user directly asked for one.`
+      );
+    };
+
+    window.addEventListener(
+      'amin:context_hint',
+      handleContextHint as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'amin:context_hint',
+        handleContextHint as EventListener
+      );
+    };
+  }, [amin, aminOpen, isFirstCaseViewToday]);
 
   useEffect(() => {
     return () => {

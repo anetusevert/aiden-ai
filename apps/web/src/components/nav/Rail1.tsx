@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { motion } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { clearSession } from '@/lib/apiClient';
@@ -18,6 +19,45 @@ import {
   DropdownDivider,
   DropdownSection,
 } from '@/components/ui/DropdownMenu';
+
+const aminPresenceVariants = {
+  idle: {
+    scale: 1,
+    boxShadow: '0 0 0 rgba(255,255,255,0)',
+    borderColor: 'rgba(255,255,255,0)',
+    rotate: 0,
+  },
+  thinking: {
+    rotate: 360,
+    transition: {
+      rotate: {
+        duration: 2,
+        repeat: Infinity,
+        ease: 'linear',
+      },
+    },
+  },
+  speaking: {
+    scale: [1, 1.08, 1],
+    boxShadow: [
+      '0 0 0 rgba(255,255,255,0)',
+      '0 0 12px rgba(255,255,255,0.2)',
+      '0 0 0 rgba(255,255,255,0)',
+    ],
+    transition: {
+      duration: 1.5,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    },
+  },
+  listening: {
+    borderColor: 'rgba(34, 211, 238, 0.35)',
+    transition: {
+      duration: 0.3,
+      ease: 'easeOut',
+    },
+  },
+};
 
 interface NavIconDef {
   id: NavSection;
@@ -182,7 +222,7 @@ export function Rail1() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const aminAvatarState = useAminAvatarState();
-  const { toggleAminPanel } = useAminContext();
+  const { toggleAminPanel, aminStatus } = useAminContext();
   const isAdmin = user?.role === 'ADMIN';
 
   const SECTION_ROUTES: Record<NavSection, string> = {
@@ -321,7 +361,62 @@ export function Rail1() {
           type="button"
           title="Talk to Amin"
         >
-          <AminAvatar size={32} state={aminAvatarState} showWaveform={false} />
+          <motion.div
+            animate={
+              aminStatus === 'thinking'
+                ? 'thinking'
+                : aminStatus === 'speaking'
+                  ? 'speaking'
+                  : aminStatus === 'listening'
+                    ? 'listening'
+                    : 'idle'
+            }
+            variants={aminPresenceVariants}
+            style={{
+              position: 'relative',
+              width: 36,
+              height: 36,
+              display: 'grid',
+              placeItems: 'center',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0)',
+            }}
+          >
+            <motion.div
+              aria-hidden
+              animate={
+                aminStatus === 'thinking'
+                  ? {
+                      rotate: 360,
+                      borderColor: 'rgba(255,255,255,0.3)',
+                    }
+                  : aminStatus === 'listening'
+                    ? {
+                        borderColor: 'rgba(34,211,238,0.2)',
+                      }
+                    : {
+                        rotate: 0,
+                        borderColor: 'rgba(255,255,255,0)',
+                      }
+              }
+              transition={
+                aminStatus === 'thinking'
+                  ? { duration: 2, repeat: Infinity, ease: 'linear' }
+                  : { duration: 0.3, ease: 'easeOut' }
+              }
+              style={{
+                position: 'absolute',
+                inset: -2,
+                borderRadius: 999,
+                border: '1px solid rgba(255,255,255,0)',
+              }}
+            />
+            <AminAvatar
+              size={32}
+              state={aminAvatarState}
+              showWaveform={false}
+            />
+          </motion.div>
         </button>
 
         {user && (
