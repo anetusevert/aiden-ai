@@ -740,6 +740,8 @@ export interface ScrapingJobRunLogEntry {
   source_url?: string;
   url?: string;
   result?: string;
+  status?: string;
+  error?: string;
 }
 
 export type ScrapingJobDetailResponse = ScrapingJobResponse & {
@@ -2176,7 +2178,7 @@ class ApiClient {
   }
 
   /**
-   * List configured scraping sources (platform admin).
+   * List configured scraping sources for the scraping operator console.
    */
   async getScrapingSources(): Promise<ScrapingSourceResponse[]> {
     const baseUrl = getApiBaseUrl();

@@ -1,6 +1,6 @@
 'use client';
 
-import { getApiBaseUrl } from '@/lib/api';
+import { resolveApiUrl } from '@/lib/api';
 
 export type OfficeDocType = 'docx' | 'xlsx' | 'pptx';
 
@@ -63,7 +63,6 @@ function extractErrorMessage(status: number, body: string): string {
 }
 
 async function officeFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const baseUrl = getApiBaseUrl();
   const opts: RequestInit = {
     ...init,
     credentials: 'include',
@@ -74,17 +73,18 @@ async function officeFetch<T>(path: string, init?: RequestInit): Promise<T> {
     },
   };
 
-  let response = await fetch(`${baseUrl}${path}`, opts);
+  const url = resolveApiUrl(path, 'client');
+  let response = await fetch(url, opts);
 
   // On 401, try a silent token refresh and retry once
   if (response.status === 401) {
     try {
-      const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
+      const refreshRes = await fetch(resolveApiUrl('/auth/refresh', 'client'), {
         method: 'POST',
         credentials: 'include',
       });
       if (refreshRes.ok) {
-        response = await fetch(`${baseUrl}${path}`, opts);
+        response = await fetch(url, opts);
       }
     } catch {
       // refresh failed — fall through to error handling
@@ -175,6 +175,9 @@ export const officeApi = {
   },
 
   getDownloadUrl(docId: string) {
-    return `${getApiBaseUrl()}/api/v1/office/documents/${docId}/download`;
+    return resolveApiUrl(
+      `/api/v1/office/documents/${docId}/download`,
+      'client'
+    );
   },
 };

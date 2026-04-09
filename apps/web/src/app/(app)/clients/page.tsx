@@ -49,6 +49,7 @@ interface SeedResponsePayload {
   clients_count?: number;
   documents_count?: number;
   notes_count?: number;
+  warnings?: string[];
 }
 
 async function readResponseDetail(response: Response): Promise<string | null> {
@@ -127,10 +128,13 @@ function getSeedNotice(
     if (action === 'already_exists') {
       return 'Demo cases are already loaded for this workspace.';
     }
+    const warningSuffix = payload?.warnings?.length
+      ? ` ${payload.warnings[0]}`
+      : '';
     if (action === 'refreshed') {
-      return `Riyadh demo data was refreshed: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.`;
+      return `Riyadh demo data was refreshed: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.${warningSuffix}`;
     }
-    return `Riyadh demo data loaded: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.`;
+    return `Riyadh demo data loaded: ${clientsCount} clients, ${casesCount} cases, ${documentsCount} documents, and ${notesCount} notes.${warningSuffix}`;
   }
 
   return action === 'wiped'

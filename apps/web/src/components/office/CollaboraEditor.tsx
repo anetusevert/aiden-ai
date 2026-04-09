@@ -30,6 +30,13 @@ async function checkCollaboraHealth(collaboraUrl: string): Promise<boolean> {
   }
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return 'Unexpected error while preparing the document editor.';
+}
+
 interface CollaboraEditorProps {
   docId: string;
   title?: string;
@@ -108,11 +115,17 @@ export function useCollaboraCommands(
 
 // ─── Fallback UI ─────────────────────────────────────────────────────────────
 
-function CollaboraUnavailable({
+function CollaboraFallback({
   docId,
+  title,
+  detail,
+  commandHint,
   onRetry,
 }: {
   docId: string;
+  title: string;
+  detail: string;
+  commandHint?: string;
   onRetry: () => void;
 }) {
   const [retrying, setRetrying] = useState(false);
@@ -153,15 +166,11 @@ function CollaboraUnavailable({
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </div>
-        <h3 className="collabora-unavailable-title">
-          Document Editor Unavailable
-        </h3>
-        <p className="collabora-unavailable-detail">
-          Collabora Online is not running. Start it with:
-        </p>
-        <code className="collabora-unavailable-cmd">
-          docker compose up collabora
-        </code>
+        <h3 className="collabora-unavailable-title">{title}</h3>
+        <p className="collabora-unavailable-detail">{detail}</p>
+        {commandHint ? (
+          <code className="collabora-unavailable-cmd">{commandHint}</code>
+        ) : null}
 
         <div className="collabora-unavailable-actions">
           <button
@@ -212,11 +221,13 @@ export function CollaboraEditor({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [editorUrl, setEditorUrl] = useState<string | null>(null);
   const [editorStatus, setEditorStatus] = useState<EditorStatus>('checking');
+  const [editorError, setEditorError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number | null>(null);
   const [currentSlide, setCurrentSlide] = useState<number | null>(null);
   const [currentSheet, setCurrentSheet] = useState<string | null>(null);
   const [isModified, setIsModified] = useState(false);
   const commands = useCollaboraCommands(iframeRef);
+  const loadAttemptRef = useRef(0);
 
   const publishContext = useCallback(
     (
@@ -259,25 +270,32 @@ export function CollaboraEditor({
   );
 
   const loadEditor = useCallback(async () => {
+    const attempt = loadAttemptRef.current + 1;
+    loadAttemptRef.current = attempt;
     setEditorStatus('checking');
+    setEditorError(null);
+    setEditorUrl(null);
+    setIsModified(false);
 
     // Fast-path: env var disables Collabora entirely
     if (!COLLABORA_ENABLED) {
-      setEditorStatus('unavailable');
-      return;
-    }
-
-    const healthy = await checkCollaboraHealth(COLLABORA_URL);
-    if (!healthy) {
+      setEditorError(
+        'Collabora editing is disabled by configuration. Set NEXT_PUBLIC_COLLABORA_ENABLED=true to enable the live editor.'
+      );
       setEditorStatus('unavailable');
       return;
     }
 
     try {
-      setEditorStatus('loading');
       const data = await officeApi.generateWopiToken(docId);
+      if (loadAttemptRef.current !== attempt) return;
       setEditorUrl(data.collabora_editor_url);
-    } catch {
+      setEditorStatus('loading');
+    } catch (error) {
+      if (loadAttemptRef.current !== attempt) return;
+      setEditorError(
+        `${getErrorMessage(error)} Check API reachability, auth cookies, and CORS for the web origin.`
+      );
       setEditorStatus('error');
     }
   }, [docId]);
@@ -297,6 +315,7 @@ export function CollaboraEditor({
         messageId === 'App_LoadingStatus' &&
         values.Status === 'Frame_Ready'
       ) {
+        setEditorError(null);
         setEditorStatus('ready');
         publishContext();
         return;
@@ -334,6 +353,33 @@ export function CollaboraEditor({
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, [docId, onSave, publishContext]);
+
+  useEffect(() => {
+    if (editorStatus !== 'loading' || !editorUrl) return;
+
+    const attempt = loadAttemptRef.current;
+    const timer = window.setTimeout(() => {
+      if (loadAttemptRef.current !== attempt) return;
+
+      void checkCollaboraHealth(COLLABORA_URL).then(isReachable => {
+        if (loadAttemptRef.current !== attempt) return;
+        if (isReachable) {
+          setEditorError(
+            'Collabora responded but the document did not finish loading. Check WOPI access, aliasgroup1, and WOPI_INTERNAL_URL.'
+          );
+          setEditorStatus('error');
+          return;
+        }
+
+        setEditorError(
+          'Collabora could not be reached from the browser. Verify NEXT_PUBLIC_COLLABORA_URL and that the Collabora service is running.'
+        );
+        setEditorStatus('unavailable');
+      });
+    }, 15000);
+
+    return () => window.clearTimeout(timer);
+  }, [editorStatus, editorUrl]);
 
   useEffect(() => {
     const reloadHandler = async (event: Event) => {
@@ -398,7 +444,30 @@ export function CollaboraEditor({
 
   if (editorStatus === 'unavailable') {
     return (
-      <CollaboraUnavailable docId={docId} onRetry={() => void loadEditor()} />
+      <CollaboraFallback
+        docId={docId}
+        title="Document Editor Unavailable"
+        detail={
+          editorError ||
+          'Collabora Online is not available for this document right now.'
+        }
+        commandHint="docker compose up collabora"
+        onRetry={() => void loadEditor()}
+      />
+    );
+  }
+
+  if (editorStatus === 'error') {
+    return (
+      <CollaboraFallback
+        docId={docId}
+        title="Document Editor Error"
+        detail={
+          editorError ||
+          'The document session could not be prepared. Retry after checking the API and Collabora configuration.'
+        }
+        onRetry={() => void loadEditor()}
+      />
     );
   }
 
@@ -436,13 +505,24 @@ export function CollaboraEditor({
           src={editorUrl}
           title={title || 'Collabora editor'}
           allow="clipboard-read; clipboard-write"
+          onError={() => {
+            setEditorError(
+              'The Collabora iframe could not be loaded. Verify the public Collabora URL and browser network access.'
+            );
+            setEditorStatus('unavailable');
+          }}
         />
       ) : null}
 
       {editorStatus !== 'ready' ? (
         <div className="collabora-loading">
           <span className="spinner spinner-lg" />
-          <p>Amin is preparing your document...</p>
+          <p>
+            {editorStatus === 'checking'
+              ? 'Preparing a secure editing session...'
+              : 'Connecting to Collabora and loading your document...'}
+          </p>
+          {editorError ? <p>{editorError}</p> : null}
         </div>
       ) : null}
     </div>

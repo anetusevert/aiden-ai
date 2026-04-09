@@ -57,6 +57,8 @@ export interface AminState {
   subTasks: SubTaskInfo[];
 }
 
+type InjectedMessageRole = 'assistant' | 'system';
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -128,6 +130,35 @@ export function useAmin() {
     }
     setIsConnected(false);
   }, []);
+
+  const injectMessage = useCallback(
+    (role: InjectedMessageRole, content: string) => {
+      const trimmed = content.trim();
+      if (!trimmed) return;
+
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last && last.role === role && last.content === trimmed) {
+          return prev;
+        }
+
+        return [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role,
+            content: trimmed,
+            createdAt: new Date().toISOString(),
+          },
+        ];
+      });
+
+      if (!isPanelOpen) {
+        setUnreadCount(count => count + 1);
+      }
+    },
+    [isPanelOpen]
+  );
 
   const connectWs = useCallback(
     (conversationId: string) => {
@@ -261,12 +292,24 @@ export function useAmin() {
             }
 
             case 'navigate':
+            case 'navigation_action': {
+              const detail = {
+                path: (data.path ?? data.navigating_to) as string | undefined,
+                message: (data.message ?? data.summary ?? '') as string,
+              };
+
+              window.dispatchEvent(
+                new CustomEvent('amin:navigate', {
+                  detail,
+                })
+              );
               window.dispatchEvent(
                 new CustomEvent('amin-navigate', {
-                  detail: { path: data.path },
+                  detail,
                 })
               );
               break;
+            }
 
             case 'collabora_reload':
               window.dispatchEvent(
@@ -524,6 +567,7 @@ export function useAmin() {
     subTasks,
     isPanelOpen,
     unreadCount,
+    injectMessage,
     sendMessage,
     confirmTool,
     createConversation,

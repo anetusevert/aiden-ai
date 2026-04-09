@@ -4,18 +4,19 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func as sa_func, select
+from sqlalchemy import func as sa_func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import async_session_maker, get_db
 from src.dependencies.platform_admin import (
-    PlatformAdminContext,
-    require_platform_admin_operator,
+    ScrapingAdminContext,
+    require_scraping_admin_operator,
 )
 from src.harvesters.connectors import list_connectors
 from src.models.legal_instrument import LegalInstrument
@@ -89,6 +90,22 @@ class ScrapingJobResponse(BaseModel):
     created_at: str
 
 
+class ScrapingJobRunLogEntry(BaseModel):
+    """Wire representation of one job log row."""
+
+    source_url: str | None = None
+    url: str | None = None
+    result: str | None = None
+    status: str | None = None
+    error: str | None = None
+
+
+class ScrapingJobDetailResponse(ScrapingJobResponse):
+    """Detailed job response used by the UI modal."""
+
+    run_log: list[ScrapingJobRunLogEntry] | None = None
+
+
 class TriggerJobResponse(BaseModel):
     """Response after manually triggering a scraping job."""
 
@@ -153,6 +170,27 @@ def _job_to_response(job: ScrapingJob) -> ScrapingJobResponse:
     )
 
 
+def _job_log_entry(entry: dict[str, Any]) -> ScrapingJobRunLogEntry:
+    source_url = entry.get("source_url")
+    url = entry.get("url")
+    result = entry.get("result")
+    status = entry.get("status")
+    return ScrapingJobRunLogEntry(
+        source_url=source_url or url,
+        url=url or source_url,
+        result=result or status,
+        status=status or result,
+        error=entry.get("error"),
+    )
+
+
+def _job_to_detail_response(job: ScrapingJob) -> ScrapingJobDetailResponse:
+    return ScrapingJobDetailResponse(
+        **_job_to_response(job).model_dump(),
+        run_log=[_job_log_entry(entry) for entry in (job.run_log or [])],
+    )
+
+
 def _validate_cron(expression: str) -> None:
     """Validate a cron expression using croniter."""
     try:
@@ -172,11 +210,11 @@ def _validate_cron(expression: str) -> None:
 
 @router.get("/stats", response_model=ScrapingStatsResponse)
 async def get_stats(
-    _ctx: Annotated[PlatformAdminContext, Depends(require_platform_admin_operator())],
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ScrapingStatsResponse:
     """Aggregated dashboard statistics for scraping and the legal corpus."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     total_result = await db.execute(
         select(sa_func.count()).select_from(LegalInstrument)
@@ -250,7 +288,7 @@ async def get_stats(
 
 @router.get("/sources", response_model=list[ScrapingSourceResponse])
 async def list_sources(
-    _ctx: Annotated[PlatformAdminContext, Depends(require_platform_admin_operator())],
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[ScrapingSourceResponse]:
     """List all scraping sources, most recent first."""
@@ -263,7 +301,7 @@ async def list_sources(
 @router.post("/sources", response_model=ScrapingSourceResponse, status_code=201)
 async def create_source(
     body: ScrapingSourceCreate,
-    _ctx: Annotated[PlatformAdminContext, Depends(require_platform_admin_operator())],
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ScrapingSourceResponse:
     """Create a new scraping source."""
@@ -296,7 +334,7 @@ async def create_source(
 async def update_source(
     source_id: str,
     body: ScrapingSourceUpdate,
-    _ctx: Annotated[PlatformAdminContext, Depends(require_platform_admin_operator())],
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ScrapingSourceResponse:
     """Partial-update a scraping source."""
@@ -325,7 +363,7 @@ async def update_source(
 @router.delete("/sources/{source_id}", status_code=204)
 async def delete_source(
     source_id: str,
-    _ctx: Annotated[PlatformAdminContext, Depends(require_platform_admin_operator())],
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Delete a scraping source (cascades to its jobs)."""
@@ -347,7 +385,7 @@ async def delete_source(
 async def trigger_job(
     source_id: str,
     background_tasks: BackgroundTasks,
-    _ctx: Annotated[PlatformAdminContext, Depends(require_platform_admin_operator())],
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TriggerJobResponse:
     """Manually trigger a scraping job for a source (runs in background)."""
@@ -368,7 +406,7 @@ async def trigger_job(
 
 @router.get("/jobs", response_model=list[ScrapingJobResponse])
 async def list_jobs(
-    _ctx: Annotated[PlatformAdminContext, Depends(require_platform_admin_operator())],
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
     source_id: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
@@ -381,12 +419,12 @@ async def list_jobs(
     return [_job_to_response(j) for j in result.scalars().all()]
 
 
-@router.get("/jobs/{job_id}", response_model=ScrapingJobResponse)
+@router.get("/jobs/{job_id}", response_model=ScrapingJobDetailResponse)
 async def get_job(
     job_id: str,
-    _ctx: Annotated[PlatformAdminContext, Depends(require_platform_admin_operator())],
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> ScrapingJobResponse:
+) -> ScrapingJobDetailResponse:
     """Get a single job detail (includes run_log via the model)."""
     result = await db.execute(
         select(ScrapingJob).where(ScrapingJob.id == job_id)
@@ -394,4 +432,4 @@ async def get_job(
     job = result.scalar_one_or_none()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
-    return _job_to_response(job)
+    return _job_to_detail_response(job)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 from uuid import uuid4
@@ -34,6 +34,7 @@ class DemoSeedSummary:
     documents_count: int = 0
     notes_count: int = 0
     events_count: int = 0
+    warnings: list[str] = field(default_factory=list)
 
 
 def _doc(
@@ -1061,6 +1062,7 @@ async def seed_demo_dataset(
     summary = DemoSeedSummary()
     service = OfficeService(db)
     today = date.today()
+    document_seeding_available = True
 
     for client_fixture in RIYADH_DEMO_CLIENTS:
         client = Client(
@@ -1188,49 +1190,66 @@ async def seed_demo_dataset(
                 summary.events_count += 1
 
             for document_fixture in case_fixture.get("documents", []):
-                document = await _create_demo_document(
-                    service=service,
-                    org_id=org_id,
-                    owner_id=ctx.user.id,
-                    title=document_fixture["title"],
-                    doc_type=document_fixture["doc_type"],
-                    template=document_fixture["template"],
-                    metadata=_demo_metadata(
-                        {
-                            "case_id": case.id,
-                            "case_ref": case.internal_ref,
-                            "document_role": document_fixture["role"],
-                        }
-                    ),
-                )
-                db.add(document)
-                await db.flush()
+                if not document_seeding_available:
+                    continue
 
-                db.add(
-                    CaseDocument(
-                        case_id=case.id,
-                        document_id=document.id,
-                        attached_by=ctx.user.id,
-                        document_role=document_fixture["role"],
-                    )
-                )
-                db.add(
-                    CaseEvent(
-                        case_id=case.id,
-                        event_type="document_added",
-                        title=f"Document attached: {document.title}",
-                        description=f"Role: {document_fixture['role']}",
-                        event_date=_event_timestamp(
-                            opened_at,
-                            document_fixture["day_offset"],
-                            13,
+                try:
+                    document = await _create_demo_document(
+                        service=service,
+                        org_id=org_id,
+                        owner_id=ctx.user.id,
+                        title=document_fixture["title"],
+                        doc_type=document_fixture["doc_type"],
+                        template=document_fixture["template"],
+                        metadata=_demo_metadata(
+                            {
+                                "case_id": case.id,
+                                "case_ref": case.internal_ref,
+                                "document_role": document_fixture["role"],
+                            }
                         ),
-                        created_by=ctx.user.id,
-                        metadata_=_demo_metadata({"internal_ref": case.internal_ref}),
                     )
-                )
-                summary.documents_count += 1
-                summary.events_count += 1
+                    db.add(document)
+                    await db.flush()
+
+                    db.add(
+                        CaseDocument(
+                            case_id=case.id,
+                            document_id=document.id,
+                            attached_by=ctx.user.id,
+                            document_role=document_fixture["role"],
+                        )
+                    )
+                    db.add(
+                        CaseEvent(
+                            case_id=case.id,
+                            event_type="document_added",
+                            title=f"Document attached: {document.title}",
+                            description=f"Role: {document_fixture['role']}",
+                            event_date=_event_timestamp(
+                                opened_at,
+                                document_fixture["day_offset"],
+                                13,
+                            ),
+                            created_by=ctx.user.id,
+                            metadata_=_demo_metadata({"internal_ref": case.internal_ref}),
+                        )
+                    )
+                    summary.documents_count += 1
+                    summary.events_count += 1
+                except Exception as err:
+                    document_seeding_available = False
+                    warning = (
+                        "Office document storage is unavailable, so demo clients and cases "
+                        "were loaded without seeded documents."
+                    )
+                    if warning not in summary.warnings:
+                        summary.warnings.append(warning)
+                    logger.warning(
+                        "Skipping demo office document seeding after failure for org %s: %s",
+                        org_id,
+                        err,
+                    )
 
     await db.commit()
     return summary

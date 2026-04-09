@@ -4,14 +4,14 @@ Deploy the Aiden.ai monorepo on Railway as a multi-service project.
 
 ## Services Overview
 
-| Service | Type | Source |
-|---------|------|--------|
-| **aiden-api** | GitHub repo (Dockerfile) | `Dockerfile.api` at repo root |
-| **aiden-web** | GitHub repo (Dockerfile) | `apps/web/Dockerfile` |
-| **PostgreSQL** | Railway managed plugin | Auto-provisioned |
-| **Redis** | Railway managed plugin | Auto-provisioned |
-| **Collabora** | Docker image | `collabora/code:latest` |
-| **Object Storage** | External (Cloudflare R2) | Manual setup |
+| Service            | Type                     | Source                        |
+| ------------------ | ------------------------ | ----------------------------- |
+| **aiden-api**      | GitHub repo (Dockerfile) | `Dockerfile.api` at repo root |
+| **aiden-web**      | GitHub repo (Dockerfile) | `apps/web/Dockerfile`         |
+| **PostgreSQL**     | Railway managed plugin   | Auto-provisioned              |
+| **Redis**          | Railway managed plugin   | Auto-provisioned              |
+| **Collabora**      | Docker image             | `collabora/code:latest`       |
+| **Object Storage** | External (Cloudflare R2) | Manual setup                  |
 
 ## Step 1: Create Railway Project
 
@@ -44,29 +44,29 @@ Deploy the Aiden.ai monorepo on Railway as a multi-service project.
 
 ### API Environment Variables
 
-| Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
-| `REDIS_URL` | `${{Redis.REDIS_URL}}` |
-| `ENVIRONMENT` | `prod` |
-| `AUTH_ALLOW_DEV_LOGIN` | `false` |
-| `JWT_SECRET` | Generate: `openssl rand -hex 32` |
-| `COOKIE_SECURE` | `true` |
-| `CORS_ORIGINS_STR` | `https://<web-domain>.railway.app,https://<collabora-domain>.railway.app` |
-| `COLLABORA_URL` | `https://<collabora-domain>.railway.app` |
-| `WOPI_INTERNAL_URL` | `http://aiden-api.railway.internal:8000/api/v1/wopi` |
-| `WOPI_PUBLIC_URL` | `https://<api-domain>.railway.app/api/v1/wopi` |
-| `WOPI_BASE_URL` | `https://<api-domain>.railway.app/api/v1/wopi` |
-| `S3_ENDPOINT_URL` | Your R2 / S3 endpoint URL |
-| `S3_ACCESS_KEY_ID` | Your R2 / S3 access key |
-| `S3_SECRET_ACCESS_KEY` | Your R2 / S3 secret key |
-| `S3_BUCKET_NAME` | `aiden-storage` |
-| `S3_REGION` | `auto` (R2) or your AWS region |
-| `S3_USE_SSL` | `true` |
-| `S3_FORCE_PATH_STYLE` | `true` |
-| `LLM_PROVIDER` | `openai` (or `stub` for initial testing) |
-| `LLM_MODEL` | `gpt-4o` |
-| `LLM_API_KEY` | Your OpenAI API key |
+| Variable               | Value                                                                     |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `DATABASE_URL`         | `${{Postgres.DATABASE_URL}}`                                              |
+| `REDIS_URL`            | `${{Redis.REDIS_URL}}`                                                    |
+| `ENVIRONMENT`          | `prod`                                                                    |
+| `AUTH_ALLOW_DEV_LOGIN` | `false`                                                                   |
+| `JWT_SECRET`           | Generate: `openssl rand -hex 32`                                          |
+| `COOKIE_SECURE`        | `true`                                                                    |
+| `CORS_ORIGINS_STR`     | `https://<web-domain>.railway.app,https://<collabora-domain>.railway.app` |
+| `COLLABORA_URL`        | `https://<collabora-domain>.railway.app`                                  |
+| `WOPI_INTERNAL_URL`    | `http://aiden-api.railway.internal:8000/api/v1/wopi`                      |
+| `WOPI_PUBLIC_URL`      | `https://<api-domain>.railway.app/api/v1/wopi`                            |
+| `WOPI_BASE_URL`        | `https://<api-domain>.railway.app/api/v1/wopi`                            |
+| `S3_ENDPOINT_URL`      | Your R2 / S3 endpoint URL                                                 |
+| `S3_ACCESS_KEY_ID`     | Your R2 / S3 access key                                                   |
+| `S3_SECRET_ACCESS_KEY` | Your R2 / S3 secret key                                                   |
+| `S3_BUCKET_NAME`       | `aiden-storage`                                                           |
+| `S3_REGION`            | `auto` (R2) or your AWS region                                            |
+| `S3_USE_SSL`           | `true`                                                                    |
+| `S3_FORCE_PATH_STYLE`  | `true`                                                                    |
+| `LLM_PROVIDER`         | `openai` (or `stub` for initial testing)                                  |
+| `LLM_MODEL`            | `gpt-4o`                                                                  |
+| `LLM_API_KEY`          | Your OpenAI API key                                                       |
 
 > Railway injects `PORT` automatically. The startup script (`start.sh`) uses
 > `${PORT:-8000}` so this is handled without configuration.
@@ -87,17 +87,22 @@ Deploy the Aiden.ai monorepo on Railway as a multi-service project.
 
 ### Web Environment Variables
 
-| Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_API_BASE_URL` | `https://<api-domain>.railway.app` |
-| `API_INTERNAL_BASE_URL` | `http://aiden-api.railway.internal:8000` |
-| `NEXT_PUBLIC_COLLABORA_URL` | `https://<collabora-domain>.railway.app` |
-| `NEXT_PUBLIC_COLLABORA_ENABLED` | `true` |
+| Variable                        | Value                                    |
+| ------------------------------- | ---------------------------------------- |
+| `NEXT_PUBLIC_API_BASE_URL`      | `https://<api-domain>.railway.app`       |
+| `API_INTERNAL_BASE_URL`         | `http://aiden-api.railway.internal:8000` |
+| `NEXT_PUBLIC_COLLABORA_URL`     | `https://<collabora-domain>.railway.app` |
+| `NEXT_PUBLIC_COLLABORA_ENABLED` | `true`                                   |
 
 > `NEXT_PUBLIC_API_BASE_URL` must be the API origin only, for example
 > `https://aiden-api-production-xxxx.up.railway.app`. Do not append `/api` or a
 > trailing slash because the web app already appends `/api/v1/...` routes at
 > runtime.
+>
+> This is especially important for Office/Collabora routes. The editor requests
+> `POST /api/v1/office/documents/{id}/wopi-token` from the browser, so a value
+> like `https://<api-domain>.railway.app/api` will produce broken URLs and
+> misleading `Failed to fetch` errors in the UI.
 
 ## Step 5: Add the Collabora Service
 
@@ -108,13 +113,32 @@ Deploy the Aiden.ai monorepo on Railway as a multi-service project.
 
 ### Collabora Environment Variables
 
-| Variable | Value |
-|----------|-------|
-| `aliasgroup1` | `https://<api-domain>.railway.app` |
+| Variable       | Value                                           |
+| -------------- | ----------------------------------------------- |
+| `aliasgroup1`  | `https://<api-domain>.railway.app`              |
 | `extra_params` | `--o:ssl.enable=false --o:ssl.termination=true` |
-| `username` | `admin` |
-| `password` | Set a strong password |
-| `server_name` | `<collabora-domain>.railway.app` |
+| `username`     | `admin`                                         |
+| `password`     | Set a strong password                           |
+| `server_name`  | `<collabora-domain>.railway.app`                |
+
+### Office / Collabora Wiring Checklist
+
+The Office editor only works when all four URL roles stay distinct and aligned:
+
+| Variable                    | Example                                              | Used by                           |
+| --------------------------- | ---------------------------------------------------- | --------------------------------- |
+| `NEXT_PUBLIC_API_BASE_URL`  | `https://<api-domain>.railway.app`                   | Browser -> API                    |
+| `NEXT_PUBLIC_COLLABORA_URL` | `https://<collabora-domain>.railway.app`             | Browser -> Collabora iframe       |
+| `WOPI_INTERNAL_URL`         | `http://aiden-api.railway.internal:8000/api/v1/wopi` | Collabora -> API                  |
+| `aliasgroup1`               | `https://<api-domain>.railway.app`                   | Collabora allowlist for WOPI host |
+
+Rules:
+
+1. `NEXT_PUBLIC_API_BASE_URL` must be the API origin only. Do not append `/api`.
+2. `CORS_ORIGINS_STR` must include the exact web origin, including the correct `https://` scheme and no trailing slash.
+3. `NEXT_PUBLIC_COLLABORA_URL` and `COLLABORA_URL` must point to the public Collabora domain the browser can load in an iframe.
+4. `WOPI_INTERNAL_URL` must stay on Railway private networking so the Collabora service can reach the API directly.
+5. `aliasgroup1` must match the API host that Collabora is expected to trust for WOPI requests.
 
 ## Step 6: Object Storage (Cloudflare R2)
 
@@ -156,6 +180,22 @@ origins. Keep that contract consistent:
    the real response.
 5. After changing either variable, redeploy both services so the API CORS policy
    and the web bundle pick up the same origin pair.
+
+### Office Verification
+
+After deploying the web, API, and Collabora services together:
+
+1. Open the deployed web app and create an Office document.
+2. Confirm the browser request to `POST /api/v1/office/documents/{id}/wopi-token` succeeds.
+3. Inspect the returned `collabora_editor_url`:
+   - the base must be the public Collabora origin
+   - the encoded `WOPISrc` must point at `WOPI_INTERNAL_URL`
+4. Confirm Collabora loads the iframe and then calls:
+   - `GET /api/v1/wopi/files/{id}`
+   - `GET /api/v1/wopi/files/{id}/contents`
+   - `POST /api/v1/wopi/files/{id}/contents` after a save
+5. If step 2 fails in the browser, fix `NEXT_PUBLIC_API_BASE_URL`, cookies, or `CORS_ORIGINS_STR` first.
+6. If step 2 succeeds but the iframe stalls, check `NEXT_PUBLIC_COLLABORA_URL`, `WOPI_INTERNAL_URL`, and `aliasgroup1`.
 
 ## Verification
 
@@ -211,12 +251,12 @@ in the deploy logs.
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Build fails with "Railpack could not determine how to build" | Root directory or Dockerfile path misconfigured | Set root to `/`, Dockerfile to `Dockerfile.api` |
-| `CREATE EXTENSION vector` fails | Railway Postgres version too old | Check Postgres version in Railway dashboard; pgvector requires PG 13+ |
-| API returns 500 on startup | Database not reachable | Verify `DATABASE_URL` uses `${{Postgres.DATABASE_URL}}` reference |
-| Collabora iframe fails to load | CORS or aliasgroup1 mismatch | Ensure `aliasgroup1` matches the API public URL |
-| Cookies not attaching | Mixed HTTP/HTTPS or domain mismatch | Ensure `COOKIE_SECURE=true` and all URLs use HTTPS |
-| WOPI callbacks fail | Collabora can't reach API | Use Railway internal URL for `WOPI_INTERNAL_URL` |
+| Symptom                                                                   | Cause                                                                                                                 | Fix                                                                                                                                     |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Build fails with "Railpack could not determine how to build"              | Root directory or Dockerfile path misconfigured                                                                       | Set root to `/`, Dockerfile to `Dockerfile.api`                                                                                         |
+| `CREATE EXTENSION vector` fails                                           | Railway Postgres version too old                                                                                      | Check Postgres version in Railway dashboard; pgvector requires PG 13+                                                                   |
+| API returns 500 on startup                                                | Database not reachable                                                                                                | Verify `DATABASE_URL` uses `${{Postgres.DATABASE_URL}}` reference                                                                       |
+| Collabora iframe fails to load                                            | CORS or aliasgroup1 mismatch                                                                                          | Ensure `aliasgroup1` matches the API public URL                                                                                         |
+| Cookies not attaching                                                     | Mixed HTTP/HTTPS or domain mismatch                                                                                   | Ensure `COOKIE_SECURE=true` and all URLs use HTTPS                                                                                      |
+| WOPI callbacks fail                                                       | Collabora can't reach API                                                                                             | Use Railway internal URL for `WOPI_INTERNAL_URL`                                                                                        |
 | Client detail page shows a blocked fetch or fake "Client not found" state | `NEXT_PUBLIC_API_BASE_URL` points at the wrong host, includes `/api`, or `CORS_ORIGINS_STR` is missing the web origin | Set `NEXT_PUBLIC_API_BASE_URL` to the API origin only and include the exact web origin in `CORS_ORIGINS_STR`, then redeploy API and web |

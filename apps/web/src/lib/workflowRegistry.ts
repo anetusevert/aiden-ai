@@ -18,7 +18,28 @@ export interface WorkflowStep {
   name: string;
   name_ar: string;
   detail: string;
+  estimatedDuration?: string;
 }
+
+export type WorkflowSimulatedOutput =
+  | {
+      type: 'text' | 'document';
+      content: string;
+    }
+  | {
+      type: 'list';
+      content: Array<{
+        label: string;
+        status: string;
+        detail: string;
+      }>;
+    }
+  | {
+      type: 'score';
+      score: number;
+      label: string;
+      items: string[];
+    };
 
 export interface WorkflowDefinition {
   id: string;
@@ -33,6 +54,7 @@ export interface WorkflowDefinition {
   /** Default route when the user clicks this workflow */
   route: ToolRoute;
   icon: WorkflowIcon;
+  estimatedDuration?: string;
 }
 
 export type WorkflowCategory =

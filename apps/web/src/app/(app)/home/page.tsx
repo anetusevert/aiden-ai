@@ -281,6 +281,9 @@ function avatarStateFromVoice(
     if (aminStatus === 'speaking') return 'speaking';
     return 'listening';
   }
+  if (voiceMode === 'passive') {
+    return 'sleeping';
+  }
   return 'idle';
 }
 
@@ -623,7 +626,13 @@ function IntelligenceTab() {
 export default function HomePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { voiceMode, setVoiceMode, aminStatus, openPanel } = useAminContext();
+  const {
+    voiceMode,
+    aminStatus,
+    toggleVoice,
+    isQuietMode,
+    quietCountdownLabel,
+  } = useAminContext();
 
   const [activeTab, setActiveTab] = useState<TabId>('cases');
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -646,8 +655,8 @@ export default function HomePage() {
   }, []);
 
   const handleActivateToggle = useCallback(() => {
-    setVoiceMode(voiceMode === 'active' ? 'off' : 'active');
-  }, [voiceMode, setVoiceMode]);
+    toggleVoice();
+  }, [toggleVoice]);
 
   const handleCaseClick = useCallback(
     (c: CaseBrief) => {
@@ -677,10 +686,16 @@ export default function HomePage() {
         <button
           type="button"
           className="hp-avatar-wrap"
-          onClick={openPanel}
-          aria-label="Open Amin"
+          onClick={handleActivateToggle}
+          aria-label={
+            voiceMode === 'off'
+              ? 'Activate Amin'
+              : voiceMode === 'active'
+                ? 'Deactivate Amin'
+                : 'Wake Amin'
+          }
         >
-          <AminAvatar size={120} state={avatarState} />
+          <AminAvatar size={148} state={avatarState} />
         </button>
 
         <motion.h1
@@ -704,7 +719,7 @@ export default function HomePage() {
 
         <motion.button
           type="button"
-          className={`hp-activate-btn${voiceMode === 'active' ? ' hp-activate-btn--active' : ''}`}
+          className={`hp-activate-btn${voiceMode !== 'off' ? ' hp-activate-btn--active' : ''}`}
           onClick={handleActivateToggle}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -715,7 +730,18 @@ export default function HomePage() {
           {voiceMode === 'active' ? (
             <>
               <span className="hp-activate-dot hp-activate-dot--live" />
-              Amin is listening
+              Deactivate Amin
+            </>
+          ) : isQuietMode ? (
+            <>
+              <span className="hp-activate-dot" />
+              Amin is quiet
+              {quietCountdownLabel ? ` · ${quietCountdownLabel}` : ''}
+            </>
+          ) : voiceMode === 'passive' ? (
+            <>
+              <span className="hp-activate-dot" />
+              Wake Amin
             </>
           ) : (
             <>

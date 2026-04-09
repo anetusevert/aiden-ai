@@ -99,8 +99,11 @@ export default function OperatorLayout({
   const { user } = useAuth();
   const { navigateTo } = useNavigation();
   const tNav = useTranslations('nav');
+  const isPlatformAdmin = user?.is_platform_admin === true;
+  const isWorkspaceAdmin = user?.role === 'ADMIN';
+  const isKnowledgeBaseRoute = pathname.startsWith('/operator/knowledge-base');
 
-  if (!user?.is_platform_admin) {
+  if (!isPlatformAdmin && !(isWorkspaceAdmin && isKnowledgeBaseRoute)) {
     return <>{children}</>;
   }
 
@@ -108,28 +111,36 @@ export default function OperatorLayout({
     href: string;
     label: string;
     icon: React.ReactNode;
-  }[] = [
-    {
-      href: '/operator/organisations',
-      label: tNav('organisations'),
-      icon: <BuildingIcon />,
-    },
-    {
-      href: '/operator/users',
-      label: tNav('allUsers'),
-      icon: <UsersIcon />,
-    },
-    {
-      href: '/operator/legal-corpus',
-      label: tNav('legalCorpus'),
-      icon: <BookIcon />,
-    },
-    {
-      href: '/operator/knowledge-base',
-      label: tNav('knowledgeBase'),
-      icon: <HarvesterIcon />,
-    },
-  ];
+  }[] = isPlatformAdmin
+    ? [
+        {
+          href: '/operator/organisations',
+          label: tNav('organisations'),
+          icon: <BuildingIcon />,
+        },
+        {
+          href: '/operator/users',
+          label: tNav('allUsers'),
+          icon: <UsersIcon />,
+        },
+        {
+          href: '/operator/legal-corpus',
+          label: tNav('legalCorpus'),
+          icon: <BookIcon />,
+        },
+        {
+          href: '/operator/knowledge-base',
+          label: tNav('knowledgeBase'),
+          icon: <HarvesterIcon />,
+        },
+      ]
+    : [
+        {
+          href: '/operator/knowledge-base',
+          label: tNav('knowledgeBase'),
+          icon: <HarvesterIcon />,
+        },
+      ];
 
   return (
     <>

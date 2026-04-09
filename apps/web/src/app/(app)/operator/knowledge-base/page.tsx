@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import {
@@ -277,11 +277,17 @@ function EnabledSwitch({
 }
 
 export default function KnowledgeBasePage() {
+  const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isPlatformAdmin = user?.is_platform_admin === true;
+  const isWorkspaceAdmin = user?.role === 'ADMIN';
+  const canAccessKnowledgeBase = isPlatformAdmin || isWorkspaceAdmin;
 
-  const [activeTab, setActiveTab] = useState<'sources' | 'jobs'>('sources');
+  const routeTab: 'sources' | 'jobs' = pathname.endsWith('/jobs')
+    ? 'jobs'
+    : 'sources';
+  const [activeTab, setActiveTab] = useState<'sources' | 'jobs'>(routeTab);
 
   const [sources, setSources] = useState<ScrapingSourceResponse[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(true);
@@ -350,8 +356,12 @@ export default function KnowledgeBasePage() {
   const [stats, setStats] = useState<ScrapingStatsResponse | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
+  useEffect(() => {
+    setActiveTab(routeTab);
+  }, [routeTab]);
+
   const loadStats = useCallback(async () => {
-    if (!isPlatformAdmin) return;
+    if (!canAccessKnowledgeBase) return;
     try {
       const data = await apiClient.getScrapingStats();
       setStats(data);
@@ -360,10 +370,10 @@ export default function KnowledgeBasePage() {
     } finally {
       setStatsLoading(false);
     }
-  }, [isPlatformAdmin]);
+  }, [canAccessKnowledgeBase]);
 
   const loadSources = useCallback(async () => {
-    if (!isPlatformAdmin) return;
+    if (!canAccessKnowledgeBase) return;
     setSourcesError(null);
     try {
       const list = await apiClient.getScrapingSources();
@@ -375,10 +385,10 @@ export default function KnowledgeBasePage() {
     } finally {
       setSourcesLoading(false);
     }
-  }, [isPlatformAdmin]);
+  }, [canAccessKnowledgeBase]);
 
   const loadJobs = useCallback(async () => {
-    if (!isPlatformAdmin) return;
+    if (!canAccessKnowledgeBase) return;
     setJobsError(null);
     try {
       const list = await apiClient.getScrapingJobs({ limit: 50 });
@@ -390,21 +400,21 @@ export default function KnowledgeBasePage() {
     } finally {
       setJobsLoading(false);
     }
-  }, [isPlatformAdmin]);
+  }, [canAccessKnowledgeBase]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/login');
   }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
-    if (!isPlatformAdmin) return;
+    if (!canAccessKnowledgeBase) return;
     setSourcesLoading(true);
     setJobsLoading(true);
     setStatsLoading(true);
     void loadSources();
     void loadJobs();
     void loadStats();
-  }, [isPlatformAdmin, loadSources, loadJobs, loadStats]);
+  }, [canAccessKnowledgeBase, loadSources, loadJobs, loadStats]);
 
   const hasActiveJobOnSource = useMemo(() => {
     return sources.some(s => {
@@ -420,22 +430,28 @@ export default function KnowledgeBasePage() {
   );
 
   useEffect(() => {
-    if (!isPlatformAdmin || !jobsNeedPoll) return;
+    if (!canAccessKnowledgeBase || !jobsNeedPoll) return;
     const id = window.setInterval(() => {
       void loadJobs();
     }, 5000);
     return () => clearInterval(id);
-  }, [isPlatformAdmin, jobsNeedPoll, loadJobs]);
+  }, [canAccessKnowledgeBase, jobsNeedPoll, loadJobs]);
 
   useEffect(() => {
-    if (!isPlatformAdmin || !hasActiveJobOnSource) return;
+    if (!canAccessKnowledgeBase || !hasActiveJobOnSource) return;
     const id = window.setInterval(() => {
       void loadSources();
       void loadJobs();
       void loadStats();
     }, 15000);
     return () => clearInterval(id);
-  }, [isPlatformAdmin, hasActiveJobOnSource, loadSources, loadJobs, loadStats]);
+  }, [
+    canAccessKnowledgeBase,
+    hasActiveJobOnSource,
+    loadSources,
+    loadJobs,
+    loadStats,
+  ]);
 
   useEffect(() => {
     const triggerTimeouts = triggerErrorTimeouts.current;
@@ -599,6 +615,19 @@ export default function KnowledgeBasePage() {
     }
   };
 
+  const loadJobDetail = useCallback(async (id: string) => {
+    setJobDetailLoading(true);
+    setJobDetailError(null);
+    try {
+      const data = await apiClient.getScrapingJob(id);
+      setJobDetail(data);
+    } catch (e) {
+      setJobDetailError(e instanceof Error ? e.message : 'Failed to load job');
+    } finally {
+      setJobDetailLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!jobDetailId) {
       setJobDetail(null);
@@ -630,6 +659,24 @@ export default function KnowledgeBasePage() {
     };
   }, [jobDetailId]);
 
+  const activeJobDetailStatus =
+    jobDetail?.status ?? jobsById.get(jobDetailId ?? '')?.status;
+
+  useEffect(() => {
+    if (
+      !jobDetailId ||
+      (activeJobDetailStatus !== 'pending' &&
+        activeJobDetailStatus !== 'running')
+    ) {
+      return;
+    }
+
+    const id = window.setInterval(() => {
+      void loadJobDetail(jobDetailId);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [activeJobDetailStatus, jobDetailId, loadJobDetail]);
+
   const sourceNameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const s of sources) m.set(s.id, s.display_name);
@@ -638,18 +685,25 @@ export default function KnowledgeBasePage() {
 
   const renderRunLogEntry = (entry: ScrapingJobRunLogEntry, i: number) => {
     const url = entry.source_url ?? entry.url ?? '—';
-    const ok =
-      entry.result?.toLowerCase() === 'success' ||
-      entry.result?.toLowerCase() === 'ok';
+    const result = entry.result ?? entry.status ?? '—';
+    const normalizedResult = result.toLowerCase();
+    const ok = normalizedResult === 'success' || normalizedResult === 'ok';
     const fail =
-      entry.result?.toLowerCase() === 'fail' ||
-      entry.result?.toLowerCase() === 'failed' ||
-      entry.result?.toLowerCase() === 'error';
+      normalizedResult === 'fail' ||
+      normalizedResult === 'failed' ||
+      normalizedResult === 'error';
     return (
       <li key={i} className="kb-runlog-row">
-        <span className="kb-runlog-url" title={url}>
-          {truncateMiddle(url, 56)}
-        </span>
+        <div className="kb-runlog-main">
+          <span className="kb-runlog-url" title={url}>
+            {truncateMiddle(url, 56)}
+          </span>
+          {entry.error ? (
+            <span className="kb-runlog-error" title={entry.error}>
+              {truncateMiddle(entry.error, 72)}
+            </span>
+          ) : null}
+        </div>
         <span
           className={
             fail
@@ -659,18 +713,21 @@ export default function KnowledgeBasePage() {
                 : 'kb-runlog-result'
           }
         >
-          {entry.result ?? '—'}
+          {result}
         </span>
       </li>
     );
   };
 
-  if (!isPlatformAdmin) {
+  if (!canAccessKnowledgeBase) {
     return (
       <div className="page-container">
         <div className="alert alert-error">
           <h3>Access Denied</h3>
-          <p>This page is only available to platform administrators.</p>
+          <p>
+            This page is only available to workspace administrators or platform
+            administrators.
+          </p>
         </div>
       </div>
     );
@@ -1979,6 +2036,22 @@ export default function KnowledgeBasePage() {
           text-overflow: ellipsis;
           white-space: nowrap;
           color: var(--text-muted);
+        }
+
+        .kb-runlog-main {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.2rem;
+        }
+
+        .kb-runlog-error {
+          color: rgba(255, 255, 255, 0.48);
+          font-size: 0.72rem;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .kb-runlog-result {

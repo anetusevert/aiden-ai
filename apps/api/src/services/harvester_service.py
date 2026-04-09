@@ -11,7 +11,7 @@ import hashlib
 import logging
 import shutil
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -133,7 +133,7 @@ class HarvesterService:
             raise ValueError(f"ScrapingSource {job.source_id} not found")
 
         job.status = "running"
-        job.started_at = datetime.now(timezone.utc)
+        job.started_at = datetime.now(UTC)
         await db.commit()
 
         tmp_dir = Path(tempfile.mkdtemp(prefix=f"harvester_{job_id}_"))
@@ -155,10 +155,12 @@ class HarvesterService:
                     record = await asyncio.to_thread(connector.fetch_and_parse, item)
                     await HarvesterService._ingest_record(db, record, job)
                     if len(run_log) < _RUN_LOG_CAP:
-                        run_log.append({
-                            "url": item.source_url,
-                            "status": "ok",
-                        })
+                        run_log.append(
+                            {
+                                "source_url": item.source_url,
+                                "result": "ok",
+                            }
+                        )
                 except Exception as item_err:
                     job.items_failed += 1
                     logger.warning(
@@ -166,16 +168,18 @@ class HarvesterService:
                         job_id, item.source_url, item_err,
                     )
                     if len(run_log) < _RUN_LOG_CAP:
-                        run_log.append({
-                            "url": item.source_url,
-                            "status": "error",
-                            "error": str(item_err)[:200],
-                        })
+                        run_log.append(
+                            {
+                                "source_url": item.source_url,
+                                "result": "error",
+                                "error": str(item_err)[:200],
+                            }
+                        )
 
             job.run_log = run_log
             job.status = "completed"
-            job.finished_at = datetime.now(timezone.utc)
-            source.last_run_at = datetime.now(timezone.utc)
+            job.finished_at = datetime.now(UTC)
+            source.last_run_at = datetime.now(UTC)
             source.last_job_id = job.id
             await db.commit()
 
@@ -183,7 +187,7 @@ class HarvesterService:
             logger.error("Job %s failed: %s", job_id, e, exc_info=True)
             job.status = "failed"
             job.error_detail = str(e)[:2000]
-            job.finished_at = datetime.now(timezone.utc)
+            job.finished_at = datetime.now(UTC)
             await db.commit()
 
         finally:
@@ -213,7 +217,7 @@ class HarvesterService:
         instrument = existing.scalar_one_or_none()
 
         if instrument:
-            instrument.updated_at = datetime.now(timezone.utc)
+            instrument.updated_at = datetime.now(UTC)
             instrument.import_batch_id = import_batch_id
         else:
             title = record.title_ar or record.title_en or record.source_url
@@ -262,7 +266,7 @@ class HarvesterService:
             is_indexed=False,
             version_key=version_key,
             import_batch_id=import_batch_id,
-            imported_at=datetime.now(timezone.utc),
+            imported_at=datetime.now(UTC),
         )
         db.add(version)
         await db.flush()

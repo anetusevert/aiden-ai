@@ -1,12 +1,9 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { voiceRingPulse } from '@/lib/motion';
 import { useAminContext } from './AminProvider';
-import { AminVoiceClient, setLanguage, setVoice } from '@/lib/aminVoiceClient';
-import { WakeWordDetector } from '@/lib/wakeWordDetector';
-import { useAuth } from '@/lib/AuthContext';
 
 export type VoiceMode = 'off' | 'active' | 'passive';
 
@@ -17,70 +14,18 @@ const RING_COLORS: Record<VoiceMode, string> = {
 };
 
 export function AminVoiceToggle() {
-  const { voiceMode, setVoiceMode } = useAminContext();
-  const { aminVoice, appLanguage } = useAuth();
-  const voiceClientRef = useRef<AminVoiceClient | null>(null);
-  const wakeDetectorRef = useRef<WakeWordDetector | null>(null);
-
-  const enterPassive = useCallback(() => {
-    setVoiceMode('passive');
-    voiceClientRef.current?.pauseMicCapture();
-    if (WakeWordDetector.isSupported()) {
-      if (!wakeDetectorRef.current) {
-        wakeDetectorRef.current = new WakeWordDetector(() => {
-          setVoiceMode('active');
-          voiceClientRef.current?.resumeMicCapture();
-        });
-      }
-      wakeDetectorRef.current.start();
-    }
-  }, [setVoiceMode]);
-
-  const enterActive = useCallback(() => {
-    setVoiceMode('active');
-    wakeDetectorRef.current?.stop();
-
-    if (aminVoice) setVoice(aminVoice);
-    setLanguage(appLanguage);
-
-    if (!voiceClientRef.current) {
-      voiceClientRef.current = new AminVoiceClient({
-        onAutoIdle: () => enterPassive(),
-        onStandbyRequested: () => enterPassive(),
-        onDisconnected: () => setVoiceMode('off'),
-        onError: err => console.warn('[AminVoice]', err),
-      });
-    }
-
-    if (!voiceClientRef.current.connected) {
-      void voiceClientRef.current.connect();
-    } else {
-      voiceClientRef.current.resumeMicCapture();
-    }
-  }, [setVoiceMode, enterPassive, aminVoice, appLanguage]);
-
-  const enterOff = useCallback(() => {
-    setVoiceMode('off');
-    wakeDetectorRef.current?.stop();
-    voiceClientRef.current?.disconnect();
-  }, [setVoiceMode]);
+  const { voiceMode, activateVoice, deactivateVoice, quietVoice } =
+    useAminContext();
 
   const cycleMode = useCallback(() => {
     if (voiceMode === 'off') {
-      enterActive();
+      activateVoice();
     } else if (voiceMode === 'active') {
-      enterPassive();
+      quietVoice();
     } else {
-      enterOff();
+      deactivateVoice();
     }
-  }, [voiceMode, enterActive, enterPassive, enterOff]);
-
-  useEffect(() => {
-    return () => {
-      wakeDetectorRef.current?.stop();
-      voiceClientRef.current?.disconnect();
-    };
-  }, []);
+  }, [activateVoice, deactivateVoice, quietVoice, voiceMode]);
 
   return (
     <motion.button

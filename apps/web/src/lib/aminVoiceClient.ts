@@ -398,6 +398,12 @@ export class AminVoiceClient {
     );
   }
 
+  interrupt(): void {
+    this._stopPlayback();
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ type: 'response.cancel' }));
+  }
+
   private _handleServerEvent(data: Record<string, unknown>): void {
     const type = data.type as string;
 

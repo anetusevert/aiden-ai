@@ -1,13 +1,10 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { AminAvatar, type AminAvatarState } from './AminAvatar';
 import { aminBreathing } from '@/lib/motion';
 import { useAminContext } from './AminProvider';
-import { AminVoiceClient, setLanguage, setVoice } from '@/lib/aminVoiceClient';
-import { WakeWordDetector } from '@/lib/wakeWordDetector';
-import { useAuth } from '@/lib/AuthContext';
 
 const RING_COLORS = {
   off: 'rgba(255,255,255,0.25)',
@@ -16,72 +13,18 @@ const RING_COLORS = {
 };
 
 export function AminMinimized() {
-  const { aminStatus, voiceMode, setVoiceMode, openPanel, sendGreeting } =
-    useAminContext();
-  const { aminVoice, appLanguage } = useAuth();
-
-  const voiceClientRef = useRef<AminVoiceClient | null>(null);
-  const wakeDetectorRef = useRef<WakeWordDetector | null>(null);
-
-  const enterPassive = useCallback(() => {
-    setVoiceMode('passive');
-    voiceClientRef.current?.pauseMicCapture();
-    if (WakeWordDetector.isSupported()) {
-      if (!wakeDetectorRef.current) {
-        wakeDetectorRef.current = new WakeWordDetector(() => {
-          setVoiceMode('active');
-          voiceClientRef.current?.resumeMicCapture();
-        });
-      }
-      wakeDetectorRef.current.start();
-    }
-  }, [setVoiceMode]);
-
-  const enterActive = useCallback(() => {
-    setVoiceMode('active');
-    wakeDetectorRef.current?.stop();
-
-    sendGreeting();
-
-    if (aminVoice) setVoice(aminVoice);
-    setLanguage(appLanguage);
-
-    if (!voiceClientRef.current) {
-      voiceClientRef.current = new AminVoiceClient({
-        onAutoIdle: () => enterPassive(),
-        onStandbyRequested: () => enterPassive(),
-        onDisconnected: () => setVoiceMode('off'),
-        onError: err => console.warn('[AminVoice]', err),
-      });
-    }
-
-    if (!voiceClientRef.current.connected) {
-      void voiceClientRef.current.connect();
-    } else {
-      voiceClientRef.current.resumeMicCapture();
-    }
-  }, [setVoiceMode, enterPassive, sendGreeting, aminVoice, appLanguage]);
-
-  const enterOff = useCallback(() => {
-    setVoiceMode('off');
-    wakeDetectorRef.current?.stop();
-    voiceClientRef.current?.disconnect();
-  }, [setVoiceMode]);
+  const {
+    aminStatus,
+    voiceMode,
+    toggleVoice,
+    quietVoice,
+    isQuietMode,
+    quietCountdownLabel,
+  } = useAminContext();
 
   const handleAvatarClick = useCallback(() => {
-    if (voiceMode === 'off') {
-      enterActive();
-    } else {
-      enterOff();
-    }
-  }, [voiceMode, enterActive, enterOff]);
-
-  useEffect(() => {
-    return () => {
-      wakeDetectorRef.current?.stop();
-      voiceClientRef.current?.disconnect();
-    };
-  }, []);
+    toggleVoice();
+  }, [toggleVoice]);
 
   const avatarState: AminAvatarState =
     voiceMode === 'active'
@@ -92,40 +35,100 @@ export function AminMinimized() {
 
   return (
     <div className="amin-fab-container">
-      <motion.button
-        className="amin-minimized"
-        onClick={handleAvatarClick}
-        aria-label={voiceMode === 'off' ? 'Activate Amin' : 'Deactivate Amin'}
-        type="button"
-        variants={aminBreathing}
-        animate="idle"
-        whileHover={{ scale: 1.08 }}
-        whileTap={{ scale: 0.95 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-      >
-        <AminAvatar size={44} state={avatarState} showWaveform />
+      <div className="amin-fab-row">
+        {isQuietMode ? (
+          <button
+            type="button"
+            className="amin-quiet-chip amin-quiet-chip--countdown"
+            onClick={toggleVoice}
+            aria-label={`Amin is quiet for ${quietCountdownLabel}. Click to wake Amin.`}
+          >
+            <span className="amin-quiet-chip-icon" aria-hidden>
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="8" />
+                <path d="M12 7v5l3 2" />
+                <path d="M9 2h6" />
+              </svg>
+            </span>
+            <span className="amin-quiet-chip-label">Quiet</span>
+            <span className="amin-quiet-chip-time">{quietCountdownLabel}</span>
+          </button>
+        ) : voiceMode !== 'off' ? (
+          <button
+            type="button"
+            className="amin-quiet-chip"
+            onClick={quietVoice}
+            aria-label="Ask Amin to stay quiet"
+          >
+            <span className="amin-quiet-chip-icon" aria-hidden>
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="8" />
+                <path d="M12 7v5l3 2" />
+                <path d="M9 2h6" />
+              </svg>
+            </span>
+            <span className="amin-quiet-chip-label">Quiet</span>
+          </button>
+        ) : null}
 
-        {/* State indicator ring — white spectrum */}
-        <motion.div
-          className="amin-voice-ring"
-          style={{
-            position: 'absolute',
-            inset: -4,
-            borderRadius: '50%',
-            border: `2px solid ${RING_COLORS[voiceMode]}`,
-            pointerEvents: 'none',
-          }}
-          animate={{
-            opacity: 1,
-            scale: voiceMode === 'off' ? 1 : [1, 1.08, 1],
-          }}
-          transition={
+        <motion.button
+          className="amin-minimized"
+          onClick={handleAvatarClick}
+          aria-label={
             voiceMode === 'off'
-              ? { duration: 0.3 }
-              : { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+              ? 'Activate Amin'
+              : voiceMode === 'active'
+                ? 'Deactivate Amin'
+                : 'Wake Amin'
           }
-        />
-      </motion.button>
+          type="button"
+          variants={aminBreathing}
+          animate="idle"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+        >
+          <AminAvatar size={44} state={avatarState} showWaveform />
+
+          <motion.div
+            className="amin-voice-ring"
+            style={{
+              position: 'absolute',
+              inset: -4,
+              borderRadius: '50%',
+              border: `2px solid ${RING_COLORS[voiceMode]}`,
+              pointerEvents: 'none',
+            }}
+            animate={{
+              opacity: 1,
+              scale: voiceMode === 'off' ? 1 : [1, 1.08, 1],
+            }}
+            transition={
+              voiceMode === 'off'
+                ? { duration: 0.3 }
+                : { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+            }
+          />
+        </motion.button>
+      </div>
     </div>
   );
 }

@@ -21,6 +21,7 @@ import { NavigationProvider } from '@/context/NavigationContext';
 import { AnimatePresence } from 'framer-motion';
 import { I18nProvider } from '@/components/I18nProvider';
 import { useScreenContext } from '@/hooks/useScreenContext';
+import { useAminNavigation } from '@/hooks/useAminNavigation';
 import { useTranslations } from 'next-intl';
 import { resolveApiUrl } from '@/lib/api';
 import { setActiveCaseContext } from '@/lib/screenContext';
@@ -41,6 +42,7 @@ function AppShellInner() {
   const { aminOpen } = useAminContext();
   const { navigateTo } = useNavigation();
   useScreenContext();
+  useAminNavigation();
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -51,17 +53,9 @@ function AppShellInner() {
       }
     };
 
-    const navHandler = (event: Event) => {
-      const customEvent = event as CustomEvent<{ path?: string }>;
-      const path = customEvent.detail?.path;
-      if (path) navigateTo(path);
-    };
-
     window.addEventListener('document_created', handler as EventListener);
-    window.addEventListener('amin-navigate', navHandler as EventListener);
     return () => {
       window.removeEventListener('document_created', handler as EventListener);
-      window.removeEventListener('amin-navigate', navHandler as EventListener);
     };
   }, [navigateTo]);
 

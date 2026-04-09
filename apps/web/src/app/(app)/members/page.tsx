@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiClient, MemberWithUser, type Organization } from '@/lib/apiClient';
+import {
+  apiClient,
+  MemberWithUser,
+  type Organization,
+  type SoulSummary,
+} from '@/lib/apiClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigation } from '@/components/NavigationLoader';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +20,9 @@ export default function MembersPage() {
 
   const [members, setMembers] = useState<MemberWithUser[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [soulSummaries, setSoulSummaries] = useState<
+    Record<string, SoulSummary>
+  >({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -64,6 +72,19 @@ export default function MembersPage() {
     }
   }, [workspaceId]);
 
+  const fetchSoulSummaries = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const response = await apiClient.getAdminSoulList();
+      setSoulSummaries(
+        Object.fromEntries(response.users.map(item => [item.user_id, item]))
+      );
+    } catch {
+      // Keep the members overview usable even if summary metrics fail.
+      setSoulSummaries({});
+    }
+  }, [isAdmin]);
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login');
@@ -74,8 +95,15 @@ export default function MembersPage() {
     if (isAuthenticated && workspaceId) {
       fetchMembers();
       fetchOrganizations();
+      fetchSoulSummaries();
     }
-  }, [isAuthenticated, workspaceId, fetchMembers, fetchOrganizations]);
+  }, [
+    isAuthenticated,
+    workspaceId,
+    fetchMembers,
+    fetchOrganizations,
+    fetchSoulSummaries,
+  ]);
 
   useEffect(() => {
     if (success) {
@@ -198,6 +226,55 @@ export default function MembersPage() {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const getMaturityLabel = (maturity?: string | null) => {
+    if (!maturity) return 'Not started';
+    return maturity.charAt(0).toUpperCase() + maturity.slice(1);
+  };
+
+  const getSoulProgress = (summary?: SoulSummary) => {
+    if (!summary?.has_twin) {
+      return { percent: 0, label: 'Not started' };
+    }
+
+    const interactionRatio = Math.min(summary.interaction_count, 20) / 20;
+    const percent = Math.round(
+      (interactionRatio * 0.65 + (summary.consolidated_at ? 0.2 : 0) + 0.15) *
+        100
+    );
+
+    return {
+      percent,
+      label:
+        summary.interaction_count > 0
+          ? `${summary.interaction_count} interactions`
+          : 'Waiting for signals',
+    };
+  };
+
+  const getTwinProgress = (summary?: SoulSummary) => {
+    if (!summary?.has_twin) {
+      return { percent: 0, label: 'Not started' };
+    }
+
+    const maturityScale: Record<string, number> = {
+      nascent: 0.2,
+      forming: 0.4,
+      developing: 0.6,
+      established: 0.8,
+      deep: 1,
+    };
+    const interactionRatio = Math.min(summary.interaction_count, 20) / 20;
+    const maturityRatio = maturityScale[summary.maturity] ?? 0.2;
+    const percent = Math.round(
+      (maturityRatio * 0.55 + interactionRatio * 0.2 + 0.25) * 100
+    );
+
+    return {
+      percent,
+      label: getMaturityLabel(summary.maturity),
+    };
   };
 
   if (authLoading) {
@@ -579,8 +656,11 @@ export default function MembersPage() {
                   <th>Member</th>
                   <th>Role</th>
                   <th>Status</th>
+                  {isAdmin && (
+                    <th style={{ minWidth: '220px' }}>Build Progress</th>
+                  )}
                   <th>Joined</th>
-                  {isAdmin && <th style={{ width: '180px' }}>Actions</th>}
+                  {isAdmin && <th style={{ width: '260px' }}>Actions</th>}
                 </tr>
               </thead>
               <motion.tbody
@@ -592,6 +672,9 @@ export default function MembersPage() {
                   const isSelf = member.user_id === user?.user_id;
                   const isUpdating = updatingRoleId === member.id;
                   const isRemoving = removingId === member.id;
+                  const summary = soulSummaries[member.user_id];
+                  const soulProgress = getSoulProgress(summary);
+                  const twinProgress = getTwinProgress(summary);
 
                   return (
                     <motion.tr variants={staggerItem} key={member.id}>
@@ -651,6 +734,70 @@ export default function MembersPage() {
                           <span className="badge badge-warning">Inactive</span>
                         )}
                       </td>
+                      {isAdmin && (
+                        <td>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gap: 8,
+                              minWidth: 200,
+                            }}
+                          >
+                            {[
+                              {
+                                label: 'Soul',
+                                value: soulProgress,
+                                fill: 'linear-gradient(90deg, rgba(255,255,255,0.92), rgba(255,255,255,0.6))',
+                              },
+                              {
+                                label: 'Digital Twin',
+                                value: twinProgress,
+                                fill: 'linear-gradient(90deg, rgba(96,165,250,0.95), rgba(167,139,250,0.95))',
+                              },
+                            ].map(item => (
+                              <div key={item.label}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    gap: 12,
+                                    fontSize: 11,
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  <span
+                                    style={{ color: 'var(--text-primary)' }}
+                                  >
+                                    {item.label}
+                                  </span>
+                                  <span
+                                    style={{ color: 'var(--text-secondary)' }}
+                                  >
+                                    {item.value.label}
+                                  </span>
+                                </div>
+                                <div
+                                  style={{
+                                    height: 6,
+                                    borderRadius: 999,
+                                    background: 'rgba(255,255,255,0.08)',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: `${item.value.percent}%`,
+                                      height: '100%',
+                                      borderRadius: 999,
+                                      background: item.fill,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      )}
                       <td className="text-sm text-muted">
                         {formatDate(member.created_at)}
                       </td>
@@ -672,10 +819,28 @@ export default function MembersPage() {
                                 fontSize: '0.75rem',
                               }}
                               onClick={() =>
-                                navigateTo(`/members/${member.user_id}`)
+                                navigateTo(
+                                  `/members/${member.user_id}?tab=soul`
+                                )
                               }
                             >
                               Soul
+                            </button>
+                            <button
+                              className="btn btn-sm"
+                              style={{
+                                color: 'rgba(191,219,254,0.98)',
+                                border: '1px solid rgba(96,165,250,0.5)',
+                                background: 'rgba(96,165,250,0.08)',
+                                fontSize: '0.75rem',
+                              }}
+                              onClick={() =>
+                                navigateTo(
+                                  `/members/${member.user_id}?tab=twin`
+                                )
+                              }
+                            >
+                              Digital Twin
                             </button>
                             {!isSelf && (
                               <button

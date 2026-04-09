@@ -28,6 +28,7 @@ class SeedResponse(BaseModel):
     documents_count: int = 0
     notes_count: int = 0
     events_count: int = 0
+    warnings: list[str] = []
 
 
 async def _get_org_id(ctx: RequestContext, db: AsyncSession) -> str:
@@ -50,37 +51,47 @@ async def seed_mock_cases(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Any:
     org_id = await _get_org_id(ctx, db)
-    existing = await count_demo_dataset(db, org_id)
-    had_existing = any(
-        [
-            existing.clients_count,
-            existing.cases_count,
-            existing.documents_count,
-            existing.notes_count,
-            existing.events_count,
-        ]
-    )
+    try:
+        existing = await count_demo_dataset(db, org_id)
+        had_existing = any(
+            [
+                existing.clients_count,
+                existing.cases_count,
+                existing.documents_count,
+                existing.notes_count,
+                existing.events_count,
+            ]
+        )
 
-    if had_existing:
-        await wipe_demo_dataset(ctx, db, org_id)
+        if had_existing:
+            await wipe_demo_dataset(ctx, db, org_id)
 
-    summary = await seed_demo_dataset(ctx, db, org_id)
-    action = "refreshed" if had_existing else "created"
-    logger.info(
-        "Loaded Riyadh demo dataset for org %s: %d clients, %d cases, %d documents",
-        org_id,
-        summary.clients_count,
-        summary.cases_count,
-        summary.documents_count,
-    )
-    return SeedResponse(
-        action=action,
-        cases_count=summary.cases_count,
-        clients_count=summary.clients_count,
-        documents_count=summary.documents_count,
-        notes_count=summary.notes_count,
-        events_count=summary.events_count,
-    )
+        summary = await seed_demo_dataset(ctx, db, org_id)
+        action = "refreshed" if had_existing else "created"
+        logger.info(
+            "Loaded Riyadh demo dataset for org %s: %d clients, %d cases, %d documents",
+            org_id,
+            summary.clients_count,
+            summary.cases_count,
+            summary.documents_count,
+        )
+        return SeedResponse(
+            action=action,
+            cases_count=summary.cases_count,
+            clients_count=summary.clients_count,
+            documents_count=summary.documents_count,
+            notes_count=summary.notes_count,
+            events_count=summary.events_count,
+            warnings=summary.warnings,
+        )
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception("Failed to load Riyadh demo dataset for org %s", org_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not load demo data. {err}",
+        ) from err
 
 
 @router.delete("/mock-cases", response_model=SeedResponse)
@@ -89,19 +100,29 @@ async def wipe_mock_cases(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Any:
     org_id = await _get_org_id(ctx, db)
-    summary = await wipe_demo_dataset(ctx, db, org_id)
-    logger.info(
-        "Wiped Riyadh demo dataset for org %s: %d cases, %d clients, %d documents",
-        org_id,
-        summary.cases_count,
-        summary.clients_count,
-        summary.documents_count,
-    )
-    return SeedResponse(
-        action="wiped",
-        cases_count=summary.cases_count,
-        clients_count=summary.clients_count,
-        documents_count=summary.documents_count,
-        notes_count=summary.notes_count,
-        events_count=summary.events_count,
-    )
+    try:
+        summary = await wipe_demo_dataset(ctx, db, org_id)
+        logger.info(
+            "Wiped Riyadh demo dataset for org %s: %d cases, %d clients, %d documents",
+            org_id,
+            summary.cases_count,
+            summary.clients_count,
+            summary.documents_count,
+        )
+        return SeedResponse(
+            action="wiped",
+            cases_count=summary.cases_count,
+            clients_count=summary.clients_count,
+            documents_count=summary.documents_count,
+            notes_count=summary.notes_count,
+            events_count=summary.events_count,
+            warnings=summary.warnings,
+        )
+    except HTTPException:
+        raise
+    except Exception as err:
+        logger.exception("Failed to wipe Riyadh demo dataset for org %s", org_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not wipe demo data. {err}",
+        ) from err

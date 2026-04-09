@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { apiClient, type SoulDetail } from '@/lib/apiClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigation } from '@/components/NavigationLoader';
@@ -11,9 +11,66 @@ import { SoulConstellation } from '@/components/amin/SoulConstellation';
 
 type Tab = 'overview' | 'soul' | 'twin';
 
+const TAB_ORDER: Tab[] = ['overview', 'soul', 'twin'];
+
+function isFilledValue(value: unknown): boolean {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+  if (typeof value === 'number') {
+    return value > 0;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).some(isFilledValue);
+  }
+
+  return true;
+}
+
+function countFilledEntries(value: unknown): number {
+  if (Array.isArray(value)) {
+    return value.filter(isFilledValue).length;
+  }
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).filter(isFilledValue)
+      .length;
+  }
+
+  return isFilledValue(value) ? 1 : 0;
+}
+
+function formatLabel(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function formatValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  if (value && typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function clampPercentage(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 export default function MemberDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { navigateTo } = useNavigation();
   const userId = params.id as string;
@@ -54,6 +111,13 @@ export default function MemberDetailPage() {
       return () => clearTimeout(t);
     }
   }, [success]);
+
+  useEffect(() => {
+    const nextTab = searchParams.get('tab');
+    if (nextTab && TAB_ORDER.includes(nextTab as Tab)) {
+      setActiveTab(nextTab as Tab);
+    }
+  }, [searchParams]);
 
   const handleSaveProfile = async () => {
     try {
@@ -101,6 +165,111 @@ export default function MemberDetailPage() {
       </div>
     );
   }
+
+  const soulSignals = soul
+    ? [
+        {
+          label: 'Profile',
+          value: countFilledEntries(soul.profile),
+        },
+        {
+          label: 'Work patterns',
+          value: countFilledEntries(soul.work_patterns),
+        },
+        {
+          label: 'Drafting style',
+          value: countFilledEntries(soul.drafting_style),
+        },
+        {
+          label: 'Soul dimensions',
+          value: soul.soul_dimensions.length,
+        },
+        {
+          label: 'Interactions',
+          value: soul.interaction_count,
+        },
+      ]
+    : [];
+
+  const twinSignals = soul
+    ? [
+        {
+          label: 'Personality model',
+          value: countFilledEntries(soul.personality_model),
+        },
+        {
+          label: 'Review priorities',
+          value: countFilledEntries(soul.review_priorities),
+        },
+        {
+          label: 'Learned corrections',
+          value: soul.learned_corrections.length,
+        },
+        {
+          label: 'Preferences',
+          value: countFilledEntries(soul.preferences),
+        },
+        {
+          label: 'Consolidated snapshot',
+          value: soul.consolidated_at ? 1 : 0,
+        },
+      ]
+    : [];
+
+  const soulProgress = clampPercentage(
+    (soulSignals.filter(signal => signal.value > 0).length /
+      Math.max(soulSignals.length, 1)) *
+      100
+  );
+  const twinProgress = clampPercentage(
+    (twinSignals.filter(signal => signal.value > 0).length /
+      Math.max(twinSignals.length, 1)) *
+      100
+  );
+
+  const overviewStats = soul
+    ? [
+        {
+          label: 'Interactions',
+          value: `${soul.interaction_count}`,
+        },
+        {
+          label: 'Soul maturity',
+          value: formatLabel(soul.maturity || 'nascent'),
+        },
+        {
+          label: 'Last consolidation',
+          value: soul.consolidated_at
+            ? new Date(soul.consolidated_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : 'Pending',
+        },
+        {
+          label: 'Last updated',
+          value: soul.updated_at
+            ? new Date(soul.updated_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : 'Not yet updated',
+        },
+      ]
+    : [];
+
+  const codeBlockStyle = {
+    background: 'rgba(255,255,255,0.04)',
+    padding: 16,
+    borderRadius: 8,
+    fontSize: 12,
+    overflow: 'auto' as const,
+    maxHeight: 400,
+    color: 'var(--text-primary)',
+    border: '1px solid var(--glass-border, rgba(255,255,255,0.07))',
+  };
 
   return (
     <motion.div {...fadeUp}>
@@ -178,7 +347,11 @@ export default function MemberDetailPage() {
       {/* Overview Tab */}
       {activeTab === 'overview' && soul && (
         <div
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.15fr 0.85fr',
+            gap: 24,
+          }}
         >
           <div
             className="card"
@@ -201,24 +374,216 @@ export default function MemberDetailPage() {
             <div className="card mb-4">
               <h3
                 className="card-title"
-                style={{ fontSize: 14, marginBottom: 12 }}
+                style={{
+                  fontSize: 14,
+                  marginBottom: 16,
+                  color: 'var(--text-primary)',
+                }}
+              >
+                Build Progress
+              </h3>
+              <div style={{ display: 'grid', gap: 16 }}>
+                {[
+                  {
+                    title: 'Soul',
+                    percent: soulProgress,
+                    caption: `${soulSignals.filter(signal => signal.value > 0).length}/${soulSignals.length} signals in place`,
+                    items: soulSignals,
+                  },
+                  {
+                    title: 'Digital Twin',
+                    percent: twinProgress,
+                    caption: `${twinSignals.filter(signal => signal.value > 0).length}/${twinSignals.length} signals in place`,
+                    items: twinSignals,
+                  },
+                ].map(section => (
+                  <div
+                    key={section.title}
+                    style={{
+                      padding: 16,
+                      borderRadius: 12,
+                      background: 'rgba(255,255,255,0.03)',
+                      border:
+                        '1px solid var(--glass-border, rgba(255,255,255,0.07))',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: 'var(--text-primary)',
+                          }}
+                        >
+                          {section.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: 'var(--text-secondary)',
+                            marginTop: 2,
+                          }}
+                        >
+                          {section.caption}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 700,
+                          color: 'var(--text-primary)',
+                        }}
+                      >
+                        {section.percent}%
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        height: 8,
+                        borderRadius: 999,
+                        background: 'rgba(255,255,255,0.08)',
+                        overflow: 'hidden',
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${section.percent}%`,
+                          height: '100%',
+                          borderRadius: 999,
+                          background:
+                            section.title === 'Soul'
+                              ? 'linear-gradient(90deg, rgba(255,255,255,0.92), rgba(255,255,255,0.6))'
+                              : 'linear-gradient(90deg, rgba(96,165,250,0.95), rgba(167,139,250,0.95))',
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: 8,
+                      }}
+                    >
+                      {section.items.map(item => (
+                        <div
+                          key={item.label}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: 12,
+                            fontSize: 12,
+                            color: 'var(--text-secondary)',
+                          }}
+                        >
+                          <span>{item.label}</span>
+                          <span style={{ color: 'var(--text-primary)' }}>
+                            {item.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className="card mb-4"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 12,
+              }}
+            >
+              {overviewStats.map(stat => (
+                <div
+                  key={stat.label}
+                  style={{
+                    padding: 14,
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.03)',
+                    border:
+                      '1px solid var(--glass-border, rgba(255,255,255,0.07))',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: 'var(--text-secondary)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    {stat.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {stat.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="card mb-4">
+              <h3
+                className="card-title"
+                style={{
+                  fontSize: 14,
+                  marginBottom: 12,
+                  color: 'var(--text-primary)',
+                }}
               >
                 Profile
               </h3>
               {Object.keys(soul.profile || {}).length > 0 ? (
-                <dl style={{ margin: 0 }}>
+                <dl style={{ margin: 0, display: 'grid', gap: 10 }}>
                   {Object.entries(soul.profile).map(([k, v]) => (
-                    <div key={k} style={{ marginBottom: 8 }}>
+                    <div
+                      key={k}
+                      style={{
+                        padding: 12,
+                        borderRadius: 10,
+                        background: 'rgba(255,255,255,0.03)',
+                        border:
+                          '1px solid var(--glass-border, rgba(255,255,255,0.07))',
+                      }}
+                    >
                       <dt
                         style={{
                           fontSize: 11,
                           color: 'var(--text-secondary)',
-                          textTransform: 'capitalize',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          marginBottom: 4,
                         }}
                       >
-                        {k.replace(/_/g, ' ')}
+                        {formatLabel(k)}
                       </dt>
-                      <dd style={{ fontSize: 13, margin: 0 }}>{String(v)}</dd>
+                      <dd
+                        style={{
+                          fontSize: 13,
+                          margin: 0,
+                          color: 'var(--text-primary)',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {formatValue(v)}
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -232,25 +597,47 @@ export default function MemberDetailPage() {
             <div className="card">
               <h3
                 className="card-title"
-                style={{ fontSize: 14, marginBottom: 12 }}
+                style={{
+                  fontSize: 14,
+                  marginBottom: 12,
+                  color: 'var(--text-primary)',
+                }}
               >
                 Preferences
               </h3>
               {Object.keys(soul.preferences || {}).length > 0 ? (
-                <dl style={{ margin: 0 }}>
+                <dl style={{ margin: 0, display: 'grid', gap: 10 }}>
                   {Object.entries(soul.preferences).map(([k, v]) => (
-                    <div key={k} style={{ marginBottom: 8 }}>
+                    <div
+                      key={k}
+                      style={{
+                        padding: 12,
+                        borderRadius: 10,
+                        background: 'rgba(255,255,255,0.03)',
+                        border:
+                          '1px solid var(--glass-border, rgba(255,255,255,0.07))',
+                      }}
+                    >
                       <dt
                         style={{
                           fontSize: 11,
                           color: 'var(--text-secondary)',
-                          textTransform: 'capitalize',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          marginBottom: 4,
                         }}
                       >
-                        {k.replace(/_/g, ' ')}
+                        {formatLabel(k)}
                       </dt>
                       <dd style={{ fontSize: 13, margin: 0 }}>
-                        {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                        <span
+                          style={{
+                            color: 'var(--text-primary)',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {formatValue(v)}
+                        </span>
                       </dd>
                     </div>
                   ))}
@@ -314,17 +701,7 @@ export default function MemberDetailPage() {
               </button>
             </>
           ) : (
-            <pre
-              style={{
-                background: 'rgba(0,0,0,0.2)',
-                padding: 16,
-                borderRadius: 8,
-                fontSize: 12,
-                overflow: 'auto',
-                maxHeight: 400,
-                color: 'var(--text-primary)',
-              }}
-            >
+            <pre style={codeBlockStyle}>
               {JSON.stringify(soul.profile || {}, null, 2)}
             </pre>
           )}
@@ -335,17 +712,7 @@ export default function MemberDetailPage() {
           >
             Work Patterns
           </h3>
-          <pre
-            style={{
-              background: 'rgba(0,0,0,0.2)',
-              padding: 16,
-              borderRadius: 8,
-              fontSize: 12,
-              overflow: 'auto',
-              maxHeight: 300,
-              color: 'var(--text-primary)',
-            }}
-          >
+          <pre style={{ ...codeBlockStyle, maxHeight: 300 }}>
             {JSON.stringify(soul.work_patterns || {}, null, 2)}
           </pre>
 
@@ -355,17 +722,7 @@ export default function MemberDetailPage() {
           >
             Drafting Style
           </h3>
-          <pre
-            style={{
-              background: 'rgba(0,0,0,0.2)',
-              padding: 16,
-              borderRadius: 8,
-              fontSize: 12,
-              overflow: 'auto',
-              maxHeight: 300,
-              color: 'var(--text-primary)',
-            }}
-          >
+          <pre style={{ ...codeBlockStyle, maxHeight: 300 }}>
             {JSON.stringify(soul.drafting_style || {}, null, 2)}
           </pre>
         </div>
@@ -422,17 +779,7 @@ export default function MemberDetailPage() {
               </button>
             </>
           ) : (
-            <pre
-              style={{
-                background: 'rgba(0,0,0,0.2)',
-                padding: 16,
-                borderRadius: 8,
-                fontSize: 12,
-                overflow: 'auto',
-                maxHeight: 400,
-                color: 'var(--text-primary)',
-              }}
-            >
+            <pre style={codeBlockStyle}>
               {JSON.stringify(soul.personality_model || {}, null, 2)}
             </pre>
           )}
@@ -443,17 +790,7 @@ export default function MemberDetailPage() {
           >
             Review Priorities
           </h3>
-          <pre
-            style={{
-              background: 'rgba(0,0,0,0.2)',
-              padding: 16,
-              borderRadius: 8,
-              fontSize: 12,
-              overflow: 'auto',
-              maxHeight: 300,
-              color: 'var(--text-primary)',
-            }}
-          >
+          <pre style={{ ...codeBlockStyle, maxHeight: 300 }}>
             {JSON.stringify(soul.review_priorities || {}, null, 2)}
           </pre>
 

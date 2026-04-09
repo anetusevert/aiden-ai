@@ -7751,8 +7751,67 @@ textarea:focus-visible {
   z-index: 350;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-2);
+}
+
+.amin-fab-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.amin-quiet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 8, 8, 0.92);
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.amin-quiet-chip:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(20, 20, 20, 0.96);
+  color: var(--text-primary, #ffffff);
+  transform: translateY(-1px);
+}
+
+.amin-quiet-chip--countdown {
+  color: var(--text-primary, #ffffff);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(12, 12, 12, 0.96);
+}
+
+.amin-quiet-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.amin-quiet-chip-label {
+  white-space: nowrap;
+}
+
+.amin-quiet-chip-time {
+  font-family: var(--font-mono, var(--font-geist-mono), monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--text-primary, #ffffff);
 }
 
 /* Entry Sequence */
@@ -7829,6 +7888,13 @@ textarea:focus-visible {
   .amin-fab-container {
     bottom: 16px;
     right: 16px;
+  }
+  .amin-fab-row {
+    gap: 0.5rem;
+  }
+  .amin-quiet-chip {
+    min-height: 34px;
+    padding: 0 0.75rem;
   }
 }
 
@@ -7951,13 +8017,15 @@ textarea:focus-visible {
 
 .hp-root {
   position: relative;
-  min-height: calc(100vh - var(--topbar-height, 48px) - 3rem);
+  width: 100%;
+  min-height: calc(100vh - var(--topbar-height, 48px) - 1.5rem);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 2rem 3rem;
+  justify-content: center;
+  padding: clamp(2rem, 4vh, 3.5rem) clamp(1.5rem, 4vw, 3rem) 3.5rem;
   overflow: hidden;
-  gap: 1.75rem;
+  gap: clamp(1.75rem, 3vh, 2.5rem);
 }
 
 /* ── Backdrop ── */
@@ -7986,8 +8054,8 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.875rem;
-  padding-top: 1.5rem;
+  gap: 1.1rem;
+  width: min(100%, 860px);
   position: relative;
   z-index: 1;
 }
@@ -8010,11 +8078,11 @@ textarea:focus-visible {
 .hp-avatar-wrap::before {
   content: '';
   position: absolute;
-  inset: -18px;
+  inset: -24px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.09) 0%,
     transparent 70%
   );
   pointer-events: none;
@@ -8023,7 +8091,7 @@ textarea:focus-visible {
 
 .hp-greeting {
   font-family: var(--font-heading, 'IBM Plex Sans', sans-serif);
-  font-size: 1.625rem;
+  font-size: clamp(1.9rem, 3vw, 2.75rem);
   font-weight: 500;
   color: var(--text-primary, #f0f0f3);
   margin: 0;
@@ -8032,10 +8100,12 @@ textarea:focus-visible {
 }
 
 .hp-tagline {
-  font-size: 0.8125rem;
+  font-size: 0.95rem;
   color: var(--text-muted, #636470);
   margin: -0.25rem 0 0;
   letter-spacing: 0.01em;
+  text-align: center;
+  max-width: 34rem;
 }
 
 /* ── Activate button ── */
@@ -8044,9 +8114,9 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.25rem;
+  padding: 0.675rem 1.35rem;
   border-radius: 100px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -8105,7 +8175,7 @@ textarea:focus-visible {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  max-width: 600px;
+  max-width: 760px;
   width: 100%;
   justify-content: center;
   flex-wrap: wrap;
@@ -8154,8 +8224,8 @@ textarea:focus-visible {
 
 .hp-tab-content {
   width: 100%;
-  max-width: 560px;
-  min-height: 100px;
+  max-width: 760px;
+  min-height: 140px;
 }
 
 .hp-tab-items {
@@ -8301,7 +8371,7 @@ textarea:focus-visible {
 
 .hp-cases-strip {
   width: 100%;
-  max-width: 720px;
+  max-width: 980px;
   position: relative;
   z-index: 1;
 }
@@ -8342,8 +8412,8 @@ textarea:focus-visible {
   flex-direction: column;
   gap: 0.25rem;
   padding: 0.75rem 0.875rem;
-  min-width: 180px;
-  max-width: 220px;
+  min-width: 220px;
+  max-width: 260px;
   flex-shrink: 0;
   background: var(--glass-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.07));
@@ -8397,18 +8467,29 @@ textarea:focus-visible {
   .hp-root {
     padding: 1.5rem 1rem 2.5rem;
     gap: 1.25rem;
+    justify-content: flex-start;
   }
 
   .hp-greeting {
-    font-size: 1.375rem;
+    font-size: 1.6rem;
+  }
+
+  .hp-tagline {
+    font-size: 0.875rem;
   }
 
   .hp-tabs {
     flex-wrap: wrap;
   }
 
+  .hp-tab-content,
   .hp-cases-strip {
     max-width: 100%;
+  }
+
+  .hp-case-card {
+    min-width: 190px;
+    max-width: 220px;
   }
 }
 
