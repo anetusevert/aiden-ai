@@ -18,13 +18,19 @@ export function AminMinimized() {
     voiceMode,
     toggleVoice,
     quietVoice,
+    interruptSpeech,
+    isVoiceSpeaking,
     isQuietMode,
     quietCountdownLabel,
   } = useAminContext();
 
   const handleAvatarClick = useCallback(() => {
+    if (voiceMode === 'active' && isVoiceSpeaking) {
+      interruptSpeech();
+      return;
+    }
     toggleVoice();
-  }, [toggleVoice]);
+  }, [interruptSpeech, isVoiceSpeaking, toggleVoice, voiceMode]);
 
   const avatarState: AminAvatarState =
     voiceMode === 'active'
@@ -66,8 +72,12 @@ export function AminMinimized() {
           <button
             type="button"
             className="amin-quiet-chip"
-            onClick={quietVoice}
-            aria-label="Ask Amin to stay quiet"
+            onClick={isVoiceSpeaking ? interruptSpeech : quietVoice}
+            aria-label={
+              isVoiceSpeaking
+                ? 'Interrupt Amin while speaking'
+                : 'Ask Amin to stay quiet'
+            }
           >
             <span className="amin-quiet-chip-icon" aria-hidden>
               <svg
@@ -85,7 +95,9 @@ export function AminMinimized() {
                 <path d="M9 2h6" />
               </svg>
             </span>
-            <span className="amin-quiet-chip-label">Quiet</span>
+            <span className="amin-quiet-chip-label">
+              {isVoiceSpeaking ? 'Stop' : 'Quiet'}
+            </span>
           </button>
         ) : null}
 
@@ -96,7 +108,9 @@ export function AminMinimized() {
             voiceMode === 'off'
               ? 'Activate Amin'
               : voiceMode === 'active'
-                ? 'Deactivate Amin'
+                ? isVoiceSpeaking
+                  ? 'Interrupt Amin'
+                  : 'Deactivate Amin'
                 : 'Wake Amin'
           }
           type="button"

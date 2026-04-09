@@ -14,25 +14,44 @@ const RING_COLORS: Record<VoiceMode, string> = {
 };
 
 export function AminVoiceToggle() {
-  const { voiceMode, activateVoice, deactivateVoice, quietVoice } =
-    useAminContext();
+  const {
+    voiceMode,
+    isVoiceSpeaking,
+    activateVoice,
+    deactivateVoice,
+    quietVoice,
+    interruptSpeech,
+  } = useAminContext();
 
   const cycleMode = useCallback(() => {
     if (voiceMode === 'off') {
       activateVoice();
+    } else if (voiceMode === 'active' && isVoiceSpeaking) {
+      interruptSpeech();
     } else if (voiceMode === 'active') {
       quietVoice();
     } else {
       deactivateVoice();
     }
-  }, [activateVoice, deactivateVoice, quietVoice, voiceMode]);
+  }, [
+    activateVoice,
+    deactivateVoice,
+    interruptSpeech,
+    isVoiceSpeaking,
+    quietVoice,
+    voiceMode,
+  ]);
 
   return (
     <motion.button
       className="amin-voice-toggle"
       data-mode={voiceMode}
       onClick={cycleMode}
-      aria-label={`Voice mode: ${voiceMode}`}
+      aria-label={
+        voiceMode === 'active' && isVoiceSpeaking
+          ? 'Interrupt Amin'
+          : `Voice mode: ${voiceMode}`
+      }
       whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.92 }}
       transition={{ type: 'spring', stiffness: 400, damping: 20 }}

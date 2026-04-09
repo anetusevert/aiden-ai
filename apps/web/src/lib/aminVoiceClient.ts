@@ -42,6 +42,7 @@ export type VoiceEventHandler = {
   onTranscript?: (text: string, role: 'user' | 'amin') => void;
   onSpeakingChange?: (speaking: boolean) => void;
   onListeningChange?: (listening: boolean) => void;
+  onAssistantSpeakingChange?: (speaking: boolean) => void;
   onError?: (error: string) => void;
   onConnected?: () => void;
   onDisconnected?: () => void;
@@ -145,6 +146,7 @@ export class AminVoiceClient {
   private _lastDisconnectTime = 0;
   private _playbackQueue: string[] = [];
   private _isPlaying = false;
+  private _assistantSpeaking = false;
   private _sessionReady = false;
 
   constructor(handlers: VoiceEventHandler = {}) {
@@ -257,6 +259,7 @@ export class AminVoiceClient {
     this._clearSilenceTimer();
     this._micPaused = false;
     this._userSpeaking = false;
+    this._setAssistantSpeaking(false);
     this.stopMicCapture();
     this._stopPlayback();
     if (this.ws) {
@@ -421,6 +424,9 @@ export class AminVoiceClient {
       case 'input_audio_buffer.speech_started':
         this._userSpeaking = true;
         this.handlers.onSpeakingChange?.(true);
+        if (this._assistantSpeaking) {
+          this.interrupt();
+        }
         this._resetSilenceTimer();
         break;
 
@@ -432,6 +438,7 @@ export class AminVoiceClient {
 
       case 'response.audio.delta':
         if (typeof data.delta === 'string') {
+          this._setAssistantSpeaking(true);
           this._playbackQueue.push(data.delta);
           this._processPlaybackQueue();
         }
@@ -451,6 +458,7 @@ export class AminVoiceClient {
         break;
 
       case 'response.done':
+        this._setAssistantSpeaking(false);
         this._resetSilenceTimer();
         break;
 
@@ -549,5 +557,12 @@ export class AminVoiceClient {
   private _stopPlayback(): void {
     this._playbackQueue = [];
     this._isPlaying = false;
+    this._setAssistantSpeaking(false);
+  }
+
+  private _setAssistantSpeaking(speaking: boolean): void {
+    if (this._assistantSpeaking === speaking) return;
+    this._assistantSpeaking = speaking;
+    this.handlers.onAssistantSpeakingChange?.(speaking);
   }
 }

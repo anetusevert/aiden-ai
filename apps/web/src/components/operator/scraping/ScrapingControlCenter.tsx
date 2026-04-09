@@ -249,6 +249,18 @@ export default function ScrapingControlCenter() {
     [jobs]
   );
 
+  const selectedRunnableSource = useMemo(() => {
+    if (selectedSource && selectedSource.enabled) return selectedSource;
+    return sources.find(source => source.enabled) ?? null;
+  }, [selectedSource, sources]);
+
+  const selectedSourceActiveJob = useMemo(() => {
+    if (!selectedRunnableSource?.last_job_id) return null;
+    const job = jobsById.get(selectedRunnableSource.last_job_id);
+    if (!job) return null;
+    return job.status === 'pending' || job.status === 'running' ? job : null;
+  }, [jobsById, selectedRunnableSource]);
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login');
@@ -373,7 +385,7 @@ export default function ScrapingControlCenter() {
             error instanceof Error ? error.message : 'Failed to load run'
           );
         });
-    }, 5000);
+    }, 2000);
     return () => clearInterval(intervalId);
   }, [activeJobDetailStatus, jobDetailId]);
 
@@ -538,6 +550,9 @@ export default function ScrapingControlCenter() {
     try {
       const response = await apiClient.triggerScrapingSource(source.id);
       setSelectedSourceId(source.id);
+      setJobDetail(null);
+      setJobDetailError(null);
+      setJobDetailId(response.job_id);
       setHighlightJobId(response.job_id);
       if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
       highlightTimerRef.current = setTimeout(() => {
@@ -559,6 +574,16 @@ export default function ScrapingControlCenter() {
     }
   };
 
+  const handleQuickAction = async () => {
+    if (selectedSourceActiveJob) {
+      setJobDetailId(selectedSourceActiveJob.id);
+      return;
+    }
+    if (selectedRunnableSource) {
+      await handleTrigger(selectedRunnableSource);
+    }
+  };
+
   const sourceOptions = useMemo(
     () => [
       { value: 'all', label: 'All sources' },
@@ -573,6 +598,17 @@ export default function ScrapingControlCenter() {
   const focusedSourceSummary = selectedSource
     ? `${selectedSource.display_name} in ${selectedSource.jurisdiction}`
     : 'All configured sources';
+
+  const quickActionTitle = selectedSourceActiveJob
+    ? 'Open live dashboard'
+    : selectedRunnableSource
+      ? 'Trigger live scrape'
+      : 'Select a source';
+  const quickActionMeta = selectedSourceActiveJob
+    ? `${selectedRunnableSource?.display_name ?? 'Selected source'} is already active`
+    : selectedRunnableSource
+      ? `Run ${selectedRunnableSource.display_name} and watch it live`
+      : 'Choose a source below to trigger and monitor it';
 
   if (!isPlatformAdmin) {
     return (
@@ -616,15 +652,36 @@ export default function ScrapingControlCenter() {
           </div>
         </div>
         <div className={styles.heroActions}>
-          <Button
+          <button
             type="button"
+            className={styles.actionTile}
             onClick={() => {
               resetCreateForm();
               setCreateOpen(true);
             }}
           >
-            Add source
-          </Button>
+            <span className={styles.actionTileLabel}>Add source</span>
+            <strong className={styles.actionTileTitle}>
+              Create connector entry
+            </strong>
+            <span className={styles.actionTileMeta}>
+              Add a new official source, schedule, and harvest limit.
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.actionTile} ${styles.actionTileAccent}`}
+            onClick={() => {
+              void handleQuickAction();
+            }}
+            disabled={!selectedRunnableSource}
+          >
+            <span className={styles.actionTileLabel}>Live run</span>
+            <strong className={styles.actionTileTitle}>
+              {quickActionTitle}
+            </strong>
+            <span className={styles.actionTileMeta}>{quickActionMeta}</span>
+          </button>
         </div>
       </header>
 
@@ -832,7 +889,7 @@ export default function ScrapingControlCenter() {
                         disabled={isBusy}
                         onClick={() => handleTrigger(source)}
                       >
-                        Run now
+                        Run live
                       </Button>
                       <Button
                         size="sm"
@@ -1247,6 +1304,15 @@ export default function ScrapingControlCenter() {
         jobDetail={jobDetail}
         loading={jobDetailLoading}
         error={jobDetailError}
+        sourceLabel={
+          (jobDetail?.source_id
+            ? sourceNameById.get(jobDetail.source_id)
+            : jobDetailId
+              ? sourceNameById.get(
+                  jobs.find(job => job.id === jobDetailId)?.source_id ?? ''
+                )
+              : null) ?? null
+        }
       />
     </motion.div>
   );

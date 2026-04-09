@@ -53,6 +53,8 @@ interface AminContextValue extends ReturnType<typeof useAmin> {
   deactivateVoice: () => void;
   toggleVoice: () => void;
   quietVoice: () => void;
+  interruptSpeech: () => void;
+  isVoiceSpeaking: boolean;
   isQuietMode: boolean;
   quietCountdownMs: number;
   quietCountdownLabel: string | null;
@@ -74,6 +76,7 @@ export function AminProvider({ children }: { children: ReactNode }) {
   const [quietUntil, setQuietUntil] = useState<number | null>(null);
   const [panelSize, setPanelSize] = useState<PanelSize>('expanded');
   const [floatingMessage, setFloatingMessage] = useState<string | null>(null);
+  const [isVoiceSpeaking, setIsVoiceSpeaking] = useState(false);
   const greetingSent = useRef(false);
   const lastMsgRef = useRef('');
   const voiceClientRef = useRef<AminVoiceClient | null>(null);
@@ -182,6 +185,9 @@ export function AminProvider({ children }: { children: ReactNode }) {
     voiceClientRef.current = new AminVoiceClient({
       onAutoIdle: () => enterPassive(),
       onStandbyRequested: () => enterPassive(),
+      onAssistantSpeakingChange: speaking => {
+        setIsVoiceSpeaking(speaking);
+      },
       onTranscript: (text, role) => {
         if (role === 'user' && isQuietCommand(text)) {
           voiceClientRef.current?.interrupt();
@@ -191,6 +197,7 @@ export function AminProvider({ children }: { children: ReactNode }) {
       onDisconnected: () => {
         clearQuietMode();
         stopWakeDetector();
+        setIsVoiceSpeaking(false);
         setVoiceMode('off');
       },
       onError: err => console.warn('[AminVoice]', err),
@@ -240,6 +247,7 @@ export function AminProvider({ children }: { children: ReactNode }) {
   const deactivateVoice = useCallback(() => {
     clearQuietMode();
     setVoiceMode('off');
+    setIsVoiceSpeaking(false);
     stopWakeDetector();
     voiceClientRef.current?.disconnect();
   }, [clearQuietMode, stopWakeDetector]);
@@ -257,6 +265,14 @@ export function AminProvider({ children }: { children: ReactNode }) {
     voiceClientRef.current?.interrupt();
     enterPassive({ quietDurationMs: QUIET_MODE_MS });
   }, [enterPassive, voiceMode]);
+
+  const interruptSpeech = useCallback(() => {
+    voiceClientRef.current?.interrupt();
+    if (voiceMode === 'active') {
+      voiceClientRef.current?.resumeMicCapture();
+    }
+    setIsVoiceSpeaking(false);
+  }, [voiceMode]);
 
   useEffect(() => {
     const aminMessages = amin.messages;
@@ -377,6 +393,8 @@ export function AminProvider({ children }: { children: ReactNode }) {
         deactivateVoice,
         toggleVoice,
         quietVoice,
+        interruptSpeech,
+        isVoiceSpeaking,
         isQuietMode,
         quietCountdownMs,
         quietCountdownLabel,

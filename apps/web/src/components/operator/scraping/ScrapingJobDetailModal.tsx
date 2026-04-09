@@ -78,6 +78,7 @@ interface ScrapingJobDetailModalProps {
   jobDetail: ScrapingJobDetailResponse | null;
   loading: boolean;
   error: string | null;
+  sourceLabel?: string | null;
 }
 
 export function ScrapingJobDetailModal({
@@ -86,12 +87,22 @@ export function ScrapingJobDetailModal({
   jobDetail,
   loading,
   error,
+  sourceLabel,
 }: ScrapingJobDetailModalProps) {
+  const isLive =
+    jobDetail?.status === 'pending' || jobDetail?.status === 'running';
+  const completedCount =
+    (jobDetail?.items_upserted ?? 0) + (jobDetail?.items_failed ?? 0);
+  const progressPercent =
+    jobDetail && jobDetail.items_listed > 0
+      ? Math.min(100, (completedCount / jobDetail.items_listed) * 100)
+      : null;
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Run details"
+      title={isLive ? 'Live run dashboard' : 'Run details'}
       size="lg"
       footer={
         <Button variant="outline" type="button" onClick={onClose}>
@@ -111,10 +122,31 @@ export function ScrapingJobDetailModal({
 
       {!loading && jobDetail ? (
         <div className={styles.detailContent}>
+          {isLive ? (
+            <div className={styles.liveBanner}>
+              <div className={styles.liveBannerTitleRow}>
+                <span className={styles.livePulse} aria-hidden />
+                <strong>Live operator view</strong>
+              </div>
+              <p>
+                This dashboard refreshes automatically while the scraping run is
+                queued or running.
+              </p>
+            </div>
+          ) : null}
+
           <div className={styles.detailHeader}>
             <div>
+              {sourceLabel ? (
+                <>
+                  <span className={styles.metaLabel}>Source</span>
+                  <h3 className={styles.detailTitle}>{sourceLabel}</h3>
+                </>
+              ) : null}
               <span className={styles.metaLabel}>Connector</span>
-              <h3 className={styles.detailTitle}>{jobDetail.connector_name}</h3>
+              <p className={styles.detailConnector}>
+                {jobDetail.connector_name}
+              </p>
             </div>
             <div className={styles.detailBadges}>
               <JobStatusBadge status={jobDetail.status} />
@@ -127,6 +159,56 @@ export function ScrapingJobDetailModal({
                   ? 'Scheduled'
                   : 'Manual'}
               </Badge>
+            </div>
+          </div>
+
+          <div className={styles.liveSummaryGrid}>
+            <div className={styles.liveSummaryCard}>
+              <span className={styles.metaLabel}>Trigger mode</span>
+              <p>
+                {jobDetail.triggered_by === 'scheduler'
+                  ? 'Scheduled run'
+                  : 'Manual run'}
+              </p>
+            </div>
+            <div className={styles.liveSummaryCard}>
+              <span className={styles.metaLabel}>Current state</span>
+              <p>
+                {jobDetail.status === 'pending'
+                  ? 'Queued for execution'
+                  : jobDetail.status === 'running'
+                    ? 'Harvesting in progress'
+                    : 'Completed snapshot'}
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.progressCard}>
+            <div className={styles.progressHeader}>
+              <div>
+                <span className={styles.metaLabel}>Progress</span>
+                <p className={styles.progressTitle}>
+                  {jobDetail.items_upserted} upserted, {jobDetail.items_failed}{' '}
+                  failed
+                </p>
+              </div>
+              <span className={styles.progressMeta}>
+                {jobDetail.items_listed > 0
+                  ? `${completedCount} / ${jobDetail.items_listed}`
+                  : isLive
+                    ? 'Waiting for item count'
+                    : 'No item count'}
+              </span>
+            </div>
+            <div className={styles.progressTrack}>
+              <div
+                className={`${styles.progressFill} ${progressPercent == null ? styles.progressFillIndeterminate : ''}`}
+                style={
+                  progressPercent != null
+                    ? { width: `${Math.max(progressPercent, 6)}%` }
+                    : undefined
+                }
+              />
             </div>
           </div>
 

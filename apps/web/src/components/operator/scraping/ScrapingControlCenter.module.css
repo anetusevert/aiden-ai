@@ -1,18 +1,18 @@
 .page {
-  max-width: 1480px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: clamp(0.85rem, 1.8vw, 1.35rem);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .hero {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 1rem;
-  padding: 1.5rem;
+  padding: 1.15rem;
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
   border-radius: 20px;
   background:
@@ -29,9 +29,9 @@
 }
 
 .heroCopy h1 {
-  margin: 0.15rem 0 0.75rem;
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.05;
+  margin: 0.15rem 0 0.55rem;
+  font-size: clamp(1.8rem, 3vw, 2.55rem);
+  line-height: 1;
 }
 
 .eyebrow {
@@ -44,22 +44,22 @@
 
 .heroText {
   margin: 0;
-  max-width: 64rem;
+  max-width: 52rem;
   color: var(--text-secondary, #c2c9d6);
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .heroSignals {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
-  margin-top: 1.25rem;
+  margin-top: 0.95rem;
 }
 
 .signal {
-  min-width: 180px;
-  padding: 0.9rem 1rem;
+  min-width: 0;
+  padding: 0.75rem 0.9rem;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
@@ -75,15 +75,81 @@
 }
 
 .heroActions {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(190px, 1fr));
   gap: 0.75rem;
+  width: min(430px, 100%);
+}
+
+.actionTile {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.02)
+    ),
+    rgba(8, 15, 29, 0.34);
+  color: inherit;
+  text-align: left;
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.actionTile:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.18);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.03)
+    ),
+    rgba(8, 15, 29, 0.44);
+}
+
+.actionTile:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.actionTileAccent {
+  border-color: rgba(110, 231, 183, 0.22);
+}
+
+.actionTileLabel {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #9ca3af);
+}
+
+.actionTileTitle {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.actionTileMeta {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--text-secondary, #c2c9d6);
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.85rem;
 }
 
 .kpiCard,
@@ -95,14 +161,14 @@
 }
 
 .kpiCard {
-  padding: 1.2rem 1.25rem;
+  padding: 1rem 1.05rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
 }
 
 .kpiValue {
-  font-size: clamp(1.7rem, 2vw, 2.25rem);
+  font-size: clamp(1.45rem, 1.8vw, 2rem);
   font-weight: 700;
   line-height: 1;
   color: var(--foreground, #f8fafc);
@@ -122,12 +188,12 @@
 
 .mainGrid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 0.95fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(290px, 0.82fr);
+  gap: 0.85rem;
 }
 
 .surface {
-  padding: 1.25rem;
+  padding: 1rem;
 }
 
 .sourcesSurface {
@@ -263,7 +329,7 @@
 
 .sourceMetaGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.75rem;
   margin-top: 1rem;
 }
@@ -289,7 +355,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: 0.85rem;
 }
 
 .cardError {
@@ -400,7 +466,7 @@
 
 .table th,
 .table td {
-  padding: 0.9rem 0.75rem;
+  padding: 0.8rem 0.65rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   text-align: left;
   white-space: nowrap;
@@ -581,10 +647,102 @@
   gap: 1rem;
 }
 
+.detailConnector {
+  margin: 0;
+  color: var(--text-secondary, #c2c9d6);
+  font-size: 0.92rem;
+}
+
 .detailBadges {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.liveBanner {
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(110, 231, 183, 0.18);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.liveBanner p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary, #c2c9d6);
+  font-size: 0.9rem;
+}
+
+.liveBannerTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.livePulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.45);
+  animation: livePulse 1.8s infinite;
+}
+
+.liveSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.liveSummaryCard {
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.liveSummaryCard p {
+  margin: 0;
+}
+
+.progressCard {
+  padding: 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.progressTitle {
+  margin: 0;
+}
+
+.progressMeta {
+  color: var(--text-muted, #9ca3af);
+  font-size: 0.86rem;
+}
+
+.progressTrack {
+  margin-top: 0.75rem;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #60a5fa, #34d399);
+  transition: width 0.3s ease;
+}
+
+.progressFillIndeterminate {
+  width: 35%;
+  animation: progressSweep 1.8s ease-in-out infinite;
 }
 
 .detailGrid {
@@ -700,12 +858,12 @@
 }
 
 @media (max-width: 1200px) {
-  .kpiGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .mainGrid {
     grid-template-columns: 1fr;
+  }
+
+  .heroActions {
+    width: 100%;
   }
 }
 
@@ -718,11 +876,13 @@
     flex-direction: column;
   }
 
-  .kpiGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .heroSignals,
+  .heroActions {
+    grid-template-columns: 1fr;
   }
 
   .sourceMetaGrid,
+  .liveSummaryGrid,
   .detailGrid,
   .detailMetrics,
   .readonlySourceMeta {
@@ -734,13 +894,41 @@
   .kpiGrid,
   .sourceMetaGrid,
   .monitorStats,
+  .liveSummaryGrid,
   .detailGrid,
   .detailMetrics,
   .readonlySourceMeta {
     grid-template-columns: 1fr;
   }
 
+  .sectionHeader,
+  .progressHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .jurisdictionRow {
     grid-template-columns: 70px 1fr 60px;
+  }
+}
+
+@keyframes livePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(52, 211, 153, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+@keyframes progressSweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
   }
 }

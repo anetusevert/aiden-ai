@@ -13615,21 +13615,21 @@ textarea:focus-visible {
 .workflow-launch-screen {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .workflow-hub-screen,
 .workflow-category-screen,
 .workflow-launch-screen,
 .workflow-execute-canvas {
-  padding: 28px 28px 40px;
+  padding: 20px 24px 24px;
 }
 
 .workflow-page-intro {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-width: 760px;
+  gap: 8px;
+  max-width: 720px;
 }
 
 .workflow-page-kicker {
@@ -13642,9 +13642,9 @@ textarea:focus-visible {
 .workflow-page-title,
 .workflow-launch-title {
   margin: 0;
-  font-size: clamp(2.1rem, 5vw, 3.4rem);
+  font-size: clamp(1.9rem, 4vw, 2.95rem);
   letter-spacing: -0.04em;
-  line-height: 0.95;
+  line-height: 0.92;
   color: rgba(255, 255, 255, 0.98);
 }
 
@@ -13652,15 +13652,15 @@ textarea:focus-visible {
 .workflow-launch-description {
   margin: 0;
   max-width: 720px;
-  font-size: 1rem;
-  line-height: 1.65;
+  font-size: 0.94rem;
+  line-height: 1.48;
   color: rgba(255, 255, 255, 0.62);
 }
 
 .workflow-hub-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }
 
 .workflow-hub-card-v2,
@@ -13691,10 +13691,10 @@ textarea:focus-visible {
 .workflow-category-card {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 14px;
   width: 100%;
-  padding: 22px;
-  border-radius: 22px;
+  padding: 16px 18px;
+  border-radius: 18px;
   color: inherit;
   text-align: left;
   transition:
@@ -13726,9 +13726,9 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -13754,7 +13754,7 @@ textarea:focus-visible {
 .workflow-completion-card h2,
 .workflow-execute-topline h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.08rem;
   letter-spacing: -0.02em;
   color: rgba(255, 255, 255, 0.96);
 }
@@ -13766,8 +13766,21 @@ textarea:focus-visible {
 .workflow-answer-text,
 .workflow-completion-summary-body p {
   margin: 0;
-  line-height: 1.65;
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.66);
+}
+
+.workflow-hub-card-copy p,
+.workflow-category-card p,
+.workflow-step-node-label {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+.workflow-hub-card-copy p,
+.workflow-category-card p {
+  -webkit-line-clamp: 2;
 }
 
 .workflow-hub-card-arrow {
@@ -13785,12 +13798,13 @@ textarea:focus-visible {
 
 .workflow-category-list {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .workflow-category-card-meta {
   display: flex;
-  gap: 16px;
+  gap: 12px;
 }
 
 .workflow-live-badge,
@@ -13810,8 +13824,8 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
-  font-size: 0.82rem;
+  gap: 8px;
+  font-size: 0.76rem;
   color: rgba(255, 255, 255, 0.56);
 }
 
@@ -13825,55 +13839,56 @@ textarea:focus-visible {
 
 .workflow-launch-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.28fr) minmax(280px, 0.72fr);
+  gap: 14px;
 }
 
 .workflow-launch-brief,
 .workflow-launch-amin {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding: 24px;
-  border-radius: 24px;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 20px;
 }
 
 .workflow-launch-section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .workflow-step-flow-shell {
   position: relative;
-  padding: 10px 0;
+  padding: 6px 0;
 }
 
 .workflow-step-flow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
 }
 
 .workflow-step-node {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .workflow-step-node-circle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
 }
 
 .workflow-step-node-label {
-  font-size: 0.88rem;
+  font-size: 0.78rem;
+  -webkit-line-clamp: 2;
   color: rgba(255, 255, 255, 0.78);
 }
 
@@ -13882,7 +13897,7 @@ textarea:focus-visible {
 .workflow-inline-actions,
 .workflow-completion-actions {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .workflow-inline-form {
@@ -13894,7 +13909,7 @@ textarea:focus-visible {
 .workflow-completion-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
 .workflow-run-button,
@@ -13903,9 +13918,9 @@ textarea:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 46px;
-  padding: 0 18px;
-  border-radius: 14px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   cursor: pointer;
   transition:
@@ -13940,9 +13955,9 @@ textarea:focus-visible {
   --gx: 50%;
   --gy: 50%;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 340px;
-  gap: 18px;
-  min-height: calc(100vh - 110px);
+  grid-template-columns: 236px minmax(0, 1fr) 280px;
+  gap: 14px;
+  min-height: calc(100vh - 92px);
   background:
     radial-gradient(
       circle at var(--gx) var(--gy),
@@ -13955,9 +13970,9 @@ textarea:focus-visible {
 .workflow-step-rail {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 22px 18px;
-  border-radius: 24px;
+  gap: 12px;
+  padding: 16px 14px;
+  border-radius: 20px;
 }
 
 .workflow-step-rail-list {
@@ -13982,11 +13997,11 @@ textarea:focus-visible {
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
+  gap: 10px;
   width: 100%;
-  padding: 12px 10px;
+  padding: 8px 8px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   background: transparent;
   color: inherit;
   text-align: left;
@@ -14053,7 +14068,7 @@ textarea:focus-visible {
 .workflow-execute-main {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -14074,14 +14089,14 @@ textarea:focus-visible {
 .workflow-completion-card {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   min-height: 100%;
-  padding: 24px;
-  border-radius: 26px;
+  padding: 18px;
+  border-radius: 20px;
 }
 
 .workflow-scroll-card {
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 170px);
   overflow: auto;
 }
 
@@ -14107,16 +14122,16 @@ textarea:focus-visible {
 
 .workflow-results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
 }
 
 .workflow-result-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-  border-radius: 18px;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -14128,15 +14143,15 @@ textarea:focus-visible {
 .workflow-risk-score {
   display: inline-flex;
   align-items: baseline;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 18px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   width: fit-content;
 }
 
 .workflow-risk-score strong {
-  font-size: 2rem;
+  font-size: 1.5rem;
   color: rgba(255, 255, 255, 0.96);
 }
 
@@ -14155,10 +14170,10 @@ textarea:focus-visible {
 .workflow-upload-dropzone {
   display: grid;
   place-items: center;
-  min-height: 150px;
-  padding: 18px;
+  min-height: 112px;
+  padding: 14px;
   border: 1px dashed rgba(255, 255, 255, 0.16);
-  border-radius: 20px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
 }
@@ -14170,22 +14185,22 @@ textarea:focus-visible {
 .workflow-redline-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .workflow-redline-pane {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-  border-radius: 18px;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
 }
 
 .workflow-redline-text {
   white-space: pre-wrap;
-  line-height: 1.7;
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.72);
 }
 
@@ -14200,8 +14215,8 @@ textarea:focus-visible {
 
 .workflow-simulated-output pre {
   overflow: auto;
-  padding: 16px;
-  border-radius: 18px;
+  padding: 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
   color: rgba(255, 255, 255, 0.7);
 }
@@ -14209,11 +14224,11 @@ textarea:focus-visible {
 .workflow-execute-amin {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 22px;
-  border-radius: 24px;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
   align-self: start;
-  min-height: 240px;
+  min-height: 180px;
 }
 
 .workflow-execute-amin[data-state='thinking'] {
@@ -14231,7 +14246,9 @@ textarea:focus-visible {
 }
 
 .workflow-completion-check {
-  margin-bottom: 6px;
+  margin-bottom: 2px;
+  width: 72px;
+  height: 72px;
 }
 
 .workflow-completion-summary {
@@ -14275,6 +14292,10 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .workflow-category-list {
+    grid-template-columns: 1fr;
+  }
+
   .workflow-step-rail,
   .workflow-execute-amin {
     order: unset;
@@ -14293,11 +14314,16 @@ textarea:focus-visible {
   .workflow-category-screen,
   .workflow-launch-screen,
   .workflow-execute-canvas {
-    padding: 20px 16px 28px;
+    padding: 16px 14px 20px;
   }
 
   .workflow-page-title,
   .workflow-launch-title {
     font-size: clamp(1.8rem, 8vw, 2.4rem);
+  }
+
+  .workflow-hub-grid,
+  .workflow-category-list {
+    grid-template-columns: 1fr;
   }
 }
