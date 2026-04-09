@@ -244,20 +244,20 @@ class Settings(BaseSettings):
     # =========================================================================
     # Platform Admin Bootstrap Configuration
     # =========================================================================
-    # PLATFORM_ADMIN_EMAIL: Email of user to designate as platform admin on startup
-    # This is a one-time bootstrap mechanism for dev/staging environments.
+    # PLATFORM_ADMIN_EMAIL: Email of the enforced super admin on startup
     #
     # Behavior:
-    # - On startup (dev/staging): If user with this email exists, set is_platform_admin=true
+    # - On startup: If user with this email exists, enforce is_platform_admin=true
+    # - Revoke platform-admin from every other user
+    # - Ensure this user is ADMIN in every workspace in their tenant
+    # - Demote other tenant workspace admins to EDITOR
     # - If user doesn't exist: Log a warning (do NOT auto-create user)
-    # - In production: This is BLOCKED unless GLOBAL_CORPUS_ENABLED_IN_PROD=true
     #
     # Safety:
-    # - Only works in dev/staging by default
     # - Requires existing user (no auto-creation)
     # - All bootstrap actions are logged
     # =========================================================================
-    platform_admin_email: str | None = None
+    platform_admin_email: str | None = "utena.treves@gmail.com"
 
 
 settings = Settings()

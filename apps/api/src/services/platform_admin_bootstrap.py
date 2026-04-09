@@ -1,30 +1,22 @@
 """Platform admin bootstrap service.
 
-This module provides a one-time bootstrap mechanism for designating platform admins
-without requiring direct database access.
+This module enforces a configured super-admin email on startup.
 
-Security constraints:
-1. Only runs in dev/staging environments by default
-2. In production, requires GLOBAL_CORPUS_ENABLED_IN_PROD=true
-3. Requires existing user (does NOT auto-create users)
-4. All bootstrap actions are logged
-
-Usage:
-1. Set PLATFORM_ADMIN_EMAIL=admin@example.com in environment
-2. On application startup, if user exists, is_platform_admin is set to true
-3. If user doesn't exist, a warning is logged
-
-This removes the need for manual SQL: UPDATE users SET is_platform_admin=true...
+Behavior:
+1. Looks up the configured email
+2. Makes that user the sole platform admin
+3. Ensures that user is ADMIN in every workspace in their tenant
+4. Demotes other tenant workspace admins to EDITOR
 """
 
 import logging
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.models import User
+from src.models import User, Workspace, WorkspaceMembership
 from src.utils.passwords import normalize_email
 
 logger = logging.getLogger(__name__)
@@ -37,20 +29,20 @@ class PlatformAdminBootstrapError(Exception):
 
 
 async def bootstrap_platform_admin(db: AsyncSession) -> dict[str, Any]:
-    """Bootstrap platform admin from PLATFORM_ADMIN_EMAIL environment variable.
+    """Enforce the configured platform admin email as the tenant super admin.
 
     This function:
-    1. Checks if bootstrap is allowed in current environment
-    2. Looks up user by email
-    3. Sets is_platform_admin=true if user exists
-    4. Logs all actions
+    1. Looks up the configured user by email
+    2. Revokes platform-admin from every other user
+    3. Ensures the configured user is ADMIN in every workspace in their tenant
+    4. Demotes every other ADMIN membership in that tenant to EDITOR
 
     Args:
         db: Async database session
 
     Returns:
         dict with bootstrap result:
-        - action: "skipped" | "set" | "already_admin" | "user_not_found" | "blocked"
+        - action: "skipped" | "enforced" | "user_not_found"
         - email: The email address processed (or None)
         - message: Human-readable status message
 
@@ -63,7 +55,6 @@ async def bootstrap_platform_admin(db: AsyncSession) -> dict[str, Any]:
         "message": "No platform admin email configured",
     }
 
-    # Check if PLATFORM_ADMIN_EMAIL is set
     admin_email = settings.platform_admin_email
     if not admin_email:
         logger.debug("Platform admin bootstrap: No PLATFORM_ADMIN_EMAIL configured, skipping")
@@ -71,28 +62,6 @@ async def bootstrap_platform_admin(db: AsyncSession) -> dict[str, Any]:
 
     result["email"] = admin_email
 
-    # Environment safety check
-    # In production, bootstrap is blocked unless GLOBAL_CORPUS_ENABLED_IN_PROD=true
-    if settings.environment == "prod":
-        if not settings.global_corpus_enabled_in_prod:
-            result["action"] = "blocked"
-            result["message"] = (
-                f"Platform admin bootstrap blocked in production. "
-                f"PLATFORM_ADMIN_EMAIL={admin_email} was set but "
-                f"GLOBAL_CORPUS_ENABLED_IN_PROD=false. "
-                f"Set GLOBAL_CORPUS_ENABLED_IN_PROD=true to enable bootstrap in production."
-            )
-            logger.warning(
-                "PLATFORM_ADMIN_BOOTSTRAP_BLOCKED",
-                extra={
-                    "email": admin_email,
-                    "environment": settings.environment,
-                    "reason": "global_corpus_not_enabled_in_prod",
-                },
-            )
-            return result
-
-    # Look up user by email
     stmt = select(User).where(User.email_normalized == normalize_email(admin_email))
     db_result = await db.execute(stmt)
     user = db_result.scalar_one_or_none()
@@ -113,34 +82,84 @@ async def bootstrap_platform_admin(db: AsyncSession) -> dict[str, Any]:
         )
         return result
 
-    # Check if already admin
-    if user.is_platform_admin:
-        result["action"] = "already_admin"
-        result["message"] = (
-            f"Platform admin bootstrap: User '{admin_email}' is already a platform admin. "
-            f"No changes made."
-        )
-        logger.info(
-            "PLATFORM_ADMIN_BOOTSTRAP_ALREADY_ADMIN",
-            extra={
-                "email": admin_email,
-                "user_id": user.id,
-                "environment": settings.environment,
-            },
-        )
-        return result
-
-    # Set is_platform_admin = true
     try:
+        other_platform_admins = (
+            await db.execute(
+                select(User).where(
+                    User.id != user.id,
+                    User.is_platform_admin.is_(True),
+                )
+            )
+        ).scalars().all()
+        for other_user in other_platform_admins:
+            other_user.is_platform_admin = False
+
         user.is_platform_admin = True
+        workspaces = (
+            await db.execute(
+                select(Workspace).where(Workspace.tenant_id == user.tenant_id)
+            )
+        ).scalars().all()
+        memberships = (
+            await db.execute(
+                select(WorkspaceMembership).where(
+                    WorkspaceMembership.tenant_id == user.tenant_id
+                )
+            )
+        ).scalars().all()
+
+        membership_by_workspace = {
+            membership.workspace_id: membership
+            for membership in memberships
+            if membership.user_id == user.id
+        }
+
+        promoted_workspaces = 0
+        created_memberships = 0
+        demoted_admins = 0
+
+        for workspace in workspaces:
+            own_membership = membership_by_workspace.get(workspace.id)
+            if own_membership is None:
+                own_membership = WorkspaceMembership(
+                    tenant_id=user.tenant_id,
+                    workspace_id=workspace.id,
+                    user_id=user.id,
+                    role="ADMIN",
+                )
+                db.add(own_membership)
+                membership_by_workspace[workspace.id] = own_membership
+                created_memberships += 1
+            elif own_membership.role != "ADMIN":
+                own_membership.role = "ADMIN"
+                promoted_workspaces += 1
+
+            for membership in memberships:
+                if (
+                    membership.workspace_id == workspace.id
+                    and membership.user_id != user.id
+                    and membership.role == "ADMIN"
+                ):
+                    membership.role = "EDITOR"
+                    demoted_admins += 1
+
+        if user.default_workspace_id is None and workspaces:
+            user.default_workspace_id = workspaces[0].id
+
         await db.commit()
         await db.refresh(user)
 
-        result["action"] = "set"
+        result["action"] = "enforced"
         result["message"] = (
-            f"Platform admin bootstrap: Successfully set is_platform_admin=true "
-            f"for user '{admin_email}' (user_id={user.id})"
+            f"Platform admin bootstrap: enforced '{admin_email}' as sole platform admin "
+            f"and tenant super admin (created_memberships={created_memberships}, "
+            f"promoted_workspaces={promoted_workspaces}, demoted_admins={demoted_admins}, "
+            f"revoked_platform_admins={len(other_platform_admins)})"
         )
+        result["created_memberships"] = created_memberships
+        result["promoted_workspaces"] = promoted_workspaces
+        result["demoted_admins"] = demoted_admins
+        result["revoked_platform_admins"] = len(other_platform_admins)
         logger.info(
             "PLATFORM_ADMIN_BOOTSTRAP_SUCCESS",
             extra={
@@ -148,7 +167,11 @@ async def bootstrap_platform_admin(db: AsyncSession) -> dict[str, Any]:
                 "user_id": user.id,
                 "tenant_id": user.tenant_id,
                 "environment": settings.environment,
-                "action": "set",
+                "action": "enforced",
+                "created_memberships": created_memberships,
+                "promoted_workspaces": promoted_workspaces,
+                "demoted_admins": demoted_admins,
+                "revoked_platform_admins": len(other_platform_admins),
             },
         )
         return result
