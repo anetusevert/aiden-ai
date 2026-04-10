@@ -8096,6 +8096,15 @@ textarea:focus-visible {
   z-index: 1;
 }
 
+.hp-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.12));
+  margin-bottom: 0.25rem;
+}
+
 .hp-avatar-wrap {
   position: relative;
   cursor: pointer;
@@ -10466,7 +10475,7 @@ textarea:focus-visible {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
+  padding: 4px;
   color: #fff;
   border-radius: var(--radius-md);
   transition:

@@ -18,7 +18,7 @@ export function MarketingHeader() {
   return (
     <header className={`ha-header${scrolled ? ' scrolled' : ''}`}>
       <Link href="/" className="ha-logo-lockup">
-        <HeyAminLogo variant="mark" size={36} />
+        <HeyAminLogo variant="mark" size={42} />
         <span className="ha-logo-wordmark">HeyAmin</span>
       </Link>
 

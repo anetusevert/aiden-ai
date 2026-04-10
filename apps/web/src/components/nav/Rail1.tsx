@@ -301,7 +301,7 @@ export function Rail1() {
           onClick={() => navigateTo('/home')}
           type="button"
         >
-          <HeyAminLogo variant="mark" size={36} />
+          <HeyAminLogo variant="mark" size={42} />
         </button>
         <div className="rail1-logo-divider" />
       </div>
