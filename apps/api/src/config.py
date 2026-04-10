@@ -159,14 +159,13 @@ class Settings(BaseSettings):
         """Get the regex used for credentialed production CORS.
 
         Railway deployments typically run the web and API on separate
-        `*.up.railway.app` subdomains, so allow that pattern by default unless
-        an explicit regex is configured.
+        `*.up.railway.app` subdomains, so allow that pattern by default
+        unless an explicit regex is configured.  The Railway pattern is
+        safe in dev too (it can never match localhost).
         """
         if self.cors_origin_regex:
             return self.cors_origin_regex
-        if self.environment in {"staging", "prod"}:
-            return r"https://.*\.up\.railway\.app"
-        return None
+        return r"https://.*\.up\.railway\.app"
 
     # Authentication
     # AUTH_MODE: "jwt" uses Bearer tokens, "headers" uses legacy X-*-Id headers
