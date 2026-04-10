@@ -11,7 +11,6 @@ import {
   getWorkflowEstimatedDuration,
   getWorkflowJourneySteps,
 } from '@/lib/workflowRegistry';
-import { getWorkflowHref } from '@/lib/workflowPresentation';
 import { reportScreenContext } from '@/lib/screenContext';
 
 const listVariants = {
