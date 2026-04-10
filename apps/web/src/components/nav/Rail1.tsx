@@ -233,7 +233,7 @@ export function Rail1() {
     workflows: '/workflows/litigation',
     documents: '/documents',
     intelligence: '/news',
-    admin: isPlatformAdmin ? '/operator/knowledge-base' : '/members',
+    admin: isPlatformAdmin ? '/knowledge-base' : '/members',
   };
 
   const handleLogout = async () => {
@@ -263,7 +263,7 @@ export function Rail1() {
     workflows: ['/workflows'],
     documents: ['/documents'],
     intelligence: ['/news', '/wiki', '/research', '/global-legal'],
-    admin: ['/operator', '/members', '/audit'],
+    admin: ['/operator', '/members', '/audit', '/knowledge-base'],
   };
 
   const isIconActive = (id: NavSection) => {

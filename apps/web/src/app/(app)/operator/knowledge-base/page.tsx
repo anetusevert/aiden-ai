@@ -1,1 +1,5 @@
-export { default } from '@/components/operator/scraping/ScrapingControlCenter';
+import { redirect } from 'next/navigation';
+
+export default function KnowledgeBaseRedirectPage() {
+  redirect('/knowledge-base');
+}

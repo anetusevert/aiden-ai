@@ -7,7 +7,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func as sa_func
 from sqlalchemy import select
@@ -384,18 +384,34 @@ async def delete_source(
 )
 async def trigger_job(
     source_id: str,
-    background_tasks: BackgroundTasks,
     _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TriggerJobResponse:
     """Manually trigger a scraping job for a source (runs in background)."""
+
+    # Clean up any stuck "pending" jobs older than 10 minutes so they don't
+    # permanently block new triggers via the 409 concurrency guard.
+    ten_minutes_ago = datetime.now(UTC) - timedelta(minutes=10)
+    stale_result = await db.execute(
+        select(ScrapingJob).where(
+            ScrapingJob.source_id == source_id,
+            ScrapingJob.status == "pending",
+            ScrapingJob.created_at < ten_minutes_ago,
+        )
+    )
+    for stale_job in stale_result.scalars().all():
+        stale_job.status = "failed"
+        stale_job.error_detail = "Timed out: job was stuck in pending for over 10 minutes"
+        stale_job.finished_at = datetime.now(UTC)
+    await db.commit()
+
     job = await HarvesterService.create_job(db, source_id, "manual")
 
     async def _run_in_background(job_id: str) -> None:
         async with async_session_maker() as fresh_db:
             await HarvesterService.run_job(fresh_db, job_id)
 
-    background_tasks.add_task(asyncio.ensure_future, _run_in_background(job.id))
+    asyncio.create_task(_run_in_background(str(job.id)))
 
     return TriggerJobResponse(
         job_id=str(job.id),

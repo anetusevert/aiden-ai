@@ -11,10 +11,9 @@ logger = logging.getLogger(__name__)
 async def _search_wiki_execute(params: dict[str, Any], context: dict[str, Any]) -> ToolResult:
     try:
         from sqlalchemy import or_, select
-        from src.models.wiki import WikiArticle
+        from src.models.wiki import WikiPage
 
         db = context["db"]
-        workspace_id = context["workspace_id"]
         query = params.get("query", "").strip()
 
         if not query:
@@ -22,30 +21,31 @@ async def _search_wiki_execute(params: dict[str, Any], context: dict[str, Any]) 
 
         pattern = f"%{query}%"
         stmt = (
-            select(WikiArticle)
+            select(WikiPage)
             .where(
-                WikiArticle.workspace_id == workspace_id,
                 or_(
-                    WikiArticle.title.ilike(pattern),
-                    WikiArticle.body.ilike(pattern),
+                    WikiPage.title.ilike(pattern),
+                    WikiPage.summary.ilike(pattern),
+                    WikiPage.content_md.ilike(pattern),
                 ),
             )
-            .order_by(WikiArticle.updated_at.desc())
+            .order_by(WikiPage.updated_at.desc())
             .limit(10)
         )
 
         result = await db.execute(stmt)
-        articles = result.scalars().all()
+        pages = result.scalars().all()
 
-        if not articles:
+        if not pages:
             return ToolResult(content=f"No knowledge base articles found for '{query}'.")
 
-        lines = [f"Found {len(articles)} article(s):\n"]
-        for a in articles:
-            snippet = (a.body or "")[:150].replace("\n", " ")
-            lines.append(f"- **{a.title}** — {snippet}… [ID: {a.id}]")
+        lines = [f"Found {len(pages)} article(s):\n"]
+        for p in pages:
+            snippet = (p.content_md or "")[:150].replace("\n", " ")
+            jurisdiction = f" [{p.jurisdiction}]" if p.jurisdiction else ""
+            lines.append(f"- **{p.title}**{jurisdiction} — {snippet}… [slug: {p.slug}]")
 
-        return ToolResult(content="\n".join(lines), data={"count": len(articles)})
+        return ToolResult(content="\n".join(lines), data={"count": len(pages)})
     except ImportError:
         return ToolResult(content="Knowledge base module not available yet.")
     except Exception as e:

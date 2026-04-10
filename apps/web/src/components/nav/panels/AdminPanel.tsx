@@ -32,39 +32,12 @@ export function AdminPanel() {
       <div className="r2-section">
         <div className="r2-section-label">KNOWLEDGE BASE</div>
         <div className="r2-link-list">
-          {isPlatformAdmin ? (
-            <Link
-              href="/operator/knowledge-base"
-              className={`r2-link${isActive('/operator/knowledge-base') ? ' r2-link-active' : ''}`}
-              onClick={e => {
-                e.preventDefault();
-                navigateTo('/operator/knowledge-base');
-              }}
-            >
-              <span className="r2-link-icon">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                >
-                  <ellipse cx="12" cy="5" rx="9" ry="3" />
-                  <path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3" />
-                  <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
-                </svg>
-              </span>
-              <span className="r2-link-text">Scraping Control Center</span>
-            </Link>
-          ) : null}
-
           <Link
-            href="/wiki/log"
-            className={`r2-link${isActive('/wiki/log') ? ' r2-link-active' : ''}`}
+            href="/knowledge-base"
+            className={`r2-link${isActive('/knowledge-base') ? ' r2-link-active' : ''}`}
             onClick={e => {
               e.preventDefault();
-              navigateTo('/wiki/log');
+              navigateTo('/knowledge-base');
             }}
           >
             <span className="r2-link-icon">
@@ -76,13 +49,12 @@ export function AdminPanel() {
                 stroke="currentColor"
                 strokeWidth="1.5"
               >
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                <path d="M8 7h8" />
-                <path d="M8 11h6" />
+                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                <path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3" />
+                <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
               </svg>
             </span>
-            <span className="r2-link-text">Wiki Health</span>
+            <span className="r2-link-text">Knowledge Base</span>
           </Link>
         </div>
       </div>
@@ -115,6 +87,65 @@ export function AdminPanel() {
             </span>
             <span className="r2-link-text">Members & Orgs</span>
           </Link>
+
+          {isPlatformAdmin ? (
+            <>
+              <Link
+                href="/operator/organisations"
+                className={`r2-link${isActive('/operator/organisations') ? ' r2-link-active' : ''}`}
+                onClick={e => {
+                  e.preventDefault();
+                  navigateTo('/operator/organisations');
+                }}
+              >
+                <span className="r2-link-icon">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M3 21h18" />
+                    <path d="M5 21V7l8-4v18" />
+                    <path d="M19 21V11l-6-4" />
+                    <path d="M9 9v.01" />
+                    <path d="M9 12v.01" />
+                    <path d="M9 15v.01" />
+                    <path d="M9 18v.01" />
+                  </svg>
+                </span>
+                <span className="r2-link-text">Organisations</span>
+              </Link>
+
+              <Link
+                href="/operator/users"
+                className={`r2-link${isActive('/operator/users') ? ' r2-link-active' : ''}`}
+                onClick={e => {
+                  e.preventDefault();
+                  navigateTo('/operator/users');
+                }}
+              >
+                <span className="r2-link-icon">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </span>
+                <span className="r2-link-text">All Users</span>
+              </Link>
+            </>
+          ) : null}
         </div>
       </div>
 
