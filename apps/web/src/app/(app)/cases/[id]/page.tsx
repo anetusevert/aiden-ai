@@ -35,10 +35,13 @@ export default function CaseDetailPage() {
   const caseApiUrl = resolveApiUrl(`/api/v1/cases/${params.id}`);
   const [caseData, setCaseData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('documents');
   const [documents, setDocuments] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
+  const [tabError, setTabError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
   const [creatingDoc, setCreatingDoc] = useState(false);
@@ -46,22 +49,38 @@ export default function CaseDetailPage() {
   const handleCreateDoc = async () => {
     if (!caseData) return;
     setCreatingDoc(true);
+    setActionError(null);
     try {
       const doc = await officeApi.createDocument({
         title: `${caseData.title} — Document`,
         doc_type: 'docx',
         template: 'legal_memo',
       });
-      await fetch(resolveApiUrl(`/api/v1/cases/${params.id}/documents`), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ document_id: doc.id, document_role: 'draft' }),
-      });
+      const attachRes = await fetch(
+        resolveApiUrl(`/api/v1/cases/${params.id}/documents`),
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            document_id: doc.id,
+            document_role: 'draft',
+          }),
+        }
+      );
+      if (!attachRes.ok) {
+        setActionError(
+          `Document created but could not attach to case (${attachRes.status}).`
+        );
+        setCreatingDoc(false);
+        return;
+      }
       loadDocuments();
       navigateTo(`/documents/${doc.id}`);
-    } catch {
-      /* */
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to create document.'
+      );
     }
     setCreatingDoc(false);
   };
@@ -73,12 +92,29 @@ export default function CaseDetailPage() {
     }).catch(() => {});
 
     fetch(caseApiUrl, { credentials: 'include' })
-      .then(r => (r.ok ? r.json() : null))
+      .then(async r => {
+        if (r.ok) return r.json();
+        if (r.status === 404) {
+          setLoadError('Case not found.');
+          return null;
+        }
+        if (r.status === 403) {
+          setLoadError('You do not have permission to view this case.');
+          return null;
+        }
+        setLoadError(`Failed to load case (${r.status}).`);
+        return null;
+      })
       .then(data => {
         setCaseData(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoadError(
+          'Could not connect to the server. Please check your connection.'
+        );
+        setLoading(false);
+      });
   }, [caseApiUrl, params.id]);
 
   useEffect(() => {
@@ -108,30 +144,42 @@ export default function CaseDetailPage() {
   }, [caseData, params.id]);
 
   const loadDocuments = useCallback(() => {
+    setTabError(null);
     fetch(resolveApiUrl(`/api/v1/cases/${params.id}/documents`), {
       credentials: 'include',
     })
-      .then(r => (r.ok ? r.json() : []))
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load documents (${r.status})`);
+        return r.json();
+      })
       .then(setDocuments)
-      .catch(() => {});
+      .catch(err => setTabError(err.message));
   }, [params.id]);
 
   const loadNotes = useCallback(() => {
+    setTabError(null);
     fetch(resolveApiUrl(`/api/v1/cases/${params.id}/notes`), {
       credentials: 'include',
     })
-      .then(r => (r.ok ? r.json() : []))
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load notes (${r.status})`);
+        return r.json();
+      })
       .then(setNotes)
-      .catch(() => {});
+      .catch(err => setTabError(err.message));
   }, [params.id]);
 
   const loadTimeline = useCallback(() => {
+    setTabError(null);
     fetch(resolveApiUrl(`/api/v1/cases/${params.id}/timeline`), {
       credentials: 'include',
     })
-      .then(r => (r.ok ? r.json() : []))
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load timeline (${r.status})`);
+        return r.json();
+      })
       .then(setTimeline)
-      .catch(() => {});
+      .catch(err => setTabError(err.message));
   }, [params.id]);
 
   useEffect(() => {
@@ -143,30 +191,52 @@ export default function CaseDetailPage() {
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
     setAddingNote(true);
+    setActionError(null);
     try {
-      await fetch(resolveApiUrl(`/api/v1/cases/${params.id}/notes`), {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newNote, is_amin_generated: false }),
-      });
+      const res = await fetch(
+        resolveApiUrl(`/api/v1/cases/${params.id}/notes`),
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: newNote, is_amin_generated: false }),
+        }
+      );
+      if (!res.ok) {
+        setActionError(`Failed to save note (${res.status}).`);
+        setAddingNote(false);
+        return;
+      }
       setNewNote('');
       loadNotes();
-    } catch {
-      /* */
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to save note.'
+      );
     }
     setAddingNote(false);
   };
 
   const handleDetachDoc = async (docId: string) => {
-    await fetch(
-      resolveApiUrl(`/api/v1/cases/${params.id}/documents/${docId}`),
-      {
-        method: 'DELETE',
-        credentials: 'include',
+    setActionError(null);
+    try {
+      const res = await fetch(
+        resolveApiUrl(`/api/v1/cases/${params.id}/documents/${docId}`),
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        }
+      );
+      if (!res.ok) {
+        setActionError(`Failed to detach document (${res.status}).`);
+        return;
       }
-    );
-    loadDocuments();
+      loadDocuments();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : 'Failed to detach document.'
+      );
+    }
   };
 
   if (loading)
@@ -255,7 +325,17 @@ export default function CaseDetailPage() {
             <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
           </svg>
         </div>
-        <h3>Case not found</h3>
+        <h3>{loadError ?? 'Case not found'}</h3>
+        {loadError && (
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ marginTop: 'var(--space-3)' }}
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        )}
       </div>
     );
 
@@ -480,6 +560,22 @@ export default function CaseDetailPage() {
             className="case-tab-content"
             style={{ flex: 1, overflow: 'auto' }}
           >
+            {actionError && (
+              <div
+                className="alert alert-error"
+                style={{ marginBottom: 'var(--space-3)' }}
+              >
+                {actionError}
+              </div>
+            )}
+            {tabError && (
+              <div
+                className="alert alert-error"
+                style={{ marginBottom: 'var(--space-3)' }}
+              >
+                {tabError}
+              </div>
+            )}
             {activeTab === 'documents' && (
               <div>
                 <div

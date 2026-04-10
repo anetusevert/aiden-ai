@@ -361,6 +361,7 @@ function NewCaseModal({
   onCreated: (id: string) => void;
   preClientId?: string;
 }) {
+  const { navigateTo } = useNavigation();
   const [form, setForm] = useState<Record<string, string>>({
     client_id: preClientId ?? '',
     practice_area: 'litigation',
@@ -369,25 +370,43 @@ function NewCaseModal({
   });
   const [clientSearch, setClientSearch] = useState('');
   const [clients, setClients] = useState<any[]>([]);
+  const [clientsLoaded, setClientsLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const updateField = (k: string, v: string) =>
     setForm(prev => ({ ...prev, [k]: v }));
 
   useEffect(() => {
-    if (!clientSearch && !preClientId) return;
-    const q = clientSearch || '';
-    fetch(resolveApiUrl(`/api/v1/clients?search=${q}&limit=10`), {
-      credentials: 'include',
-    })
-      .then(r => (r.ok ? r.json() : { items: [] }))
-      .then(d => setClients(d.items ?? []))
-      .catch(() => {});
-  }, [clientSearch, preClientId]);
+    const timer = setTimeout(() => {
+      const q = clientSearch || '';
+      fetch(resolveApiUrl(`/api/v1/clients?search=${q}&limit=10`), {
+        credentials: 'include',
+      })
+        .then(r => {
+          if (!r.ok) throw new Error(`Failed to load clients (${r.status})`);
+          return r.json();
+        })
+        .then(d => {
+          setClients(d.items ?? []);
+          setClientsLoaded(true);
+        })
+        .catch(() => {
+          setClientsLoaded(true);
+        });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [clientSearch]);
+
+  const clearSelectedClient = () => {
+    updateField('client_id', '');
+    setClientSearch('');
+  };
 
   const handleCreate = async () => {
     if (!form.client_id || !form.title) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch(resolveApiUrl('/api/v1/cases'), {
         method: 'POST',
@@ -398,11 +417,28 @@ function NewCaseModal({
       if (res.ok) {
         const data = await res.json();
         onCreated(data.id);
+        return;
       }
-    } catch {
-      /* */
+      let message = `Could not create case (${res.status}).`;
+      try {
+        const body = await res.json();
+        const detail = body?.detail;
+        if (typeof detail === 'string') message = detail;
+        else if (typeof detail === 'object' && detail?.message)
+          message = detail.message;
+      } catch {
+        /* non-JSON body */
+      }
+      setError(message);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Network error. Please check your connection and try again.'
+      );
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const practiceAreas = [
@@ -431,31 +467,94 @@ function NewCaseModal({
           </button>
         </div>
         <div className="modal-body">
+          {error ? (
+            <div style={{ padding: '0 0 var(--space-3)' }}>
+              <div className="alert alert-error">{error}</div>
+            </div>
+          ) : null}
+
           <div className="form-grid">
             <div className="form-field form-field-full">
               <label>Client *</label>
-              <input
-                type="text"
-                placeholder="Search clients..."
-                value={clientSearch}
-                onChange={e => setClientSearch(e.target.value)}
-              />
-              {clients.length > 0 && !form.client_id && (
-                <div className="client-suggestions">
-                  {clients.map(c => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className="client-suggestion"
-                      onClick={() => {
-                        updateField('client_id', c.id);
-                        setClientSearch(c.display_name);
+              {form.client_id ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={clientSearch}
+                    readOnly
+                    style={{ flex: 1, opacity: 0.8 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ fontSize: 12, height: 32, padding: '0 10px' }}
+                    onClick={clearSelectedClient}
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Search clients..."
+                    value={clientSearch}
+                    onChange={e => setClientSearch(e.target.value)}
+                    autoFocus
+                  />
+                  {clients.length > 0 && (
+                    <div className="client-suggestions">
+                      {clients.map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className="client-suggestion"
+                          onClick={() => {
+                            updateField('client_id', c.id);
+                            setClientSearch(c.display_name);
+                          }}
+                        >
+                          {c.display_name} ({c.client_type})
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {clientsLoaded && clients.length === 0 && (
+                    <div
+                      style={{
+                        padding: 'var(--space-3)',
+                        color: 'var(--text-muted)',
+                        fontSize: '0.8125rem',
+                        textAlign: 'center',
                       }}
                     >
-                      {c.display_name} ({c.client_type})
-                    </button>
-                  ))}
-                </div>
+                      {clientSearch
+                        ? 'No clients match your search.'
+                        : 'No clients yet.'}{' '}
+                      <button
+                        type="button"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-link, #60a5fa)',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          padding: 0,
+                          font: 'inherit',
+                        }}
+                        onClick={() => navigateTo('/clients?new=true')}
+                      >
+                        Create a client first
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             <div className="form-field form-field-full">

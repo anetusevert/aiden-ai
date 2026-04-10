@@ -8332,14 +8332,16 @@ textarea:focus-visible {
 /* ── Case quick links ── */
 
 .hp-quick-link--case {
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .hp-case-priority {
-  width: 4px;
-  align-self: stretch;
-  border-radius: 2px;
+  width: 0.55rem;
+  height: 0.55rem;
+  align-self: center;
+  border-radius: 999px;
   flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.08);
 }
 
 .hp-quick-link-body {
@@ -8468,10 +8470,11 @@ textarea:focus-visible {
 }
 
 .hp-case-card-priority {
-  width: 24px;
-  height: 3px;
-  border-radius: 2px;
-  margin-bottom: 0.125rem;
+  width: 1.9rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  margin-bottom: 0.2rem;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.06);
 }
 
 .hp-case-card-title {

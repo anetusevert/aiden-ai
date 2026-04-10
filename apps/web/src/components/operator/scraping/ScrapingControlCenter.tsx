@@ -105,44 +105,14 @@ function getJobBadgeVariant(status: ScrapingJobStatus) {
 function sourceHealth(
   source: ScrapingSourceResponse,
   lastJob?: ScrapingJobResponse
-): {
-  label: string;
-  tone: 'healthy' | 'warning' | 'muted';
-  summary: string;
-} {
-  if (!source.enabled) {
-    return {
-      label: 'Disabled',
-      tone: 'muted',
-      summary: 'Source is visible but blocked from scheduled and manual runs.',
-    };
-  }
-  if (!lastJob) {
-    return {
-      label: 'Ready',
-      tone: 'healthy',
-      summary: 'Source is enabled and waiting for its first harvest.',
-    };
-  }
-  if (lastJob.status === 'failed') {
-    return {
-      label: 'Needs review',
-      tone: 'warning',
-      summary: 'The latest run failed. Review the log before triggering again.',
-    };
-  }
-  if (lastJob.status === 'running' || lastJob.status === 'pending') {
-    return {
-      label: 'In progress',
-      tone: 'healthy',
-      summary: 'A run is already active for this source.',
-    };
-  }
-  return {
-    label: 'Healthy',
-    tone: 'healthy',
-    summary: 'Latest run completed successfully.',
-  };
+): { label: string; tone: 'healthy' | 'warning' | 'muted' } {
+  if (!source.enabled) return { label: 'Disabled', tone: 'muted' };
+  if (!lastJob) return { label: 'Ready', tone: 'healthy' };
+  if (lastJob.status === 'failed')
+    return { label: 'Needs review', tone: 'warning' };
+  if (lastJob.status === 'running' || lastJob.status === 'pending')
+    return { label: 'Running', tone: 'healthy' };
+  return { label: 'Healthy', tone: 'healthy' };
 }
 
 function EmptyDocumentIcon() {
@@ -213,6 +183,10 @@ export default function ScrapingControlCenter() {
   const [highlightJobId, setHighlightJobId] = useState<string | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  /* ── Derived values ──────────────────────────────────── */
+
   const sourceNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const source of sources) map.set(source.id, source.display_name);
@@ -249,17 +223,18 @@ export default function ScrapingControlCenter() {
     [jobs]
   );
 
-  const selectedRunnableSource = useMemo(() => {
-    if (selectedSource && selectedSource.enabled) return selectedSource;
-    return sources.find(source => source.enabled) ?? null;
-  }, [selectedSource, sources]);
+  const sourceOptions = useMemo(
+    () => [
+      { value: 'all', label: 'All sources' },
+      ...sources.map(source => ({
+        value: source.id,
+        label: source.display_name,
+      })),
+    ],
+    [sources]
+  );
 
-  const selectedSourceActiveJob = useMemo(() => {
-    if (!selectedRunnableSource?.last_job_id) return null;
-    const job = jobsById.get(selectedRunnableSource.last_job_id);
-    if (!job) return null;
-    return job.status === 'pending' || job.status === 'running' ? job : null;
-  }, [jobsById, selectedRunnableSource]);
+  /* ── Effects ─────────────────────────────────────────── */
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -344,21 +319,16 @@ export default function ScrapingControlCenter() {
     void apiClient
       .getScrapingJob(jobDetailId)
       .then(response => {
-        if (!cancelled) {
-          setJobDetail(response);
-        }
+        if (!cancelled) setJobDetail(response);
       })
       .catch(error => {
-        if (!cancelled) {
+        if (!cancelled)
           setJobDetailError(
             error instanceof Error ? error.message : 'Failed to load run'
           );
-        }
       })
       .finally(() => {
-        if (!cancelled) {
-          setJobDetailLoading(false);
-        }
+        if (!cancelled) setJobDetailLoading(false);
       });
     return () => {
       cancelled = true;
@@ -394,6 +364,19 @@ export default function ScrapingControlCenter() {
       if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-source-menu]')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [openMenuId]);
+
+  /* ── Handlers ────────────────────────────────────────── */
 
   const setActionError = useCallback((sourceId: string, message: string) => {
     setActionErrors(current => ({ ...current, [sourceId]: message }));
@@ -441,7 +424,6 @@ export default function ScrapingControlCenter() {
     event.preventDefault();
     setCreateSubmitting(true);
     setCreateError(null);
-
     const payload: ScrapingSourceCreate = {
       connector_name: createForm.connectorName,
       display_name: createForm.displayName.trim(),
@@ -530,9 +512,7 @@ export default function ScrapingControlCenter() {
     setDeleteSubmitting(true);
     try {
       await apiClient.deleteScrapingSource(confirmDeleteId);
-      if (selectedSourceId === confirmDeleteId) {
-        setSelectedSourceId('all');
-      }
+      if (selectedSourceId === confirmDeleteId) setSelectedSourceId('all');
       setConfirmDeleteId(null);
       await Promise.all([loadSources(), loadJobs(), loadStats()]);
     } catch (error) {
@@ -574,203 +554,86 @@ export default function ScrapingControlCenter() {
     }
   };
 
-  const handleQuickAction = async () => {
-    if (selectedSourceActiveJob) {
-      setJobDetailId(selectedSourceActiveJob.id);
-      return;
-    }
-    if (selectedRunnableSource) {
-      await handleTrigger(selectedRunnableSource);
-    }
-  };
-
-  const sourceOptions = useMemo(
-    () => [
-      { value: 'all', label: 'All sources' },
-      ...sources.map(source => ({
-        value: source.id,
-        label: source.display_name,
-      })),
-    ],
-    [sources]
-  );
-
-  const focusedSourceSummary = selectedSource
-    ? `${selectedSource.display_name} in ${selectedSource.jurisdiction}`
-    : 'All configured sources';
-
-  const quickActionTitle = selectedSourceActiveJob
-    ? 'Open live dashboard'
-    : selectedRunnableSource
-      ? 'Trigger live scrape'
-      : 'Select a source';
-  const quickActionMeta = selectedSourceActiveJob
-    ? `${selectedRunnableSource?.display_name ?? 'Selected source'} is already active`
-    : selectedRunnableSource
-      ? `Run ${selectedRunnableSource.display_name} and watch it live`
-      : 'Choose a source below to trigger and monitor it';
+  /* ── Guard: non-admin ────────────────────────────────── */
 
   if (!isPlatformAdmin) {
     return (
       <motion.div className={`page-container ${styles.page}`} {...fadeUp}>
         <div className={styles.deniedState}>
           <h1>Scraping Control Center</h1>
-          <p>
-            This operator view is reserved for platform administrators because
-            it controls the shared legal-source ingestion pipeline.
-          </p>
+          <p>This operator view is reserved for platform administrators.</p>
         </div>
       </motion.div>
     );
   }
 
+  /* ── Render ──────────────────────────────────────────── */
+
   return (
     <motion.div className={`page-container ${styles.page}`} {...fadeUp}>
-      <header className={styles.hero}>
-        <div className={styles.heroCopy}>
-          <span className={styles.eyebrow}>Platform operator</span>
-          <h1>Scraping Control Center</h1>
-          <p className={styles.heroText}>
-            Manage public legal sources, watch live harvesting activity, and
-            review ingestion runs from one operator cockpit.
-          </p>
-          <div className={styles.heroSignals}>
-            <div className={styles.signal}>
-              <span className={styles.signalLabel}>Last harvest</span>
-              <strong>
-                {formatRelativeTime(stats?.last_harvest_at ?? null)}
-              </strong>
+      {/* ── Header strip ──────────────────────────────── */}
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>Scraping Control Center</h1>
+          {!statsLoading && stats ? (
+            <div className={styles.statPills}>
+              <span className={styles.pill}>
+                {stats.total_instruments.toLocaleString()} records
+              </span>
+              <span className={styles.pill}>
+                {stats.active_sources}/{stats.total_sources} active
+              </span>
+              <span className={styles.pill}>{stats.running_jobs} queued</span>
+              <span className={`${styles.pill} ${styles.pillMuted}`}>
+                {stats.items_harvested_24h.toLocaleString()} in 24h
+              </span>
             </div>
-            <div className={styles.signal}>
-              <span className={styles.signalLabel}>Control scope</span>
-              <strong>Platform admin only</strong>
-            </div>
-            <div className={styles.signal}>
-              <span className={styles.signalLabel}>Queue state</span>
-              <strong>{hasActiveJobs ? 'Active' : 'Idle'}</strong>
-            </div>
-          </div>
+          ) : null}
         </div>
-        <div className={styles.heroActions}>
-          <button
-            type="button"
-            className={styles.actionTile}
-            onClick={() => {
-              resetCreateForm();
-              setCreateOpen(true);
-            }}
-          >
-            <span className={styles.actionTileLabel}>Add source</span>
-            <strong className={styles.actionTileTitle}>
-              Create connector entry
-            </strong>
-            <span className={styles.actionTileMeta}>
-              Add a new official source, schedule, and harvest limit.
-            </span>
-          </button>
-          <button
-            type="button"
-            className={`${styles.actionTile} ${styles.actionTileAccent}`}
-            onClick={() => {
-              void handleQuickAction();
-            }}
-            disabled={!selectedRunnableSource}
-          >
-            <span className={styles.actionTileLabel}>Live run</span>
-            <strong className={styles.actionTileTitle}>
-              {quickActionTitle}
-            </strong>
-            <span className={styles.actionTileMeta}>{quickActionMeta}</span>
-          </button>
-        </div>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => {
+            resetCreateForm();
+            setCreateOpen(true);
+          }}
+        >
+          Add source
+        </Button>
       </header>
 
-      <section className={styles.kpiGrid}>
-        {statsLoading ? (
-          Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className={styles.kpiCard}>
-              <Skeleton variant="title" width="45%" />
-              <Skeleton variant="text" width="60%" />
-            </div>
-          ))
-        ) : (
-          <>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiValue}>
-                {stats?.total_instruments.toLocaleString() ?? '-'}
-              </span>
-              <span className={styles.kpiLabel}>Corpus records</span>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiValue}>
-                {stats?.active_sources ?? 0}
-                <span className={styles.kpiSecondary}>
-                  {' '}
-                  / {stats?.total_sources ?? 0}
-                </span>
-              </span>
-              <span className={styles.kpiLabel}>Active sources</span>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiValue}>
-                {stats?.running_jobs ?? 0}
-              </span>
-              <span className={styles.kpiLabel}>Queued or running</span>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiValue}>
-                {stats?.items_harvested_24h.toLocaleString() ?? '-'}
-              </span>
-              <span className={styles.kpiLabel}>Harvested in 24h</span>
-            </div>
-            <div className={styles.kpiCard}>
-              <span className={styles.kpiValue}>
-                {stats?.items_harvested_7d.toLocaleString() ?? '-'}
-              </span>
-              <span className={styles.kpiLabel}>Harvested in 7d</span>
-            </div>
-          </>
-        )}
-      </section>
-
-      <div className={styles.mainGrid}>
-        <section className={`${styles.surface} ${styles.sourcesSurface}`}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2>Source library</h2>
-              <p>
-                Sources are the control points for scheduled and manual
-                harvesting into the legal knowledge base.
-              </p>
-            </div>
+      {/* ── Two-column content ────────────────────────── */}
+      <div className={styles.columns}>
+        {/* ── Sources panel (left) ────────────────────── */}
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <h2>Sources</h2>
             <Badge variant="muted">{sources.length} configured</Badge>
           </div>
 
           {sourcesError ? (
-            <div className={styles.inlineError}>
-              <span>{sourcesError}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                onClick={() => {
-                  setSourcesLoading(true);
-                  void loadSources();
-                }}
-              >
-                Retry
-              </Button>
+            <div className={styles.panelBody}>
+              <div className={styles.inlineError}>
+                <span>{sourcesError}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    setSourcesLoading(true);
+                    void loadSources();
+                  }}
+                >
+                  Retry
+                </Button>
+              </div>
             </div>
           ) : null}
 
           {sourcesLoading ? (
-            <div className={styles.cardList}>
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className={styles.sourceCard}>
-                  <Skeleton variant="title" width="35%" />
-                  <Skeleton variant="text" width="70%" />
-                  <Skeleton variant="text" width="100%" />
-                </div>
+            <div className={styles.panelBody}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} variant="text" width="100%" />
               ))}
             </div>
           ) : sources.length === 0 ? (
@@ -792,163 +655,191 @@ export default function ScrapingControlCenter() {
               </Button>
             </div>
           ) : (
-            <div className={styles.cardList}>
-              {sources.map(source => {
-                const lastJob = source.last_job_id
-                  ? jobsById.get(source.last_job_id)
-                  : undefined;
-                const health = sourceHealth(source, lastJob);
-                const isBusy =
-                  triggerBusyId === source.id ||
-                  sourceBusyIds.includes(source.id);
-                const isFocused = selectedSourceId === source.id;
-                const scheduleLabel = source.schedule_cron
-                  ? describeCron(source.schedule_cron)
-                  : 'Manual only';
-                const lastDuration =
-                  lastJob && jobDurationSeconds(lastJob) != null
-                    ? formatDuration(jobDurationSeconds(lastJob)!)
-                    : null;
-                return (
-                  <article
-                    key={source.id}
-                    className={`${styles.sourceCard} ${isFocused ? styles.sourceCardFocused : ''}`}
-                  >
-                    <div className={styles.sourceCardHeader}>
-                      <div>
-                        <div className={styles.sourceTitleRow}>
-                          <h3>{source.display_name}</h3>
-                          <Badge variant="viewer" size="sm">
-                            {source.jurisdiction}
-                          </Badge>
-                        </div>
-                        <p className={styles.sourceSubline}>
-                          {source.connector_name}
-                          {source.source_url ? (
-                            <>
-                              {' '}
-                              ·{' '}
+            <div className={styles.sourceTableWrap}>
+              <table className={styles.sourceTable}>
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Jurisdiction</th>
+                    <th className={styles.hideNarrow}>Schedule</th>
+                    <th>Status</th>
+                    <th className={styles.hideNarrow}>Last run</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sources.map(source => {
+                    const lastJob = source.last_job_id
+                      ? jobsById.get(source.last_job_id)
+                      : undefined;
+                    const health = sourceHealth(source, lastJob);
+                    const isBusy =
+                      triggerBusyId === source.id ||
+                      sourceBusyIds.includes(source.id);
+                    const scheduleLabel = source.schedule_cron
+                      ? describeCron(source.schedule_cron)
+                      : 'Manual only';
+                    const isRunning =
+                      lastJob &&
+                      (lastJob.status === 'pending' ||
+                        lastJob.status === 'running');
+
+                    return (
+                      <tr
+                        key={source.id}
+                        className={
+                          selectedSourceId === source.id
+                            ? styles.focusedRow
+                            : ''
+                        }
+                      >
+                        <td>
+                          <div className={styles.sourceNameCell}>
+                            <strong>{source.display_name}</strong>
+                            {source.source_url ? (
                               <a
                                 href={source.source_url}
                                 target="_blank"
                                 rel="noreferrer"
+                                className={styles.externalLink}
+                                title="Open source"
                               >
-                                Official source
+                                ↗
                               </a>
-                            </>
-                          ) : null}
-                        </p>
-                      </div>
-                      <span
-                        className={`${styles.healthBadge} ${
-                          health.tone === 'healthy'
-                            ? styles.healthHealthy
-                            : health.tone === 'warning'
-                              ? styles.healthWarning
-                              : styles.healthMuted
-                        }`}
-                      >
-                        {health.label}
-                      </span>
-                    </div>
-
-                    <p className={styles.sourceSummary}>{health.summary}</p>
-
-                    <div className={styles.sourceMetaGrid}>
-                      <div>
-                        <span className={styles.metaLabel}>Schedule</span>
-                        <p>{scheduleLabel}</p>
-                      </div>
-                      <div>
-                        <span className={styles.metaLabel}>Last run</span>
-                        <p>{formatRelativeTime(source.last_run_at)}</p>
-                      </div>
-                      <div>
-                        <span className={styles.metaLabel}>Harvest limit</span>
-                        <p>{source.harvest_limit.toLocaleString()} items</p>
-                      </div>
-                      <div>
-                        <span className={styles.metaLabel}>Latest outcome</span>
-                        <p>
-                          {lastJob
-                            ? `${jobStatusLabel(lastJob.status)}${
-                                lastJob.status === 'completed'
-                                  ? ` · ${lastJob.items_upserted} upserted`
-                                  : ''
-                              }${lastDuration ? ` · ${lastDuration}` : ''}`
-                            : 'No runs yet'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className={styles.sourceActions}>
-                      <Button
-                        size="sm"
-                        type="button"
-                        loading={triggerBusyId === source.id}
-                        disabled={isBusy}
-                        onClick={() => handleTrigger(source)}
-                      >
-                        Run live
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        type="button"
-                        onClick={() => setSelectedSourceId(source.id)}
-                      >
-                        Focus runs
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => openEditModal(source)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => handleToggleEnabled(source)}
-                      >
-                        {source.enabled ? 'Disable' : 'Enable'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => setConfirmDeleteId(source.id)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-
-                    {actionErrors[source.id] ? (
-                      <div className={styles.cardError}>
-                        {actionErrors[source.id]}
-                      </div>
-                    ) : null}
-                  </article>
-                );
-              })}
+                            ) : null}
+                          </div>
+                        </td>
+                        <td>
+                          <Badge variant="viewer" size="sm">
+                            {source.jurisdiction}
+                          </Badge>
+                        </td>
+                        <td className={styles.hideNarrow}>{scheduleLabel}</td>
+                        <td>
+                          <span
+                            className={`${styles.healthBadge} ${
+                              health.tone === 'healthy'
+                                ? styles.healthHealthy
+                                : health.tone === 'warning'
+                                  ? styles.healthWarning
+                                  : styles.healthMuted
+                            }`}
+                          >
+                            {isRunning ? (
+                              <span className={styles.runningDot} aria-hidden />
+                            ) : null}
+                            {health.label}
+                          </span>
+                        </td>
+                        <td className={styles.hideNarrow}>
+                          {formatRelativeTime(source.last_run_at)}
+                        </td>
+                        <td>
+                          <div className={styles.actionCell}>
+                            <Button
+                              size="sm"
+                              type="button"
+                              loading={triggerBusyId === source.id}
+                              disabled={isBusy || !source.enabled}
+                              onClick={() => handleTrigger(source)}
+                            >
+                              Run
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => openEditModal(source)}
+                            >
+                              Edit
+                            </Button>
+                            <div className={styles.moreWrap} data-source-menu>
+                              <button
+                                type="button"
+                                className={styles.moreBtn}
+                                onClick={() =>
+                                  setOpenMenuId(
+                                    openMenuId === source.id ? null : source.id
+                                  )
+                                }
+                              >
+                                ···
+                              </button>
+                              {openMenuId === source.id ? (
+                                <div className={styles.moreMenu}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedSourceId(source.id);
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Focus runs
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                      void handleToggleEnabled(source);
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    {source.enabled ? 'Disable' : 'Enable'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.dangerItem}
+                                    disabled={isBusy}
+                                    onClick={() => {
+                                      setConfirmDeleteId(source.id);
+                                      setOpenMenuId(null);
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
+
+          {Object.keys(actionErrors).length > 0 ? (
+            <div className={styles.panelBody}>
+              {Object.entries(actionErrors).map(([id, msg]) => (
+                <div key={id} className={styles.inlineError}>
+                  <span>
+                    {sourceNameById.get(id) ?? 'Source'}: {msg}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </section>
 
-        <aside className={styles.sidebarStack}>
-          <section className={styles.surface}>
-            <div className={styles.sectionHeader}>
-              <div>
-                <h2>Execution monitor</h2>
-                <p>{focusedSourceSummary}</p>
-              </div>
-            </div>
-
+        {/* ── Activity panel (right) ──────────────────── */}
+        <aside className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <h2>Activity</h2>
+            {selectedSource ? (
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => setSelectedSourceId('all')}
+              >
+                Clear filter
+              </Button>
+            ) : null}
+          </div>
+          <div className={styles.activityScroll}>
             <Select
               label="Focus source"
               options={sourceOptions}
@@ -956,20 +847,38 @@ export default function ScrapingControlCenter() {
               onChange={e => setSelectedSourceId(e.target.value)}
             />
 
-            <div className={styles.monitorStats}>
-              <div className={styles.monitorStat}>
-                <span className={styles.monitorValue}>{activeJobs.length}</span>
-                <span className={styles.monitorLabel}>Active runs</span>
+            {activeJobs.length > 0 ? (
+              <div className={styles.activeSection}>
+                <div className={styles.activeSectionHeader}>
+                  <span className={styles.livePulse} aria-hidden />
+                  <h3>
+                    {activeJobs.length} active{' '}
+                    {activeJobs.length === 1 ? 'run' : 'runs'}
+                  </h3>
+                </div>
+                <div className={styles.activeList}>
+                  {activeJobs.map(job => (
+                    <button
+                      key={job.id}
+                      type="button"
+                      className={styles.activeCard}
+                      onClick={() => setJobDetailId(job.id)}
+                    >
+                      <div>
+                        <strong>
+                          {sourceNameById.get(job.source_id) ??
+                            job.connector_name}
+                        </strong>
+                        <span>{formatTimestamp(job.created_at)}</span>
+                      </div>
+                      <Badge variant={getJobBadgeVariant(job.status)} size="sm">
+                        {jobStatusLabel(job.status)}
+                      </Badge>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className={styles.monitorStat}>
-                <span className={styles.monitorValue}>
-                  {filteredJobs.length > 0
-                    ? formatRelativeTime(filteredJobs[0].created_at)
-                    : 'Never'}
-                </span>
-                <span className={styles.monitorLabel}>Latest queued</span>
-              </div>
-            </div>
+            ) : null}
 
             {jobsError ? (
               <div className={styles.inlineError}>
@@ -988,225 +897,128 @@ export default function ScrapingControlCenter() {
               </div>
             ) : null}
 
-            {jobsLoading ? (
-              <div className={styles.compactList}>
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className={styles.compactRunCard}>
-                    <Skeleton variant="text" width="55%" />
-                    <Skeleton variant="text" width="35%" />
-                  </div>
-                ))}
-              </div>
-            ) : activeJobs.length === 0 ? (
-              <div className={styles.monitorEmpty}>
-                <p>No active runs right now.</p>
-                <span>Trigger a source to watch live queue activity here.</span>
-              </div>
-            ) : (
-              <div className={styles.compactList}>
-                {activeJobs.map(job => (
-                  <button
-                    key={job.id}
-                    type="button"
-                    className={styles.compactRunCard}
-                    onClick={() => setJobDetailId(job.id)}
-                  >
-                    <div>
-                      <strong>
-                        {sourceNameById.get(job.source_id) ??
-                          job.connector_name}
-                      </strong>
-                      <span>{formatTimestamp(job.created_at)}</span>
-                    </div>
-                    <Badge variant={getJobBadgeVariant(job.status)} size="sm">
-                      {jobStatusLabel(job.status)}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className={styles.surface}>
-            <div className={styles.sectionHeader}>
-              <div>
-                <h2>Operator notes</h2>
-                <p>Ground truths that keep the control center honest.</p>
-              </div>
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Run history</h3>
+              {jobsLoading ? (
+                <div className={styles.skeletonStack}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} variant="text" width="100%" />
+                  ))}
+                </div>
+              ) : filteredJobs.length === 0 ? (
+                <div className={styles.emptySmall}>
+                  <p>No runs yet.</p>
+                </div>
+              ) : (
+                <div className={styles.runTableWrap}>
+                  <table className={styles.runTable}>
+                    <thead>
+                      <tr>
+                        <th>Source</th>
+                        <th>Status</th>
+                        <th>Started</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredJobs.map(job => {
+                        const duration = jobDurationSeconds(job);
+                        return (
+                          <tr
+                            key={job.id}
+                            className={
+                              highlightJobId === job.id
+                                ? styles.highlightRow
+                                : ''
+                            }
+                          >
+                            <td>
+                              {sourceNameById.get(job.source_id) ??
+                                job.connector_name}
+                            </td>
+                            <td>
+                              <Badge
+                                variant={getJobBadgeVariant(job.status)}
+                                size="sm"
+                              >
+                                {jobStatusLabel(job.status)}
+                              </Badge>
+                            </td>
+                            <td className={styles.timeCell}>
+                              {job.started_at
+                                ? formatTimestamp(job.started_at)
+                                : '-'}
+                              {duration != null ? (
+                                <> ({formatDuration(duration)})</>
+                              ) : null}
+                            </td>
+                            <td>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                                onClick={() => setJobDetailId(job.id)}
+                              >
+                                Inspect
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-            <ul className={styles.truthList}>
-              <li>
-                Disabled sources remain visible but cannot be triggered or
-                scheduled.
-              </li>
-              <li>
-                Only one queued or running job is allowed per source at a time.
-              </li>
-              <li>
-                Run details retain the first 100 harvested-item outcomes for
-                review.
-              </li>
-            </ul>
-          </section>
+
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Coverage</h3>
+              {statsLoading ? (
+                <Skeleton variant="text" width="100%" />
+              ) : stats &&
+                Object.keys(stats.instruments_by_jurisdiction).length > 0 ? (
+                <div className={styles.jurisdictionList}>
+                  {Object.entries(stats.instruments_by_jurisdiction)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([jurisdiction, count]) => {
+                      const pct =
+                        stats.total_instruments > 0
+                          ? (count / stats.total_instruments) * 100
+                          : 0;
+                      return (
+                        <div
+                          key={jurisdiction}
+                          className={styles.jurisdictionRow}
+                        >
+                          <span className={styles.jurisdictionLabel}>
+                            {jurisdiction}
+                          </span>
+                          <div className={styles.jurisdictionTrack}>
+                            <div
+                              className={styles.jurisdictionFill}
+                              style={{
+                                width: `${Math.max(pct, 2)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className={styles.jurisdictionValue}>
+                            {count.toLocaleString()}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : (
+                <div className={styles.emptySmall}>
+                  <p>No data yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
         </aside>
       </div>
 
-      <div className={styles.lowerGrid}>
-        <section className={`${styles.surface} ${styles.historySurface}`}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2>Run history</h2>
-              <p>
-                Recent manual and scheduled harvesting runs for{' '}
-                {selectedSource ? selectedSource.display_name : 'all sources'}.
-              </p>
-            </div>
-            {selectedSource ? (
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                onClick={() => setSelectedSourceId('all')}
-              >
-                Clear focus
-              </Button>
-            ) : null}
-          </div>
-
-          {jobsLoading ? (
-            <div className={styles.tableSkeleton}>
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} variant="text" width="100%" />
-              ))}
-            </div>
-          ) : filteredJobs.length === 0 ? (
-            <div className={styles.emptyStateSmall}>
-              <p>No runs yet for this selection.</p>
-            </div>
-          ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Source</th>
-                    <th>Status</th>
-                    <th>Trigger</th>
-                    <th>Started</th>
-                    <th>Duration</th>
-                    <th>Result</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredJobs.map(job => {
-                    const duration = jobDurationSeconds(job);
-                    return (
-                      <tr
-                        key={job.id}
-                        className={
-                          highlightJobId === job.id ? styles.highlightRow : ''
-                        }
-                      >
-                        <td>
-                          {sourceNameById.get(job.source_id) ??
-                            job.connector_name}
-                        </td>
-                        <td>
-                          <Badge
-                            variant={getJobBadgeVariant(job.status)}
-                            size="sm"
-                          >
-                            {jobStatusLabel(job.status)}
-                          </Badge>
-                        </td>
-                        <td>
-                          {job.triggered_by === 'scheduler'
-                            ? 'Scheduled'
-                            : 'Manual'}
-                        </td>
-                        <td>
-                          {job.started_at
-                            ? formatTimestamp(job.started_at)
-                            : '-'}
-                        </td>
-                        <td>
-                          {duration != null
-                            ? formatDuration(duration)
-                            : job.status === 'pending' ||
-                                job.status === 'running'
-                              ? 'In progress'
-                              : '-'}
-                        </td>
-                        <td>
-                          {job.items_upserted} upserted / {job.items_failed}{' '}
-                          failed
-                        </td>
-                        <td>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            type="button"
-                            onClick={() => setJobDetailId(job.id)}
-                          >
-                            Inspect
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <section className={`${styles.surface} ${styles.footprintSurface}`}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2>Jurisdiction footprint</h2>
-              <p>
-                Current legal corpus distribution across harvested
-                jurisdictions.
-              </p>
-            </div>
-          </div>
-          {statsLoading ? (
-            <Skeleton variant="text" width="100%" />
-          ) : stats &&
-            Object.keys(stats.instruments_by_jurisdiction).length > 0 ? (
-            <div className={styles.jurisdictionList}>
-              {Object.entries(stats.instruments_by_jurisdiction)
-                .sort(([, left], [, right]) => right - left)
-                .map(([jurisdiction, count]) => {
-                  const percentage =
-                    stats.total_instruments > 0
-                      ? (count / stats.total_instruments) * 100
-                      : 0;
-                  return (
-                    <div key={jurisdiction} className={styles.jurisdictionRow}>
-                      <span className={styles.jurisdictionLabel}>
-                        {jurisdiction}
-                      </span>
-                      <div className={styles.jurisdictionTrack}>
-                        <div
-                          className={styles.jurisdictionFill}
-                          style={{ width: `${Math.max(percentage, 2)}%` }}
-                        />
-                      </div>
-                      <span className={styles.jurisdictionValue}>
-                        {count.toLocaleString()}
-                      </span>
-                    </div>
-                  );
-                })}
-            </div>
-          ) : (
-            <div className={styles.emptyStateSmall}>
-              <p>No harvested jurisdiction data yet.</p>
-            </div>
-          )}
-        </section>
-      </div>
+      {/* ── Modals (unchanged) ────────────────────────── */}
 
       <ScrapingSourceModal
         mode="create"

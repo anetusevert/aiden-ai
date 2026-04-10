@@ -254,10 +254,10 @@ const CATEGORY_ICONS: Record<WorkflowCategory, React.ReactNode> = {
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#f59e0b',
-  medium: '#3b82f6',
-  low: '#6b7280',
+  critical: 'rgba(255, 255, 255, 0.92)',
+  high: 'rgba(255, 255, 255, 0.78)',
+  medium: 'rgba(255, 255, 255, 0.58)',
+  low: 'rgba(255, 255, 255, 0.34)',
 };
 
 // ---------------------------------------------------------------------------
