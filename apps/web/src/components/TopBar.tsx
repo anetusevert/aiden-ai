@@ -124,7 +124,7 @@ export function TopBar() {
     <header className="topbar">
       <div className="topbar-left">
         <Link href="/home" className="topbar-brand" aria-label="HeyAmin — Home">
-          <HeyAminLogo variant="mark" size={24} />
+          <HeyAminLogo variant="mark" size={32} />
         </Link>
         <nav
           className="topbar-breadcrumb"

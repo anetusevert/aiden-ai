@@ -8,7 +8,6 @@ import { resolveApiUrl } from '@/lib/api';
 import { useAminContext } from '@/components/amin/AminProvider';
 import { AminAvatar } from '@/components/amin/AminAvatar';
 import type { AminAvatarState } from '@/components/amin/AminAvatar';
-import { HeyAminLogo } from '@/components/brand/HeyAminLogo';
 import {
   WORKFLOW_CATEGORIES,
   type WorkflowCategory,
@@ -684,15 +683,6 @@ export default function HomePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
-        <motion.div
-          className="hp-brand-mark"
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.05, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <HeyAminLogo variant="mark" size={72} />
-        </motion.div>
-
         <button
           type="button"
           className="hp-avatar-wrap"
