@@ -37,6 +37,7 @@ const ROUTE_SECTION_MAP: Array<{ prefix: string; section: NavSection }> = [
   { prefix: '/wiki', section: 'intelligence' },
   { prefix: '/research', section: 'intelligence' },
   { prefix: '/global-legal', section: 'intelligence' },
+  { prefix: '/knowledge-base', section: 'admin' },
   { prefix: '/operator', section: 'admin' },
   { prefix: '/members', section: 'admin' },
   { prefix: '/audit', section: 'admin' },
