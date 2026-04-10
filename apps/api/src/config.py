@@ -147,11 +147,26 @@ class Settings(BaseSettings):
         "http://localhost:3101,http://127.0.0.1:3101,"
         "http://localhost:9980,http://127.0.0.1:9980"
     )
+    cors_origin_regex: str | None = None
 
     @property
     def cors_origins(self) -> list[str]:
         """Get CORS origins as a list."""
         return [origin.strip() for origin in self.cors_origins_str.split(",") if origin.strip()]
+
+    @property
+    def effective_cors_origin_regex(self) -> str | None:
+        """Get the regex used for credentialed production CORS.
+
+        Railway deployments typically run the web and API on separate
+        `*.up.railway.app` subdomains, so allow that pattern by default unless
+        an explicit regex is configured.
+        """
+        if self.cors_origin_regex:
+            return self.cors_origin_regex
+        if self.environment in {"staging", "prod"}:
+            return r"https://.*\.up\.railway\.app"
+        return None
 
     # Authentication
     # AUTH_MODE: "jwt" uses Bearer tokens, "headers" uses legacy X-*-Id headers
