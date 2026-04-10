@@ -389,20 +389,27 @@ async def trigger_job(
 ) -> TriggerJobResponse:
     """Manually trigger a scraping job for a source (runs in background)."""
 
-    # Clean up any stuck "pending" jobs older than 10 minutes so they don't
-    # permanently block new triggers via the 409 concurrency guard.
-    ten_minutes_ago = datetime.now(UTC) - timedelta(minutes=10)
+    # Clean up stuck jobs so they don't permanently block new triggers via
+    # the 409 concurrency guard.  "pending" > 10 min and "running" > 30 min
+    # are considered abandoned (e.g. the API process restarted mid-run).
+    now = datetime.now(UTC)
     stale_result = await db.execute(
         select(ScrapingJob).where(
             ScrapingJob.source_id == source_id,
-            ScrapingJob.status == "pending",
-            ScrapingJob.created_at < ten_minutes_ago,
+            ScrapingJob.status.in_(["pending", "running"]),
         )
     )
     for stale_job in stale_result.scalars().all():
-        stale_job.status = "failed"
-        stale_job.error_detail = "Timed out: job was stuck in pending for over 10 minutes"
-        stale_job.finished_at = datetime.now(UTC)
+        created = stale_job.created_at.replace(tzinfo=UTC) if stale_job.created_at.tzinfo is None else stale_job.created_at
+        age_minutes = (now - created).total_seconds() / 60
+        threshold = 10 if stale_job.status == "pending" else 30
+        if age_minutes > threshold:
+            stale_job.status = "failed"
+            stale_job.error_detail = (
+                f"Timed out: job was stuck in {stale_job.status} for over "
+                f"{threshold} minutes (likely lost during API restart)"
+            )
+            stale_job.finished_at = now
     await db.commit()
 
     job = await HarvesterService.create_job(db, source_id, "manual")
@@ -418,6 +425,29 @@ async def trigger_job(
         status=job.status,
         message="Job created and queued for execution",
     )
+
+
+@router.post("/jobs/reset-stuck")
+async def reset_stuck_jobs(
+    _ctx: Annotated[ScrapingAdminContext, Depends(require_scraping_admin_operator())],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Force-fail all pending/running jobs so sources can be re-triggered."""
+    now = datetime.now(UTC)
+    result = await db.execute(
+        select(ScrapingJob).where(
+            ScrapingJob.status.in_(["pending", "running"]),
+        )
+    )
+    orphans = result.scalars().all()
+    count = 0
+    for job in orphans:
+        job.status = "failed"
+        job.error_detail = "Manually reset by administrator"
+        job.finished_at = now
+        count += 1
+    await db.commit()
+    return {"reset_count": count, "message": f"Marked {count} stuck job(s) as failed"}
 
 
 @router.get("/jobs", response_model=list[ScrapingJobResponse])

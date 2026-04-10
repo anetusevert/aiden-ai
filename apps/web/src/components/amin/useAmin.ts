@@ -429,6 +429,7 @@ export function useAmin() {
   const createConversation = useCallback(async () => {
     const conv = await apiFetch<Conversation>('/conversations', {
       method: 'POST',
+      body: JSON.stringify({}),
     });
     setConversations(prev => [conv, ...prev]);
     setActiveConversationState(conv);

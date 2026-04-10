@@ -2275,6 +2275,24 @@ class ApiClient {
     );
   }
 
+  async resetStuckScrapingJobs(): Promise<{
+    reset_count: number;
+    message: string;
+  }> {
+    const baseUrl = getApiBaseUrl();
+    return this.fetchWithRetry<{ reset_count: number; message: string }>(
+      `${baseUrl}/operator/scraping/jobs/reset-stuck`,
+      {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+      }
+    );
+  }
+
   async getScrapingJobs(
     params: { source_id?: string; limit?: number } = {}
   ): Promise<ScrapingJobResponse[]> {

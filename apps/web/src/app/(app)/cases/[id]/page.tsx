@@ -109,9 +109,13 @@ export default function CaseDetailPage() {
         setCaseData(data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch(err => {
+        const isCors =
+          err instanceof TypeError && /fetch|network/i.test(err.message);
         setLoadError(
-          'Could not connect to the server. Please check your connection.'
+          isCors
+            ? 'API request blocked (CORS). The server deployment may still be in progress — try again in a minute.'
+            : 'Could not connect to the server. Please check your connection.'
         );
         setLoading(false);
       });

@@ -58,6 +58,7 @@ export default function CasesPage() {
   const [cases, setCases] = useState<CaseBrief[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState(
     () => searchParams.get('search') ?? ''
   );
@@ -103,6 +104,7 @@ export default function CasesPage() {
 
   const fetchCases = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     const params = new URLSearchParams();
     const s = searchParams.get('search');
     if (s) params.set('search', s);
@@ -121,9 +123,17 @@ export default function CasesPage() {
         const data = await res.json();
         setCases(data.items ?? []);
         setTotal(data.total ?? 0);
+      } else {
+        setFetchError(`Failed to load cases (${res.status}).`);
       }
-    } catch {
-      /* */
+    } catch (err) {
+      const isCors =
+        err instanceof TypeError && /fetch|network/i.test(String(err));
+      setFetchError(
+        isCors
+          ? 'API request blocked (CORS). The server deployment may still be in progress — try again in a minute.'
+          : 'Could not connect to the server. Please check your connection.'
+      );
     }
     setLoading(false);
   }, [searchParams]);
@@ -308,7 +318,34 @@ export default function CasesPage() {
             );
           })}
         </motion.div>
-        {!loading && cases.length === 0 && (
+        {!loading && fetchError && (
+          <div className="page-empty">
+            <div className="page-empty-icon">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h3>{fetchError}</h3>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ marginTop: 'var(--space-3)' }}
+              onClick={fetchCases}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {!loading && !fetchError && cases.length === 0 && (
           <div className="page-empty">
             <div className="page-empty-icon">
               <svg

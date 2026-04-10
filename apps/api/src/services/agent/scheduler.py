@@ -172,12 +172,58 @@ class AminScheduler:
                 )
 
     # --------------------------------------------------------------------- #
+    # Scraping: orphaned job cleanup
+    # --------------------------------------------------------------------- #
+
+    async def _cleanup_orphaned_jobs(self) -> None:
+        """Mark any pending/running scraping jobs as failed on startup.
+
+        When the API process restarts, any in-flight asyncio tasks are lost
+        but the DB still shows them as running.  This resets them so new
+        triggers aren't permanently blocked by the 409 concurrency guard.
+        """
+        from src.database import async_session_maker
+        from src.models.scraping_job import ScrapingJob
+
+        async with async_session_maker() as db:
+            result = await db.execute(
+                select(ScrapingJob).where(
+                    ScrapingJob.status.in_(["pending", "running"]),
+                )
+            )
+            orphans = result.scalars().all()
+            if not orphans:
+                return
+
+            now = datetime.now(timezone.utc)
+            for job in orphans:
+                job.status = "failed"
+                job.error_detail = (
+                    "Orphaned: job was still active when the API process "
+                    "restarted. Marked as failed during startup cleanup."
+                )
+                job.finished_at = now
+
+            await db.commit()
+            logger.info(
+                "Startup cleanup: marked %d orphaned scraping job(s) as failed",
+                len(orphans),
+            )
+
+    # --------------------------------------------------------------------- #
     # Scraping loop
     # --------------------------------------------------------------------- #
 
     async def _scraping_loop(self) -> None:
         """Periodically evaluate scraping schedules and launch due jobs."""
         await asyncio.sleep(15)  # let the app fully initialise
+
+        # On startup, mark any orphaned "pending"/"running" jobs as failed.
+        # These are leftovers from a previous process that died mid-run.
+        try:
+            await self._cleanup_orphaned_jobs()
+        except Exception as e:
+            logger.error("Orphaned job cleanup error: %s", e, exc_info=True)
 
         while self._running:
             try:

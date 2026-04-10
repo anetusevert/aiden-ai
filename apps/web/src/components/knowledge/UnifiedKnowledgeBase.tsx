@@ -408,16 +408,35 @@ export default function UnifiedKnowledgeBase() {
           <aside className={styles.panel}>
             <div className={styles.panelHeader}>
               <h2>Admin</h2>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  scraping.resetCreateForm();
-                  scraping.setCreateOpen(true);
-                }}
-              >
-                Add source
-              </Button>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      const res = await apiClient.resetStuckScrapingJobs();
+                      scraping.loadJobs();
+                      scraping.loadStats();
+                      alert(res.message);
+                    } catch {
+                      alert('Failed to reset stuck jobs');
+                    }
+                  }}
+                >
+                  Reset stuck
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    scraping.resetCreateForm();
+                    scraping.setCreateOpen(true);
+                  }}
+                >
+                  Add source
+                </Button>
+              </div>
             </div>
             <div className={styles.sidebarScroll}>
               {/* Stats */}

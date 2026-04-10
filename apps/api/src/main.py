@@ -212,6 +212,24 @@ async def llm_status():
     return get_llm_status()
 
 
+@app.get("/cors-check")
+async def cors_check():
+    """Diagnostic endpoint for verifying CORS configuration.
+
+    No auth required. Curl with an Origin header to see if the
+    response includes Access-Control-Allow-Origin:
+
+        curl -i https://<api>/cors-check -H "Origin: https://<web>"
+    """
+    regex = settings.effective_cors_origin_regex
+    return {
+        "environment": settings.environment,
+        "allow_origins": settings.cors_origins,
+        "allow_origin_regex": regex,
+        "hint": "Check the response headers for Access-Control-Allow-Origin",
+    }
+
+
 @app.get("/")
 async def root() -> dict[str, str]:
     """Root endpoint."""

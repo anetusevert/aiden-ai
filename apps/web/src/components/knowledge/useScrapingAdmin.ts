@@ -456,5 +456,7 @@ export function useScrapingAdmin(enabled: boolean) {
     jobDetailError,
 
     loadAll,
+    loadJobs,
+    loadStats,
   };
 }

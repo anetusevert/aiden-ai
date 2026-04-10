@@ -8,6 +8,8 @@
 
 import { getApiBaseUrl } from './api';
 
+const textDecoder = new TextDecoder();
+
 function arrayBufferToBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let binary = '';
@@ -148,6 +150,8 @@ export class AminVoiceClient {
   private _isPlaying = false;
   private _assistantSpeaking = false;
   private _sessionReady = false;
+  private _playbackGeneration = 0;
+  private _activePlaybackSources = new Set<AudioBufferSourceNode>();
 
   constructor(handlers: VoiceEventHandler = {}) {
     if (_singletonInstance && _singletonInstance !== this) {
@@ -187,6 +191,7 @@ export class AminVoiceClient {
     let ws: WebSocket;
     try {
       ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
       this.ws = ws;
     } catch (err) {
       this.handlers.onError?.(`Failed to create voice WebSocket: ${err}`);
@@ -211,12 +216,7 @@ export class AminVoiceClient {
     };
 
     ws.onmessage = event => {
-      try {
-        const data = JSON.parse(event.data as string);
-        this._handleServerEvent(data);
-      } catch {
-        /* ignore non-JSON */
-      }
+      void this._handleIncomingMessage(event.data);
     };
 
     ws.onclose = ev => {
@@ -407,6 +407,43 @@ export class AminVoiceClient {
     this.ws.send(JSON.stringify({ type: 'response.cancel' }));
   }
 
+  private async _handleIncomingMessage(data: unknown): Promise<void> {
+    const messageText = await this._coerceMessageToText(data);
+    if (!messageText) return;
+
+    try {
+      const parsed = JSON.parse(messageText) as Record<string, unknown>;
+      this._handleServerEvent(parsed);
+    } catch (err) {
+      this.handlers.onError?.(
+        `Voice message parsing failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  private async _coerceMessageToText(data: unknown): Promise<string | null> {
+    if (typeof data === 'string') {
+      return data;
+    }
+
+    if (data instanceof ArrayBuffer) {
+      return textDecoder.decode(new Uint8Array(data));
+    }
+
+    if (ArrayBuffer.isView(data)) {
+      return textDecoder.decode(
+        new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      );
+    }
+
+    if (data instanceof Blob) {
+      const buffer = await data.arrayBuffer();
+      return textDecoder.decode(new Uint8Array(buffer));
+    }
+
+    return null;
+  }
+
   private _handleServerEvent(data: Record<string, unknown>): void {
     const type = data.type as string;
 
@@ -424,9 +461,6 @@ export class AminVoiceClient {
       case 'input_audio_buffer.speech_started':
         this._userSpeaking = true;
         this.handlers.onSpeakingChange?.(true);
-        if (this._assistantSpeaking) {
-          this.interrupt();
-        }
         this._resetSilenceTimer();
         break;
 
@@ -517,13 +551,20 @@ export class AminVoiceClient {
   private async _processPlaybackQueue(): Promise<void> {
     if (this._isPlaying || this._playbackQueue.length === 0) return;
     this._isPlaying = true;
+    const generation = this._playbackGeneration;
 
     try {
       if (!this.audioContext) {
         this.audioContext = new AudioContext({ sampleRate: 24000 });
       }
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
 
-      while (this._playbackQueue.length > 0) {
+      while (
+        generation === this._playbackGeneration &&
+        this._playbackQueue.length > 0
+      ) {
         const base64 = this._playbackQueue.shift()!;
         const binary = atob(base64);
         const bytes = new Uint8Array(binary.length);
@@ -541,22 +582,49 @@ export class AminVoiceClient {
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
         source.connect(this.audioContext.destination);
+        this._activePlaybackSources.add(source);
         source.start();
 
         await new Promise<void>(resolve => {
-          source.onended = () => resolve();
+          source.onended = () => {
+            this._activePlaybackSources.delete(source);
+            resolve();
+          };
         });
       }
-    } catch {
-      /* playback error, non-critical */
+    } catch (err) {
+      if (generation === this._playbackGeneration) {
+        this.handlers.onError?.(
+          `Voice playback failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
     }
 
-    this._isPlaying = false;
+    if (generation === this._playbackGeneration) {
+      this._isPlaying = false;
+      if (this._playbackQueue.length === 0) {
+        this._setAssistantSpeaking(false);
+      }
+    }
   }
 
   private _stopPlayback(): void {
+    this._playbackGeneration += 1;
     this._playbackQueue = [];
     this._isPlaying = false;
+    this._activePlaybackSources.forEach(source => {
+      try {
+        source.stop();
+      } catch {
+        /* source may already be stopped */
+      }
+      try {
+        source.disconnect();
+      } catch {
+        /* ignore disconnect failures */
+      }
+    });
+    this._activePlaybackSources.clear();
     this._setAssistantSpeaking(false);
   }
 

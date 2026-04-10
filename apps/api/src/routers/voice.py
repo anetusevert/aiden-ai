@@ -218,7 +218,12 @@ async def voice_ws(websocket: WebSocket, conversation_id: Optional[str] = None):
                 if isinstance(message, str):
                     await websocket.send_text(message)
                 elif isinstance(message, bytes):
-                    await websocket.send_bytes(message)
+                    try:
+                        await websocket.send_text(message.decode("utf-8"))
+                    except UnicodeDecodeError:
+                        logger.warning(
+                            "Voice WS: received non-text binary frame from upstream; dropping frame"
+                        )
         except Exception as e:
             logger.debug("openai_to_browser ended: %s", e)
 

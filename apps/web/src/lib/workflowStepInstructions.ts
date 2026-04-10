@@ -10,6 +10,8 @@ interface StepInstructionOptions {
   stepIndex: number;
   userInputs?: Record<string, string>;
   caseId?: string | null;
+  uploadedDocumentId?: string | null;
+  uploadedDocumentName?: string | null;
 }
 
 function toolHints(workflowId: string, stepDetail: string): string {
@@ -56,7 +58,14 @@ function toolHints(workflowId: string, stepDetail: string): string {
 }
 
 export function buildStepInstruction(options: StepInstructionOptions): string {
-  const { workflowId, stepIndex, userInputs, caseId } = options;
+  const {
+    workflowId,
+    stepIndex,
+    userInputs,
+    caseId,
+    uploadedDocumentId,
+    uploadedDocumentName,
+  } = options;
 
   const workflow = getWorkflowById(workflowId);
   if (!workflow) return `Execute step ${stepIndex + 1} of the workflow.`;
@@ -84,6 +93,13 @@ export function buildStepInstruction(options: StepInstructionOptions): string {
         lines.push(`  ${key}: ${value}`);
       }
     }
+  }
+
+  if (uploadedDocumentId) {
+    lines.push(
+      '',
+      `Uploaded document: "${uploadedDocumentName ?? 'document'}" (ID: ${uploadedDocumentId}). Use this document for analysis, review, or processing in this step.`
+    );
   }
 
   if (caseId) {
